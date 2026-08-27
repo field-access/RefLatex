@@ -207,7 +207,7 @@ body.controls .hint{opacity:1;pointer-events:auto}
  position:fixed;z-index:100;left:16px;top:64px;width:min(500px,calc(100vw - 32px));
  height:min(720px,calc(100vh - 80px));display:none;flex-direction:column;
  background:#faf9f6f5;border:1px solid #00000018;border-radius:10px;
- box-shadow:0 20px 60px #00000025;overflow:hidden;backdrop-filter:none
+ box-shadow:0 20px 60px #00000025;overflow:hidden;backdrop-filter:blur(15px)
 }
 .editor.open{display:flex}
 .editorhead{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between}
@@ -356,46 +356,11 @@ body.fullscreen.controls .toolbar{transform:translateY(-50%)}
 }
 
 
-.card{contain:layout paint style;content-visibility:auto;contain-intrinsic-size:500px 220px;will-change:transform}
-.cardbody{contain:layout style}
-#world{will-change:transform}
-
-.font-control{
-  width:44px;
-  padding:4px 3px 5px;
-  border-radius:9px;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:3px;
-  background:transparent;
-  color:#68645d;
+.card.keyboard-focus{
+ outline:2px solid var(--accent);
+ outline-offset:4px;
 }
-.font-glyph{
-  font:600 11px/1 Georgia,serif;
-  letter-spacing:-.3px;
-}
-.font-control select{
-  width:42px;
-  height:22px;
-  padding:0 2px;
-  border:0;
-  outline:0;
-  background:transparent;
-  color:inherit;
-  font:10px/1 Inter,system-ui,sans-serif;
-  cursor:pointer;
-}
-.font-control select:focus{
-  background:#00000008;
-  border-radius:5px;
-}
-.dark .font-control select{color:#ddd}
-.dark .font-control select:focus{background:#ffffff0c}
 </style>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Merriweather:wght@400;700&family=Source+Serif+4:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
 <div id="canvas">
@@ -418,19 +383,6 @@ body.fullscreen.controls .toolbar{transform:translateY(-50%)}
  <button class="tool" id="openCanvas" title="Open canvas (Ctrl/Cmd+O)">↑</button>
  <input id="canvasFile" type="file" accept=".json,application/json" hidden>
  <button class="tool" id="full" title="Fullscreen">⛶</button>
-
-<div class="font-control" title="Card font">
-  <span class="font-glyph">Aa</span>
-  <select id="fontSelect" aria-label="Card font">
-    <option value="Inter">Inter</option>
-    <option value="Georgia">Georgia</option>
-    <option value="Merriweather">Merriweather</option>
-    <option value="Source Serif 4">Source Serif 4</option>
-    <option value="DM Sans">DM Sans</option>
-    <option value="IBM Plex Sans">IBM Plex Sans</option>
-    <option value="JetBrains Mono">JetBrains Mono</option>
-  </select>
-</div>
 </div>
 
 <div class="zoom">
@@ -474,7 +426,7 @@ const state={
  hand:true,spacePan:false,controlsVisible:true,pan:null,drag:null,rightPan:null,resize:null,editId:null,
  undo:[],redo:[],historyLock:false,raf:0,saveTimer:0,hideTimer:0,
  board:{left:-1800,top:-1100,width:3600,height:2200,margin:120}
-,font:"Inter"};
+};
 
 function showControls(){
   document.body.classList.remove("controls-hidden");
@@ -801,9 +753,8 @@ function render(md){
   return box.innerHTML;
 }
 function apply(){
- world.style.transform=`translate3d(${state.x}px,${state.y}px,0) scale(${state.scale})`;
+ world.style.transform=`translate(${state.x}px,${state.y}px) scale(${state.scale})`;
  $("#zoomLabel").textContent=Math.round(state.scale*100)+"%";
- scheduleCull();
 }
 function worldPoint(x,y){return{x:(x-state.x)/state.scale,y:(y-state.y)/state.scale}}
 function setCameraImmediate(x,y,s){
@@ -913,23 +864,6 @@ function restore(s){
 }
 function undo(){if(!state.undo.length)return;state.redo.push(snapshot());restore(state.undo.pop())}
 function redo(){if(!state.redo.length)return;state.undo.push(snapshot());restore(state.redo.pop())}
-
-function applyFont(font){
-  state.font=font;
-  state.notes.forEach(n=>{
-    n.el.style.setProperty("--card-font",`"${font}"`);
-    n.el.style.fontFamily=`"${font}", var(--card-font-fallback, Inter, system-ui, sans-serif)`;
-  });
-}
-function applyFontToSelected(font){
-  if(!state.selected){
-    applyFont(font);
-    return;
-  }
-  state.selected.el.style.fontFamily=`"${font}", Inter, system-ui, sans-serif`;
-  state.selected.font=font;
-}
-
 function save(){
  clearTimeout(state.saveTimer);
  state.saveTimer=setTimeout(()=>{
@@ -940,8 +874,7 @@ function empty(){$("#empty").style.display=state.notes.length?"none":"grid"}
 
 function select(n){
  state.notes.forEach(x=>x.el.classList.remove("selected"));
- state.selected=n;
- const fs=$("#fontSelect"); if(fs) fs.value=n.font||state.font||"Inter";if(n)n.el.classList.add("selected");
+ state.selected=n;if(n)n.el.classList.add("selected");
  context.classList.remove("open");
 }
 
@@ -1049,77 +982,16 @@ function openCanvasFile(file){
  reader.readAsText(file);
 }
 
-
-/* ===== RefLatex performance layer ===== */
-const renderCache=new Map();
-let cullRAF=0;
-let renderSerial=0;
-
-function mountNote(n,force=false){
-  if(!n?.el||(!force&&n.rendered))return;
-  const body=n.el.querySelector(".cardbody");
-  if(!body)return;
-  const key=String(n.md);
-  const cached=renderCache.get(key);
-  if(cached!==undefined){
-    body.innerHTML=cached;
-    body.style.minHeight="";
-    n.rendered=true;
-    return;
-  }
-  const serial=++renderSerial;
-  requestAnimationFrame(()=>{
-    if(!n.el.isConnected)return;
-    const out=render(n.md);
-    renderCache.set(key,out);
-    if(renderCache.size>180)renderCache.delete(renderCache.keys().next().value);
-    if(serial<=renderSerial){
-      body.innerHTML=out;
-      body.style.minHeight="";
-      n.rendered=true;
-    }
-  });
-}
-function unmountNote(n){
-  if(!n?.rendered||n.el.classList.contains("selected"))return;
-  n.cachedHeight=Math.max(90,n.el.offsetHeight);
-  const body=n.el.querySelector(".cardbody");
-  body.innerHTML="";
-  body.style.minHeight=Math.max(64,n.cachedHeight-26)+"px";
-  n.rendered=false;
-}
-function cullNotes(){
-  cullRAF=0;
-  const pad=650;
-  state.notes.forEach(n=>{
-    const r=n.el.getBoundingClientRect();
-    if(r.right>-pad&&r.left<innerWidth+pad&&r.bottom>-pad&&r.top<innerHeight+pad)mountNote(n);
-    else unmountNote(n);
-  });
-}
-function scheduleCull(){
-  if(cullRAF)return;
-  cullRAF=requestAnimationFrame(cullNotes);
-}
-function invalidateNote(n){
-  if(!n)return;
-  renderCache.delete(String(n.md));
-  n.rendered=false;
-  n.cachedHeight=0;
-  n.el.querySelector(".cardbody").style.minHeight="";
-  scheduleCull();
-}
-
 function makeNote(md,x,y,w=600,record=true,id=null){
  if(record)history();
- const n={id:id??state.nextId++,md,x,y,el:null,rendered:false,cachedHeight:0};
+ const n={id:id??state.nextId++,md,x,y,el:null};
  state.nextId=Math.max(state.nextId,n.id+1);
  const el=document.createElement("article");
  el.className="card";el.style.left=x+"px";el.style.top=y+"px";el.style.width=Math.max(300,Math.min(1200,w||600))+"px";
  el.innerHTML=`<div class="cardbar"></div><div class="cardactions"><button data-edit>✎</button><button data-delete>×</button></div>
  <div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div>
- <div class="cardbody"></div>`;
- n.el=el;n.el.style.fontFamily=`"${state.font||"Inter"}", Inter, system-ui, sans-serif`;world.appendChild(el);state.notes.push(n);mountNote(n);
+ <div class="cardbody">${render(md)}</div>`;
+ n.el=el;world.appendChild(el);state.notes.push(n);
 
  el.addEventListener("mousedown",e=>{
   if(e.button!==0||e.target.closest(".cardactions,.resize,a,button"))return;
@@ -1420,12 +1292,6 @@ async function toggleFull(){
 document.addEventListener("mousemove",e=>{if(document.body.classList.contains("fullscreen")&&(e.clientY<80||e.clientX<25))revealControls()});
 document.addEventListener("fullscreenchange",()=>document.body.classList.toggle("fullscreen",!!document.fullscreenElement));
 
-$("#fontSelect").onchange=e=>{
-  const font=e.target.value;
-  if(state.selected) applyFontToSelected(font);
-  else applyFont(font);
-  save();
-};
 $("#hand").onclick=()=>{
  state.hand=!state.hand;
  updateHandUI();
@@ -1461,6 +1327,8 @@ document.addEventListener("paste",e=>{
 function focusSelected(){
   const n=state.selected;
   if(!n)return;
+  state.notes.forEach(x=>x.el.classList.remove("keyboard-focus"));
+  n.el.classList.add("keyboard-focus");
 
   // Keep the selected card centered without changing its zoom level.
   const r={
@@ -1497,48 +1365,197 @@ function cycleSelected(direction){
 }
 
 window.addEventListener("keydown",e=>{
- const mod=e.ctrlKey||e.metaKey,editing=document.activeElement===source;
+ const mod=e.ctrlKey||e.metaKey;
+ const editing=document.activeElement===source ||
+   document.activeElement?.tagName==="INPUT" ||
+   document.activeElement?.tagName==="TEXTAREA";
+
+ showControls();
+
+ /*
+  * SPACE
+  * - selected card -> focus it
+  * - no selection -> temporary hand/pan mode
+  */
  if(e.code==="Space"&&!editing){
-  e.preventDefault();
-  if(state.selected){
-    focusSelected();
-    state.spacePan=false;
-  }else{
-    state.spacePan=true;
-    canvas.style.cursor="grab";
-  }
-  return;
-}
-if(!editing&&!mod&&e.key==="ArrowRight"){
-  e.preventDefault();
-  cycleSelected(1);
-  return;
-}
-if(!editing&&!mod&&e.key==="ArrowLeft"){
-  e.preventDefault();
-  cycleSelected(-1);
-  return;
-}
- if(e.code==="Space"&&!editing){e.preventDefault();fit(true);return}
+   e.preventDefault();
+   if(state.selected){
+     focusSelected();
+     state.spacePan=false;
+   }else{
+     state.spacePan=true;
+     canvas.style.cursor="grab";
+   }
+   return;
+ }
+
+ if(editing){
+   // Keep normal text-editor navigation untouched.
+   if(e.key==="Escape"){
+     e.preventDefault();
+     closeEditor();
+   }
+   return;
+ }
+
+ /*
+  * CARD NAVIGATION
+  *
+  * Arrow Left/Right:
+  *   previous / next card
+  *
+  * PageUp/PageDown:
+  *   previous / next card, PureRef-style quick browsing
+  *
+  * Home/End:
+  *   first / last card
+  *
+  * Ctrl + PageUp/PageDown:
+  *   previous / next card as an explicit Windows-style
+  *   document-navigation shortcut.
+  */
+ if(e.key==="PageUp"){
+   e.preventDefault();
+   cycleSelected(-1);
+   return;
+ }
+ if(e.key==="PageDown"){
+   e.preventDefault();
+   cycleSelected(1);
+   return;
+ }
+ if(e.key==="ArrowRight"&&!mod){
+   e.preventDefault();
+   cycleSelected(1);
+   return;
+ }
+ if(e.key==="ArrowLeft"&&!mod){
+   e.preventDefault();
+   cycleSelected(-1);
+   return;
+ }
+ if(e.key==="ArrowDown"&&!mod){
+   e.preventDefault();
+   cycleSelected(1);
+   return;
+ }
+ if(e.key==="ArrowUp"&&!mod){
+   e.preventDefault();
+   cycleSelected(-1);
+   return;
+ }
+
+ if(e.key==="Home"){
+   e.preventDefault();
+   if(state.notes.length){
+     select(state.notes[0]);
+     focusSelected();
+   }else{
+     fit();
+   }
+   return;
+ }
+ if(e.key==="End"){
+   e.preventDefault();
+   if(state.notes.length){
+     select(state.notes[state.notes.length-1]);
+     focusSelected();
+   }else{
+     fit();
+   }
+   return;
+ }
+
+ /*
+  * VIEWPORT NAVIGATION
+  * Ctrl+Arrow = move the canvas without changing selection.
+  */
+ if(mod&&e.key==="ArrowLeft"){
+   e.preventDefault();
+   state.targetX+=innerWidth*.72;
+   animate();
+   return;
+ }
+ if(mod&&e.key==="ArrowRight"){
+   e.preventDefault();
+   state.targetX-=innerWidth*.72;
+   animate();
+   return;
+ }
+ if(mod&&e.key==="ArrowUp"){
+   e.preventDefault();
+   state.targetY+=innerHeight*.72;
+   animate();
+   return;
+ }
+ if(mod&&e.key==="ArrowDown"){
+   e.preventDefault();
+   state.targetY-=innerHeight*.72;
+   animate();
+   return;
+ }
+
+ /* Canvas/file/edit shortcuts */
  if(mod&&e.key.toLowerCase()==="s"){
-  e.preventDefault();
-  downloadCanvas();
-  return;
-}
-if(mod&&e.key.toLowerCase()==="o"){
-  e.preventDefault();
-  $("#canvasFile").click();
-  return;
-}
-if(mod&&e.key==="Enter"){e.preventDefault();quickPaste();return}
- if(mod&&e.shiftKey&&e.key.toLowerCase()==="f"){e.preventDefault();toggleFull();return}
- if(mod&&!editing&&e.key.toLowerCase()==="z"){e.preventDefault();e.shiftKey?redo():undo();return}
- if(mod&&!editing&&e.key.toLowerCase()==="y"){e.preventDefault();redo();return}
- if(mod&&!editing&&e.key.toLowerCase()==="d"){e.preventDefault();duplicate();return}
- if(e.key==="Delete"&&!editing&&state.selected){deleteNote(state.selected);return}
- if(e.key==="Escape"){closeEditor();context.classList.remove("open");return}
- if(!editing&&e.key.toLowerCase()==="h"){$("#hand").click();return}
- if(!editing&&e.key.toLowerCase()==="n"){$("#new").click();return}
+   e.preventDefault();
+   downloadCanvas();
+   return;
+ }
+ if(mod&&e.key.toLowerCase()==="o"){
+   e.preventDefault();
+   $("#canvasFile").click();
+   return;
+ }
+ if(mod&&e.key==="Enter"){
+   e.preventDefault();
+   quickPaste();
+   return;
+ }
+ if(mod&&e.key.toLowerCase()==="z"){
+   e.preventDefault();
+   e.shiftKey?redo():undo();
+   return;
+ }
+ if(mod&&e.key.toLowerCase()==="y"){
+   e.preventDefault();
+   redo();
+   return;
+ }
+ if(mod&&e.key.toLowerCase()==="d"){
+   e.preventDefault();
+   duplicate();
+   return;
+ }
+ if(mod&&e.shiftKey&&e.key.toLowerCase()==="f"){
+   e.preventDefault();
+   toggleFull();
+   return;
+ }
+
+ if(e.key==="Delete"&&state.selected){
+   e.preventDefault();
+   deleteNote(state.selected);
+   return;
+ }
+
+ if(e.key==="Escape"){
+   closeEditor();
+   context.classList.remove("open");
+   state.notes.forEach(n=>n.el.classList.remove("keyboard-focus"));
+   return;
+ }
+
+ if(e.key.toLowerCase()==="h"){
+   e.preventDefault();
+   $("#hand").click();
+   return;
+ }
+
+ if(e.key.toLowerCase()==="n"){
+   e.preventDefault();
+   $("#new").click();
+   return;
+ }
 });
 function load(){
  try{
