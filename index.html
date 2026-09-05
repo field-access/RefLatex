@@ -425,7 +425,8 @@ const state={
  notes:[],selected:null,nextId:1,
  hand:true,spacePan:false,controlsVisible:true,pan:null,drag:null,rightPan:null,resize:null,editId:null,
  undo:[],redo:[],historyLock:false,raf:0,saveTimer:0,hideTimer:0,
- board:{left:-1800,top:-1100,width:3600,height:2200,margin:120}
+  board:{left:-1800,top:-1100,width:3600,height:2200,margin:120},
+  glassRaf:0
 };
 
 function showControls(){
@@ -827,6 +828,13 @@ function updateGlass(){
  board.style.width=state.board.width+"px";
  board.style.height=state.board.height+"px";
 }
+function scheduleGlass(){
+ if(state.glassRaf)return;
+ state.glassRaf=requestAnimationFrame(()=>{
+  state.glassRaf=0;
+  updateGlass();
+ });
+}
 
 function sync(){state.targetX=state.x;state.targetY=state.y;state.targetScale=state.scale}
 function animate(){
@@ -869,6 +877,10 @@ function save(){
  state.saveTimer=setTimeout(()=>{
   try{localStorage.setItem("reflatex",snapshot())}catch{}
  },80);
+}
+function flushSave(){
+ clearTimeout(state.saveTimer);
+ try{localStorage.setItem("reflatex",snapshot())}catch{}
 }
 function empty(){$("#empty").style.display=state.notes.length?"none":"grid"}
 
@@ -1018,21 +1030,21 @@ window.addEventListener("mousemove",e=>{
   const d=state.drag,dx=(e.clientX-d.sx)/state.scale,dy=(e.clientY-d.sy)/state.scale;
   d.n.x=d.x+dx;d.n.y=d.y+dy;
   d.n.el.style.left=d.n.x+"px";d.n.el.style.top=d.n.y+"px";
-  updateGlass();
+  scheduleGlass();
  }
  if(state.resize){
   const r=state.resize,dx=(e.clientX-r.sx)/state.scale;
   const w=Math.max(300,Math.min(1200,r.w+(r.side==="right"?dx:-dx)));
   r.n.el.style.width=w+"px";
   if(r.side==="left"){r.n.x=r.x+r.w-w;r.n.el.style.left=r.n.x+"px"}
-  updateGlass();
+  scheduleGlass();
  }
  if(state.pan){
   state.x=state.pan.x+e.clientX-state.pan.sx;state.y=state.pan.y+e.clientY-state.pan.sy;sync();apply();
  }
 });
 window.addEventListener("mouseup",()=>{
- if(state.drag||state.resize||state.pan)save();
+ if(state.drag||state.resize||state.pan){flushSave();scheduleGlass()}
  state.drag=null;state.resize=null;state.pan=null;
  canvas.style.cursor=state.hand?"grab":"default";
 });
@@ -1570,7 +1582,12 @@ function load(){
  state.hand=true;$("#hand").classList.add("active");canvas.style.cursor="grab";
  sync();apply();updateGlass();empty()
 }
-window.addEventListener("resize",()=>{updateGlass();apply()});
+let resizeFrame=0;
+window.addEventListener("resize",()=>{
+ if(resizeFrame)return;
+ resizeFrame=requestAnimationFrame(()=>{resizeFrame=0;updateGlass();apply()});
+});
+window.addEventListener("pagehide",flushSave);
 window.addEventListener("keyup",e=>{
  if(e.code==="Space"){
   state.spacePan=false;
