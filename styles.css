@@ -82,9 +82,14 @@ body.dark #board{background:#20201e;border-color:#494740}
 }
 .card:hover .resize:after,.card.selected .resize:after{background:#5b57b728}
 .cardactions{
- position:absolute;right:7px;top:4px;display:none;gap:3px;z-index:8
+ position:absolute;right:7px;top:4px;display:none;align-items:center;gap:3px;z-index:8
 }
 .card.selected .cardactions{display:flex}
+.cardactions select{
+ border:0;border-radius:5px;background:transparent;color:#777;height:25px;
+ padding:0 3px;font:10px system-ui;cursor:pointer;max-width:74px
+}
+.cardactions select:hover{background:#eeece6;color:#333}
 .cardactions button{
  border:0;background:transparent;width:26px;height:25px;border-radius:5px;color:#777;
 }
@@ -347,3 +352,7 @@ body.fullscreen.controls .toolbar{transform:translateY(-50%)}
  outline:2px solid var(--accent);
  outline-offset:4px;
 }
+.card[data-font="sans"] .cardbody,.card[data-font="sans"] .cardbody p,.card[data-font="sans"] .cardbody li{font-family:ui-sans-serif,system-ui,sans-serif}
+.card[data-font="mono"] .cardbody,.card[data-font="mono"] .cardbody p,.card[data-font="mono"] .cardbody li{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.9em}
+.card[data-font="slab"] .cardbody,.card[data-font="slab"] .cardbody p,.card[data-font="slab"] .cardbody li{font-family:Rockwell,"Roboto Slab",Georgia,serif}
+.card[data-font="humanist"] .cardbody,.card[data-font="humanist"] .cardbody p,.card[data-font="humanist"] .cardbody li{font-family:"Trebuchet MS",ui-sans-serif,sans-serif}

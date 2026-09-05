@@ -444,7 +444,7 @@ function zoom(f,cx=innerWidth/2,cy=innerHeight/2){
  moveTo(cx-p.x*s,cy-p.y*s,s);
  clearTimeout(state.saveTimer);state.saveTimer=setTimeout(save,180);
 }
-function snapshot(){return JSON.stringify({x:state.x,y:state.y,scale:state.scale,nextId:state.nextId,notes:state.notes.map(n=>({id:n.id,md:n.md,x:n.x,y:n.y,w:n.el.offsetWidth}))})}
+function snapshot(){return JSON.stringify({x:state.x,y:state.y,scale:state.scale,nextId:state.nextId,notes:state.notes.map(n=>({id:n.id,md:n.md,x:n.x,y:n.y,w:n.el.offsetWidth,font:n.font||"serif"}))})}
 function history(){
  if(state.historyLock)return;
  const s=snapshot();
@@ -453,7 +453,7 @@ function history(){
 function restore(s){
  const d=JSON.parse(s);state.historyLock=true;
  state.notes.forEach(n=>n.el.remove());state.notes=[];state.selected=null;
- (d.notes||[]).forEach(n=>makeNote(n.md,n.x,n.y,n.w,false,n.id));
+ (d.notes||[]).forEach(n=>makeNote(n.md,n.x,n.y,n.w,false,n.id,n.font));
  state.x=d.x;state.y=d.y;state.scale=d.scale;state.nextId=d.nextId||state.nextId;sync();apply();
  state.historyLock=false;save();empty();
 }
@@ -492,7 +492,8 @@ function canvasPayload(){
    markdown:n.md,
    x:n.x,
    y:n.y,
-   width:n.el.offsetWidth
+   width:n.el.offsetWidth,
+   font:n.font||"serif"
   }))
  };
 }
@@ -540,7 +541,8 @@ function openCanvasFile(file){
      Number.isFinite(n.y)?n.y:0,
      Number.isFinite(n.width)?n.width:600,
      false,
-     Number.isFinite(n.id)?n.id:null
+      Number.isFinite(n.id)?n.id:null,
+      typeof n.font==="string"?n.font:"serif"
     );
    });
 
@@ -581,15 +583,17 @@ function openCanvasFile(file){
  reader.readAsText(file);
 }
 
-function makeNote(md,x,y,w=600,record=true,id=null){
+function makeNote(md,x,y,w=600,record=true,id=null,font="serif"){
  if(record)history();
- const n={id:id??state.nextId++,md,x,y,el:null};
+ const n={id:id??state.nextId++,md,x,y,font,el:null};
  state.nextId=Math.max(state.nextId,n.id+1);
  const el=document.createElement("article");
  el.className="card";el.style.left=x+"px";el.style.top=y+"px";el.style.width=Math.max(300,Math.min(1200,w||600))+"px";
- el.innerHTML=`<div class="cardbar"></div><div class="cardactions"><button data-edit>✎</button><button data-delete>×</button></div>
+ el.innerHTML=`<div class="cardbar"></div><div class="cardactions"><select data-font aria-label="Card font" title="Card font"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option><option value="slab">Slab</option><option value="humanist">Humanist</option></select><button data-edit>✎</button><button data-delete>×</button></div>
  <div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div>
  <div class="cardbody">${render(md)}</div>`;
+ el.dataset.font=font;
+ el.querySelector("[data-font]").value=font;
  n.el=el;world.appendChild(el);state.notes.push(n);
 
  el.addEventListener("mousedown",e=>{
@@ -602,6 +606,9 @@ function makeNote(md,x,y,w=600,record=true,id=null){
  });
  el.querySelector("[data-edit]").onclick=()=>editNote(n);
  el.querySelector("[data-delete]").onclick=()=>deleteNote(n);
+ el.querySelector("[data-font]").onchange=e=>{
+  history();n.font=e.target.value;el.dataset.font=n.font;save();scheduleGlass();
+ };
  el.querySelectorAll(".resize").forEach(r=>r.onmousedown=e=>startResize(e,n,r.dataset.side));
  empty();
  updateGlass();
@@ -1166,7 +1173,7 @@ function load(){
   const d=JSON.parse(localStorage.getItem("reflatex")||"null");
   if(d){
    state.x=d.x??innerWidth/2;state.y=d.y??innerHeight/2;state.scale=d.scale??1;state.nextId=d.nextId??1;
-   (d.notes||[]).forEach(n=>{if(typeof n.md==="string")makeNote(n.md,n.x||0,n.y||0,n.w||600,false,n.id)})
+   (d.notes||[]).forEach(n=>{if(typeof n.md==="string")makeNote(n.md,n.x||0,n.y||0,n.w||600,false,n.id,typeof n.font==="string"?n.font:"serif")})
   }
  }catch{}
  const dark=localStorage.getItem("reflatex-theme")==="dark";
