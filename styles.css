@@ -354,6 +354,10 @@ body.fullscreen.controls .toolbar{transform:translateY(-50%)}
 
 
 .card[data-font="sans"] .cardbody,.card[data-font="sans"] .cardbody p,.card[data-font="sans"] .cardbody li{font-family:ui-sans-serif,system-ui,sans-serif}
-.card[data-font="mono"] .cardbody,.card[data-font="mono"] .cardbody p,.card[data-font="mono"] .cardbody li{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.9em}
+.card[data-font="mono"] .cardbody,.card[data-font="mono"] .cardbody p,.card[data-font="mono"] .cardbody li{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:1em}
 .card[data-font="slab"] .cardbody,.card[data-font="slab"] .cardbody p,.card[data-font="slab"] .cardbody li{font-family:Rockwell,"Roboto Slab",Georgia,serif}
 .card[data-font="humanist"] .cardbody,.card[data-font="humanist"] .cardbody p,.card[data-font="humanist"] .cardbody li{font-family:"Trebuchet MS",ui-sans-serif,sans-serif}
+.card[data-font="display"] .cardbody,.card[data-font="display"] .cardbody p,.card[data-font="display"] .cardbody li{font-family:Impact,"Arial Black",ui-sans-serif,sans-serif;letter-spacing:.01em}
+.card[data-font="rounded"] .cardbody,.card[data-font="rounded"] .cardbody p,.card[data-font="rounded"] .cardbody li{font-family:"Arial Rounded MT Bold","Trebuchet MS",ui-sans-serif,sans-serif}
+.card[data-font="editorial"] .cardbody,.card[data-font="editorial"] .cardbody p,.card[data-font="editorial"] .cardbody li{font-family:Cambria,Georgia,"Times New Roman",serif}
+.card[data-font="hand"] .cardbody,.card[data-font="hand"] .cardbody p,.card[data-font="hand"] .cardbody li{font-family:"Segoe Print","Comic Sans MS",cursive}
