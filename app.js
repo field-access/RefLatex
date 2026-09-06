@@ -426,6 +426,17 @@ function scheduleGlass(){
  });
 }
 
+function boardBounds(){
+ updateGlass();
+ const b=state.board;
+ return {
+  minX:b.left,
+  minY:b.top,
+  maxX:b.left+b.width,
+  maxY:b.top+b.height
+ };
+}
+
 function sync(){state.targetX=state.x;state.targetY=state.y;state.targetScale=state.scale}
 function animate(){
  if(state.raf)return;
@@ -702,7 +713,7 @@ function scheduleWheelFrame(){
    if(Math.abs(zd)>0.001){
     // Increased gain: normal trackpad pinch/wheel now reaches a useful
     // zoom range in roughly the same physical gesture as PureRef.
-    const factor=Math.exp(-zd*0.006);
+    const factor=Math.exp(-zd*0.003);
     zoomPrecise(factor,wheelPointerX,wheelPointerY);
    }
   }else{
@@ -819,15 +830,13 @@ function duplicate(){
  requestAnimationFrame(updateGlass);select(c);save()
 }
 function fit(widthOnly=false){
- if(!state.notes.length){
-  updateGlass();
-  moveTo(innerWidth/2,innerHeight/2,Math.min(1,(innerWidth-100)/state.board.width,(innerHeight-100)/state.board.height));
-  return
-}
- const b=state.notes.map(n=>{const r=n.el.getBoundingClientRect();return{a:worldPoint(r.left,r.top),b:worldPoint(r.right,r.bottom)}});
- const minX=Math.min(...b.map(q=>q.a.x)),maxX=Math.max(...b.map(q=>q.b.x)),minY=Math.min(...b.map(q=>q.a.y)),maxY=Math.max(...b.map(q=>q.b.y));
- const w=Math.max(1,maxX-minX),h=Math.max(1,maxY-minY),p=100,s=Math.max(.18,Math.min(1.5,widthOnly?(innerWidth-2*p)/w:Math.min((innerWidth-2*p)/w,(innerHeight-2*p)/h)));
- moveTo(innerWidth/2-(minX+w/2)*s,widthOnly?state.targetY:innerHeight/2-(minY+h/2)*s,s)
+ const b=boardBounds();
+ const w=Math.max(1,b.maxX-b.minX),h=Math.max(1,b.maxY-b.minY),p=100;
+ const s=Math.max(MIN_SCALE,Math.min(1.5,widthOnly
+  ? (innerWidth-2*p)/w
+  : Math.min((innerWidth-2*p)/w,(innerHeight-2*p)/h)));
+ const cx=b.minX+w/2,cy=b.minY+h/2;
+ moveTo(innerWidth/2-cx*s,widthOnly?state.targetY:innerHeight/2-cy*s,s)
 }
 function arrange(){
  if(!state.notes.length)return;
@@ -918,7 +927,16 @@ showControls();
 }
 $("#new").onclick=()=>{state.editId=null;source.value="";$("#apply").textContent="Place note";editor.classList.add("open");source.focus()}
 $("#fit").onclick=()=>{fit(false);save()}
-$("#center").onclick=()=>{moveTo(innerWidth/2,innerHeight/2,1);save()}
+$("#center").onclick=()=>{
+ const b=boardBounds();
+ const scale=Math.max(MIN_SCALE,Math.min(MAX_SCALE,state.targetScale||state.scale||1));
+ moveTo(
+  innerWidth/2-(b.minX+b.maxX)*scale/2,
+  innerHeight/2-(b.minY+b.maxY)*scale/2,
+  scale
+ );
+ save();
+}
 $("#arrange").onclick=arrange
 $("#theme").onclick=toggleTheme
 $("#saveCanvas").onclick=downloadCanvas
