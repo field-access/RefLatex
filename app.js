@@ -422,7 +422,7 @@ function scheduleGlass(){
  if(state.glassRaf)return;
  state.glassRaf=requestAnimationFrame(()=>{
   state.glassRaf=0;
-  scheduleGlass();
+  updateGlass();
  });
 }
 
