@@ -3,6 +3,9 @@
 
 const $=s=>document.querySelector(s);
 const canvas=$("#canvas"),world=$("#world"),editor=$("#editor"),source=$("#source"),context=$("#context");
+const MIN_SCALE=.01;
+const MAX_SCALE=4;
+const DEFAULT_BOARD={left:-6000,top:-3500,width:12000,height:7000,margin:240};
 
 if(window.marked?.setOptions) marked.setOptions({gfm:true,breaks:true});
 
@@ -12,7 +15,7 @@ const state={
  notes:[],selected:null,nextId:1,
  hand:true,spacePan:false,controlsVisible:true,pan:null,drag:null,rightPan:null,resize:null,editId:null,
  undo:[],redo:[],historyLock:false,raf:0,saveTimer:0,hideTimer:0,
-  board:{left:-1800,top:-1100,width:3600,height:2200,margin:120},
+  board:{...DEFAULT_BOARD},
   glassRaf:0
 };
 
@@ -356,7 +359,7 @@ function zoomPrecise(f,cx=innerWidth/2,cy=innerHeight/2){
  const wx=(cx-state.x)/state.scale;
  const wy=(cy-state.y)/state.scale;
 
- const ns=Math.max(.12,Math.min(4,state.scale*f));
+ const ns=Math.max(MIN_SCALE,Math.min(MAX_SCALE,state.scale*f));
 
  // Solve the camera position so the same world point remains exactly
  // underneath the pointer. No accumulated target offset.
@@ -375,7 +378,7 @@ function zoomPrecise(f,cx=innerWidth/2,cy=innerHeight/2){
 
 function updateGlass(){
  if(!state.notes.length){
-  state.board={left:-1800,top:-1100,width:3600,height:2200,margin:120};
+  state.board={...DEFAULT_BOARD};
   board.style.left=state.board.left+"px";
   board.style.top=state.board.top+"px";
   board.style.width=state.board.width+"px";
@@ -396,7 +399,7 @@ function updateGlass(){
  });
 
  // A minimum readable glass area prevents it becoming a tiny box.
- const minW=3600,minH=900;
+ const minW=12000,minH=7000;
  const contentW=right-left;
  const contentH=bottom-top;
  const width=Math.max(minW,contentW+pad*2);
@@ -427,9 +430,11 @@ function sync(){state.targetX=state.x;state.targetY=state.y;state.targetScale=st
 function animate(){
  if(state.raf)return;
  const tick=()=>{
-  state.x+=(state.targetX-state.x)*.24;
-  state.y+=(state.targetY-state.y)*.24;
-  state.scale+=(state.targetScale-state.scale)*.2;
+  // Keep camera response close to the input while retaining a small amount
+  // of smoothing for button/keyboard navigation.
+  state.x+=(state.targetX-state.x)*.42;
+  state.y+=(state.targetY-state.y)*.42;
+  state.scale+=(state.targetScale-state.scale)*.34;
   apply();
   if(Math.abs(state.x-state.targetX)<.08&&Math.abs(state.y-state.targetY)<.08&&Math.abs(state.scale-state.targetScale)<.0005){
    state.x=state.targetX;state.y=state.targetY;state.scale=state.targetScale;apply();state.raf=0;return;
@@ -438,9 +443,9 @@ function animate(){
  };
  state.raf=requestAnimationFrame(tick);
 }
-function moveTo(x,y,s=state.targetScale){state.targetX=x;state.targetY=y;state.targetScale=Math.max(.12,Math.min(4,s));animate()}
+function moveTo(x,y,s=state.targetScale){state.targetX=x;state.targetY=y;state.targetScale=Math.max(MIN_SCALE,Math.min(MAX_SCALE,s));animate()}
 function zoom(f,cx=innerWidth/2,cy=innerHeight/2){
- const p=worldPoint(cx,cy),s=Math.max(.12,Math.min(4,state.targetScale*f));
+ const p=worldPoint(cx,cy),s=Math.max(MIN_SCALE,Math.min(MAX_SCALE,state.targetScale*f));
  moveTo(cx-p.x*s,cy-p.y*s,s);
  clearTimeout(state.saveTimer);state.saveTimer=setTimeout(save,180);
 }
@@ -701,9 +706,12 @@ function scheduleWheelFrame(){
     zoomPrecise(factor,wheelPointerX,wheelPointerY);
    }
   }else{
-   state.targetX-=dx;
-   state.targetY-=dy;
-   animate();
+   // Wheel scrolling is already frame-batched, so applying it directly
+   // avoids a second interpolation layer and removes noticeable lag.
+   state.x-=dx;
+   state.y-=dy;
+   sync();
+   apply();
   }
  });
 }
@@ -764,7 +772,7 @@ canvas.addEventListener("pointermove",e=>{
  }
  if(touches.size===2&&gesture?.type==="pinch"){
   const[a,b]=[...touches.values()],cx=(a.x+b.x)/2,cy=(a.y+b.y)/2,d=Math.hypot(a.x-b.x,a.y-b.y);
-  const ns=Math.max(.12,Math.min(4,gesture.s*d/gesture.d));
+  const ns=Math.max(MIN_SCALE,Math.min(MAX_SCALE,gesture.s*d/gesture.d));
   const nx=cx-gesture.w.x*ns,ny=cy-gesture.w.y*ns;
   state.scale=ns;state.x=nx;state.y=ny;
   sync();apply();
@@ -922,7 +930,7 @@ $("#canvasFile").addEventListener("change",e=>{
 })
 $("#full").onclick=toggleFull
 $("#edge").onclick=revealControls
-$("#minus").onclick=()=>zoom(.89);$("#plus").onclick=()=>zoom(1.12);$("#reset").onclick=()=>moveTo(innerWidth/2,innerHeight/2,1)
+$("#minus").onclick=()=>zoom(.9);$("#plus").onclick=()=>zoom(1.1);$("#reset").onclick=()=>moveTo(innerWidth/2,innerHeight/2,1)
 $("#close").onclick=closeEditor;$("#cancel").onclick=closeEditor;$("#apply").onclick=applyEditor
 $("#edit").onclick=()=>state.selected&&editNote(state.selected)
 $("#duplicate").onclick=duplicate
