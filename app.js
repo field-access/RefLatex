@@ -910,7 +910,19 @@ function arrange(){
   save();
  });
 }
-function toggleTheme(){document.body.classList.toggle("dark");localStorage.setItem("reflatex-theme",document.body.classList.contains("dark")?"dark":"light");$("#theme").textContent=document.body.classList.contains("dark")?"☀":"☾"}
+const themes=["light","dark","sepia","contrast"];
+function setTheme(theme){
+ const value=themes.includes(theme)?theme:"light";
+ document.body.classList.remove("dark","sepia","contrast");
+ if(value!=="light")document.body.classList.add(value);
+ localStorage.setItem("reflatex-theme",value);
+ $("#theme").textContent=value==="dark"?"☾":value==="light"?"☼":value==="sepia"?"◒":"◐";
+ $("#themeMenu").classList.remove("open");
+}
+function toggleThemeMenu(){
+ showControls();
+ $("#themeMenu").classList.toggle("open");
+}
 function revealControls(){
  showControls();clearTimeout(state.hideTimer);
  state.hideTimer=setTimeout(()=>{if(!editor.classList.contains("open"))document.body.classList.remove("controls")},2200)
@@ -938,18 +950,11 @@ showControls();
 }
 $("#new").onclick=()=>{state.editId=null;source.value="";$("#apply").textContent="Place note";editor.classList.add("open");source.focus()}
 $("#fit").onclick=()=>{fit(true);save()}
-$("#center").onclick=()=>{
- const b=boardBounds();
- const scale=MIN_SCALE;
- moveTo(
-  innerWidth/2-(b.minX+b.maxX)*scale/2,
-  innerHeight/2-(b.minY+b.maxY)*scale/2,
-  scale
- );
- save();
-}
 $("#arrange").onclick=arrange
-$("#theme").onclick=toggleTheme
+$("#theme").onclick=toggleThemeMenu
+$("#themeMenu").querySelectorAll("[data-theme]").forEach(button=>{
+ button.onclick=()=>setTheme(button.dataset.theme);
+});
 $("#saveCanvas").onclick=downloadCanvas
 $("#openCanvas").onclick=()=>$("#canvasFile").click()
 $("#canvasFile").addEventListener("change",e=>{
@@ -957,7 +962,6 @@ $("#canvasFile").addEventListener("change",e=>{
  openCanvasFile(file);
  e.target.value="";
 })
-$("#full").onclick=toggleFull
 $("#edge").onclick=revealControls
 $("#minus").onclick=()=>zoom(.9);$("#plus").onclick=()=>zoom(1.1);$("#reset").onclick=()=>moveTo(innerWidth/2,innerHeight/2,1)
 $("#close").onclick=closeEditor;$("#cancel").onclick=closeEditor;$("#apply").onclick=applyEditor
@@ -965,7 +969,10 @@ $("#edit").onclick=()=>state.selected&&editNote(state.selected)
 $("#duplicate").onclick=duplicate
 $("#copy").onclick=copyNote
 $("#remove").onclick=()=>state.selected&&deleteNote(state.selected)
-document.addEventListener("click",e=>{if(!context.contains(e.target))context.classList.remove("open")})
+document.addEventListener("click",e=>{
+ if(!context.contains(e.target))context.classList.remove("open");
+ if(!e.target.closest("#theme,#themeMenu"))$("#themeMenu").classList.remove("open");
+})
 document.addEventListener("paste",e=>{
  if(document.activeElement===source)return;
  const md=e.clipboardData?.getData("text/plain");if(!md?.trim())return;
@@ -1210,8 +1217,7 @@ function load(){
    (d.notes||[]).forEach(n=>{if(typeof n.md==="string")makeNote(n.md,n.x||0,n.y||0,n.w||600,false,n.id,typeof n.font==="string"?n.font:"serif")})
   }
  }catch{}
- const dark=localStorage.getItem("reflatex-theme")==="dark";
- if(dark){document.body.classList.add("dark");$("#theme").textContent="☀"}
+ setTheme(localStorage.getItem("reflatex-theme")||"light");
  state.hand=true;$("#hand").classList.add("active");canvas.style.cursor="grab";
  sync();apply();scheduleGlass();empty()
 }
