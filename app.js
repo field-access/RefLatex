@@ -616,7 +616,7 @@ function makeNote(md,x,y,w=600,record=true,id=null,font="serif"){
  };
  el.querySelectorAll(".resize").forEach(r=>r.onmousedown=e=>startResize(e,n,r.dataset.side));
  empty();
- updateGlass();
+ requestAnimationFrame(updateGlass);
  return n;
 }
 function startDrag(e,n){
@@ -946,8 +946,6 @@ document.addEventListener("paste",e=>{
 function focusSelected(){
   const n=state.selected;
   if(!n)return;
-  state.notes.forEach(x=>x.el.classList.remove("keyboard-focus"));
-  n.el.classList.add("keyboard-focus");
 
   // Keep the selected card centered without changing its zoom level.
   const r={
@@ -1160,7 +1158,6 @@ window.addEventListener("keydown",e=>{
  if(e.key==="Escape"){
    closeEditor();
    context.classList.remove("open");
-   state.notes.forEach(n=>n.el.classList.remove("keyboard-focus"));
    return;
  }
 

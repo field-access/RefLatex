@@ -30,7 +30,12 @@ body.dark #board{background:#20201e;border-color:#494740}
  box-shadow:0 9px 28px #00000018,0 2px 5px #0000000d;
  z-index:3;
 }
-.card.selected{outline:2px solid #5b57b744;outline-offset:3px}
+.card.selected{
+ outline:2px solid var(--accent);
+ outline-offset:4px;
+ box-shadow:0 0 0 5px color-mix(in srgb,var(--accent) 14%,transparent),
+   0 12px 32px #00000020;
+}
 .cardbar{
  height:26px;cursor:grab;position:relative;border-bottom:1px solid transparent;
 }
@@ -348,10 +353,6 @@ body.fullscreen.controls .toolbar{transform:translateY(-50%)}
 }
 
 
-.card.keyboard-focus{
- outline:2px solid var(--accent);
- outline-offset:4px;
-}
 .card[data-font="sans"] .cardbody,.card[data-font="sans"] .cardbody p,.card[data-font="sans"] .cardbody li{font-family:ui-sans-serif,system-ui,sans-serif}
 .card[data-font="mono"] .cardbody,.card[data-font="mono"] .cardbody p,.card[data-font="mono"] .cardbody li{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.9em}
 .card[data-font="slab"] .cardbody,.card[data-font="slab"] .cardbody p,.card[data-font="slab"] .cardbody li{font-family:Rockwell,"Roboto Slab",Georgia,serif}
