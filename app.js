@@ -344,6 +344,10 @@ function render(md){
   return box.innerHTML;
 }
 function apply(){
+ if(!Number.isFinite(state.x)||!Number.isFinite(state.y)||!Number.isFinite(state.scale)){
+  state.x=innerWidth/2;state.y=innerHeight/2;state.scale=1;
+  state.targetX=state.x;state.targetY=state.y;state.targetScale=state.scale;
+ }
  world.style.transform=`translate(${state.x}px,${state.y}px) scale(${state.scale})`;
  $("#zoomLabel").textContent=Math.round(state.scale*100)+"%";
 }
@@ -355,6 +359,10 @@ function setCameraImmediate(x,y,s){
 }
 
 function zoomPrecise(f,cx=innerWidth/2,cy=innerHeight/2){
+ if(!Number.isFinite(f)||!Number.isFinite(state.scale)||state.scale<=0){
+  setCameraImmediate(innerWidth/2,innerHeight/2,1);
+  return;
+ }
  // Capture the exact world coordinate underneath the pointer before zoom.
  const wx=(cx-state.x)/state.scale;
  const wy=(cy-state.y)/state.scale;
@@ -454,7 +462,10 @@ function animate(){
  };
  state.raf=requestAnimationFrame(tick);
 }
-function moveTo(x,y,s=state.targetScale){state.targetX=x;state.targetY=y;state.targetScale=Math.max(MIN_SCALE,Math.min(MAX_SCALE,s));animate()}
+function moveTo(x,y,s=state.targetScale){
+ if(!Number.isFinite(x)||!Number.isFinite(y)||!Number.isFinite(s))return;
+ state.targetX=x;state.targetY=y;state.targetScale=Math.max(MIN_SCALE,Math.min(MAX_SCALE,s));animate()
+}
 function zoom(f,cx=innerWidth/2,cy=innerHeight/2){
  const p=worldPoint(cx,cy),s=Math.max(MIN_SCALE,Math.min(MAX_SCALE,state.targetScale*f));
  moveTo(cx-p.x*s,cy-p.y*s,s);
@@ -713,7 +724,7 @@ function scheduleWheelFrame(){
    if(Math.abs(zd)>0.001){
     // Increased gain: normal trackpad pinch/wheel now reaches a useful
     // zoom range in roughly the same physical gesture as PureRef.
-    const factor=Math.exp(-zd*0.003);
+    const factor=Math.exp(-Math.max(-1000,Math.min(1000,zd))*0.003);
     zoomPrecise(factor,wheelPointerX,wheelPointerY);
    }
   }else{
@@ -845,8 +856,8 @@ function arrange(){
  // Wider PureRef-style packing: more cards visible at once.
  // Six columns fit comfortably inside the enlarged central workspace.
  const columns=10;
- const gapX=45;
- const gapY=55;
+ const gapX=100;
+ const gapY=120;
  const left=-3000;
  const cardWidth=500;
  const usableWidth=columns*cardWidth+(columns-1)*gapX;
@@ -926,10 +937,10 @@ $("#hand").onclick=()=>{
 showControls();
 }
 $("#new").onclick=()=>{state.editId=null;source.value="";$("#apply").textContent="Place note";editor.classList.add("open");source.focus()}
-$("#fit").onclick=()=>{fit(false);save()}
+$("#fit").onclick=()=>{fit(true);save()}
 $("#center").onclick=()=>{
  const b=boardBounds();
- const scale=Math.max(MIN_SCALE,Math.min(MAX_SCALE,state.targetScale||state.scale||1));
+ const scale=MIN_SCALE;
  moveTo(
   innerWidth/2-(b.minX+b.maxX)*scale/2,
   innerHeight/2-(b.minY+b.maxY)*scale/2,
