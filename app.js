@@ -10,8 +10,8 @@ const DEFAULT_BOARD={left:-6000,top:-3500,width:12000,height:7000,margin:240};
 if(window.marked?.setOptions) marked.setOptions({gfm:true,breaks:true});
 
 const state={
- x:innerWidth/2,y:innerHeight/2,scale:.01,
- targetX:innerWidth/2,targetY:innerHeight/2,targetScale:.01,
+ x:innerWidth/2,y:innerHeight/2,scale:1,
+ targetX:innerWidth/2,targetY:innerHeight/2,targetScale:1,
  notes:[],selected:null,nextId:1,
  hand:true,spacePan:false,controlsVisible:true,pan:null,drag:null,rightPan:null,resize:null,editId:null,
  undo:[],redo:[],historyLock:false,raf:0,saveTimer:0,hideTimer:0,
@@ -422,7 +422,7 @@ function scheduleGlass(){
  if(state.glassRaf)return;
  state.glassRaf=requestAnimationFrame(()=>{
   state.glassRaf=0;
-  updateGlass();
+  scheduleGlass();
  });
 }
 
@@ -627,7 +627,7 @@ function makeNote(md,x,y,w=600,record=true,id=null,font="serif"){
  };
  el.querySelectorAll(".resize").forEach(r=>r.onmousedown=e=>startResize(e,n,r.dataset.side));
  empty();
- requestAnimationFrame(updateGlass);
+ scheduleGlass();
  return n;
 }
 function startDrag(e,n){
@@ -804,7 +804,7 @@ function applyEditor(){
  if(state.editId!==null){
   const n=state.notes.find(x=>x.id===state.editId);if(!n)return;
   history();n.md=md;n.el.querySelector(".cardbody").innerHTML=render(md);
-  requestAnimationFrame(updateGlass);select(n);
+  scheduleGlass();select(n);
  }else{
   const p=worldPoint(innerWidth/2,innerHeight/2),n=makeNote(md,p.x-300,p.y-150,600,true);select(n)
  }
@@ -827,7 +827,7 @@ async function copyNote(){
 function duplicate(){
  if(!state.selected)return;
  const n=state.selected,c=makeNote(n.md,n.x+45,n.y+45,n.el.offsetWidth,true);
- requestAnimationFrame(updateGlass);select(c);save()
+ scheduleGlass();select(c);save()
 }
 function fit(widthOnly=false){
  const b=boardBounds();
@@ -1202,7 +1202,7 @@ function load(){
  const dark=localStorage.getItem("reflatex-theme")==="dark";
  if(dark){document.body.classList.add("dark");$("#theme").textContent="☀"}
  state.hand=true;$("#hand").classList.add("active");canvas.style.cursor="grab";
- sync();apply();updateGlass();empty()
+ sync();apply();scheduleGlass();empty()
 }
 let resizeFrame=0;
 window.addEventListener("resize",()=>{
