@@ -1,6 +1,6 @@
 :root{
  --canvas:#d9d6cf;--paper:#fffdf8;--ink:#272622;--muted:#77736b;
- --panel:#f7f5f0e8;--border:#c8c4bb;--accent:#5b57b7;--board:#e4e1da;
+ --panel:#f7f5f0e8;--border:#c8c4bb;--accent:#5b57b7;
 }
 *{box-sizing:border-box}
 html,body{width:100%;height:100%;margin:0;overflow:hidden}
@@ -15,7 +15,7 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
 #world{position:absolute;left:0;top:0;width:1px;height:1px;transform-origin:0 0;will-change:transform}
 #board{
  position:absolute;left:-6000px;top:-3500px;width:12000px;height:7000px;
- background:var(--board);border:1px solid #bbb7ae;border-radius:7px;
+ background:#e4e1da;border:1px solid #bbb7ae;border-radius:7px;
  box-shadow:0 20px 60px #00000015,0 0 0 1px #ffffff55;
  pointer-events:none;z-index:0;
  transition:none;
@@ -134,23 +134,6 @@ body.dark #board{background:#20201e;border-color:#494740}
  color:#fff;
  box-shadow:0 5px 15px #00000018;
 }
-.theme-menu{
- position:absolute;left:58px;top:50%;transform:translateY(-50%) translateX(-6px);
- display:none;min-width:148px;padding:6px;background:var(--panel);
- border:1px solid #00000014;border-radius:12px;box-shadow:0 14px 32px #00000022;
-}
-.theme-menu.open{display:grid;gap:3px;transform:translateY(-50%) translateX(0)}
-.theme-menu button{
- display:flex;align-items:center;gap:8px;width:100%;padding:8px 9px;border:0;
- background:transparent;border-radius:8px;color:var(--ink);font:11px system-ui;
- text-align:left;cursor:pointer;
-}
-.theme-menu button:hover{background:#0000000b}
-.theme-swatch{width:15px;height:15px;border-radius:50%;border:1px solid #0003}
-.theme-swatch.light{background:#fffdf8}
-.theme-swatch.dark{background:#242321}
-.theme-swatch.sepia{background:#f1e4cc}
-.theme-swatch.contrast{background:#000}
 .toolbar .tool[title]::after{
  content:attr(title);
  position:absolute;
@@ -244,10 +227,10 @@ body.controls .hint{opacity:1;pointer-events:auto}
  border-radius:0 9px 9px 0;background:var(--panel);border:1px solid #0001;display:none;place-items:center}
 body.dark{
  --canvas:#171716;--paper:#242321;--ink:#e9e6df;--muted:#9d9990;
- --panel:#252421e8;--border:#47443e;--board:#20201e;
+ --panel:#252421e8;--border:#47443e;
 }
-body.dark #canvas{background-color:var(--canvas);background-image:radial-gradient(#aaa69d25 .7px,transparent .7px)}
-body.dark #board{background:var(--board);border-color:#494740}
+body.dark #canvas{background-color:#171716;background-image:radial-gradient(#aaa69d25 .7px,transparent .7px)}
+body.dark #board{background:#20201e;border-color:#494740}
 body.dark .card{border-color:#4a4740;box-shadow:0 12px 32px #0008}
 body.dark .cardbody code{background:#36342f}
 body.dark .cardbody th{background:#302e2a}
@@ -260,24 +243,6 @@ body.dark .cancel{background:#383631}
 body.dark .context{background:#292824;color:#eee}
 body.dark .context button{color:#eee}
 body.dark .context button:hover{background:#3a3832}
-body.sepia{
- --canvas:#d8c8ad;--paper:#fff8e9;--ink:#43372a;--muted:#806d59;
- --panel:#f8eddaee;--border:#c8b79d;--accent:#9a5b32;--board:#e5d5bb;
-}
-body.sepia #canvas{background-color:var(--canvas);background-image:radial-gradient(#806d5940 .7px,transparent .7px)}
-body.sepia #board{border-color:#bca98c}
-body.sepia .card{border-color:#cdbb9f}
-body.sepia .cardbody code{background:#efe0c5}
-body.sepia .cardbody th{background:#f1e2c7}
-body.contrast{
- --canvas:#f7f7f7;--paper:#fff;--ink:#111;--muted:#333;
- --panel:#ffffff;--border:#111;--accent:#0645ad;--board:#e8e8e8;
-}
-body.contrast #canvas{background-color:var(--canvas);background-image:radial-gradient(#3336 .8px,transparent .8px)}
-body.contrast #board{border:2px solid #111}
-body.contrast .card{border:2px solid #111;box-shadow:4px 4px 0 #111}
-body.contrast .cardbody a{color:#0645ad;text-decoration:underline}
-body.contrast .cardbody blockquote{border-left-color:#111;color:#333}
 body.fullscreen .toolbar,body.fullscreen .zoom,body.fullscreen .hint{opacity:0;pointer-events:none}
 body.fullscreen.controls .toolbar,body.fullscreen.controls .zoom,body.fullscreen.controls .hint{opacity:1;pointer-events:auto}
 body.fullscreen .toolbar{transform:translate(-12px,-50%)}
