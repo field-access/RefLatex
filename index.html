@@ -40,8 +40,20 @@
  <button id="plus">＋</button><button class="tool" id="reset">100%</button>
 </div>
 
-<div class="hint" id="hint">✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · Drag notes · Double-click edit · Ctrl/Cmd+Enter finish/paste · Ctrl/Cmd+S save · Ctrl/Cmd+O open</div>
+<div class="hint" id="hint">✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · Drag notes · Double-click edit · Ctrl/Cmd+Enter paste · Ctrl/Cmd+S save · Ctrl/Cmd+O open</div>
 <div class="edge" id="edge">☰</div>
+
+<div class="editor" id="editor">
+ <div class="editorhead"><div><div class="etitle">Markdown</div><div class="esub">AI response → readable knowledge card</div></div><button class="tool" id="close">×</button></div>
+ <textarea id="source" spellcheck="false" placeholder="# Concept
+
+Explain the idea here.
+
+For $T(n)=2T(n/2)+n$,
+
+$$T(n)=O(n\log n)$$"></textarea>
+ <div class="editorfoot"><button class="cancel" id="cancel">Cancel</button><button class="apply" id="apply">Place note</button></div>
+</div>
 
 <div class="context" id="context">
  <button id="edit">Edit</button><button id="duplicate">Duplicate</button>
