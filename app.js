@@ -810,69 +810,70 @@ function finishInlineEdit(n,cancel=false){
  if(!n?.editing)return;
  const edit=n.editing;
  if(cancel)n.md=edit.initial;
- else n.md=edit.body.textContent;
  n.editing=null;
  if(state.editing===n)state.editing=null;
  edit.body.style.padding=edit.padding;
- edit.body.contentEditable="false";
- edit.body.classList.remove("direct-editing");
  n.el.querySelector(".cardbody").innerHTML=render(n.md);
  scheduleGlass();
  save();
 }
-function placeCaretAtPoint(element,clientX,clientY){
- if(!Number.isFinite(clientX)||!Number.isFinite(clientY))return;
- const range=document.caretRangeFromPoint?.(clientX,clientY);
- if(range&&element.contains(range.startContainer)){
-  const selection=getSelection();
-  selection.removeAllRanges();
-  selection.addRange(range);
+function placeCaretAtPoint(textarea,clientX,clientY){
+ if(!Number.isFinite(clientX)||!Number.isFinite(clientY)){
+  textarea.setSelectionRange(textarea.value.length,textarea.value.length);
   return;
  }
- const position=document.caretPositionFromPoint?.(clientX,clientY);
- if(position&&element.contains(position.offsetNode)){
-  const rangeFallback=document.createRange();
-  rangeFallback.setStart(position.offsetNode,position.offset);
-  rangeFallback.collapse(true);
-  const selection=getSelection();
-  selection.removeAllRanges();
-  selection.addRange(rangeFallback);
- }
+ const style=getComputedStyle(textarea);
+ const lineHeight=parseFloat(style.lineHeight)||22;
+ const fontSize=parseFloat(style.fontSize)||14;
+ const charWidth=fontSize*.62;
+ const rect=textarea.getBoundingClientRect();
+ const paddingLeft=parseFloat(style.paddingLeft)||0;
+ const paddingTop=parseFloat(style.paddingTop)||0;
+ const line=Math.max(0,Math.floor((clientY-rect.top-paddingTop+textarea.scrollTop)/lineHeight));
+ const column=Math.max(0,Math.floor((clientX-rect.left-paddingLeft+textarea.scrollLeft)/charWidth));
+ const lines=textarea.value.split("\n");
+ let offset=0;
+ for(let i=0;i<Math.min(line,lines.length);i++)offset+=lines[i].length+1;
+ textarea.setSelectionRange(Math.min(textarea.value.length,offset+Math.min(column,lines[Math.min(line,lines.length-1)]?.length||0)),Math.min(textarea.value.length,offset+Math.min(column,lines[Math.min(line,lines.length-1)]?.length||0)));
 }
 
 function editNote(n,sourceEvent=null){
  if(n.editing){
-  n.editing.body.focus();
+  n.editing.textarea.focus();
   return;
  }
  if(state.editing&&state.editing!==n)finishInlineEdit(state.editing);
  history();
  const body=n.el.querySelector(".cardbody");
+ const textarea=document.createElement("textarea");
+ textarea.className="inline-source";
+ textarea.value=n.md;
+ textarea.spellcheck=false;
+ textarea.setAttribute("aria-label","Edit Markdown");
+ const bodyHeight=body.getBoundingClientRect().height;
  const padding=body.style.padding;
  body.style.padding="0";
- body.classList.add("direct-editing");
- body.contentEditable="true";
- body.spellcheck=false;
- body.textContent=n.md;
- n.editing={initial:n.md,body,padding};
+ textarea.style.height=Math.max(120,bodyHeight)+"px";
+ body.replaceChildren(textarea);
+ n.editing={initial:n.md,textarea,body,padding};
  state.editing=n;
  select(n);
- body.addEventListener("input",()=>{
-  n.md=body.textContent;
+ textarea.addEventListener("input",()=>{
+  n.md=textarea.value;
   scheduleGlass();
   save();
- },{once:false});
- body.addEventListener("keydown",e=>{
+ });
+ textarea.addEventListener("keydown",e=>{
   if(e.key==="Escape"){
-  e.preventDefault();
-  finishInlineEdit(n,true);
+   e.preventDefault();
+   finishInlineEdit(n,true);
   }else if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){
    e.preventDefault();
    finishInlineEdit(n);
   }
  });
- body.focus();
- requestAnimationFrame(()=>placeCaretAtPoint(body,sourceEvent?.clientX,sourceEvent?.clientY));
+ textarea.focus();
+ placeCaretAtPoint(textarea,sourceEvent?.clientX,sourceEvent?.clientY);
  scheduleGlass();
 }
 async function quickPaste(){
@@ -1028,12 +1029,12 @@ $("#copy").onclick=copyNote
 $("#remove").onclick=()=>state.selected&&deleteNote(state.selected)
 document.addEventListener("click",e=>{if(!context.contains(e.target))context.classList.remove("open")})
 document.addEventListener("paste",e=>{
- if(state.editing)return;
+ if(document.activeElement?.classList.contains("inline-source"))return;
  const md=e.clipboardData?.getData("text/plain");if(!md?.trim())return;
  e.preventDefault();const p=worldPoint(innerWidth/2,innerHeight/2),n=makeNote(md,p.x-300,p.y-150,600,true);select(n);save()
 });
 document.addEventListener("mousedown",e=>{
- if(state.editing&&!state.editing.body.contains(e.target)){
+ if(state.editing&&!state.editing.el.contains(e.target)){
   finishInlineEdit(state.editing);
  }
 });
@@ -1078,7 +1079,7 @@ function cycleSelected(direction){
 
 window.addEventListener("keydown",e=>{
  const mod=e.ctrlKey||e.metaKey;
- const editing=state.editing ||
+ const editing=document.activeElement?.classList.contains("inline-source") ||
    document.activeElement?.tagName==="INPUT" ||
    document.activeElement?.tagName==="TEXTAREA";
 
