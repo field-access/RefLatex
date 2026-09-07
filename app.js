@@ -351,7 +351,11 @@ function apply(){
  world.style.transform=`translate(${state.x}px,${state.y}px) scale(${state.scale})`;
  $("#zoomLabel").textContent=Math.round(state.scale*100)+"%";
 }
-function worldPoint(x,y){return{x:(x-state.x)/state.scale,y:(y-state.y)/state.scale}}
+function clampScale(scale){return Math.max(MIN_SCALE,Math.min(MAX_SCALE,scale))}
+function worldPointAt(x,y,cameraX=state.x,cameraY=state.y,cameraScale=state.scale){
+ return{x:(x-cameraX)/cameraScale,y:(y-cameraY)/cameraScale}
+}
+function worldPoint(x,y){return worldPointAt(x,y)}
 function setCameraImmediate(x,y,s){
  state.x=x;state.y=y;state.scale=s;
  state.targetX=x;state.targetY=y;state.targetScale=s;
@@ -363,24 +367,15 @@ function zoomPrecise(f,cx=innerWidth/2,cy=innerHeight/2){
   setCameraImmediate(innerWidth/2,innerHeight/2,1);
   return;
  }
- // Capture the exact world coordinate underneath the pointer before zoom.
- const wx=(cx-state.x)/state.scale;
- const wy=(cy-state.y)/state.scale;
-
- const ns=Math.max(MIN_SCALE,Math.min(MAX_SCALE,state.scale*f));
-
- // Solve the camera position so the same world point remains exactly
- // underneath the pointer. No accumulated target offset.
- const nx=cx-wx*ns;
- const ny=cy-wy*ns;
-
- state.x=nx;
- state.y=ny;
- state.scale=ns;
- state.targetX=nx;
- state.targetY=ny;
+ const wx=(cx-state.targetX)/state.targetScale;
+ const wy=(cy-state.targetY)/state.targetScale;
+ const ns=clampScale(state.targetScale*f);
+ state.targetX=cx-wx*ns;
+ state.targetY=cy-wy*ns;
  state.targetScale=ns;
-
+ state.x=state.targetX;
+ state.y=state.targetY;
+ state.scale=ns;
  apply();
 }
 
@@ -464,11 +459,10 @@ function animate(){
 }
 function moveTo(x,y,s=state.targetScale){
  if(!Number.isFinite(x)||!Number.isFinite(y)||!Number.isFinite(s))return;
- state.targetX=x;state.targetY=y;state.targetScale=Math.max(MIN_SCALE,Math.min(MAX_SCALE,s));animate()
+ state.targetX=x;state.targetY=y;state.targetScale=clampScale(s);animate()
 }
 function zoom(f,cx=innerWidth/2,cy=innerHeight/2){
- const p=worldPoint(cx,cy),s=Math.max(MIN_SCALE,Math.min(MAX_SCALE,state.targetScale*f));
- moveTo(cx-p.x*s,cy-p.y*s,s);
+ zoomPrecise(f,cx,cy);
  clearTimeout(state.saveTimer);state.saveTimer=setTimeout(save,180);
 }
 function snapshot(){return JSON.stringify({x:state.x,y:state.y,scale:state.scale,nextId:state.nextId,notes:state.notes.map(n=>({id:n.id,md:n.md,x:n.x,y:n.y,w:n.el.offsetWidth,font:n.font||"serif"}))})}
@@ -481,7 +475,10 @@ function restore(s){
  const d=JSON.parse(s);state.historyLock=true;
  state.notes.forEach(n=>n.el.remove());state.notes=[];state.selected=null;
  (d.notes||[]).forEach(n=>makeNote(n.md,n.x,n.y,n.w,false,n.id,n.font));
- state.x=d.x;state.y=d.y;state.scale=d.scale;state.nextId=d.nextId||state.nextId;sync();apply();
+ state.x=Number.isFinite(d.x)?d.x:innerWidth/2;
+ state.y=Number.isFinite(d.y)?d.y:innerHeight/2;
+ state.scale=clampScale(Number.isFinite(d.scale)?d.scale:1);
+ state.nextId=d.nextId||state.nextId;sync();apply();
  state.historyLock=false;save();empty();
 }
 function undo(){if(!state.undo.length)return;state.redo.push(snapshot());restore(state.undo.pop())}
@@ -624,7 +621,7 @@ function makeNote(md,x,y,w=600,record=true,id=null,font="serif"){
  n.el=el;world.appendChild(el);state.notes.push(n);
 
  el.addEventListener("mousedown",e=>{
-  if(e.button!==0||e.target.closest(".cardactions,.resize,a,button"))return;
+  if(e.button!==0||!e.target.closest(".cardbar"))return;
   select(n);startDrag(e,n);
  });
  el.addEventListener("dblclick",e=>{
@@ -1206,7 +1203,10 @@ function load(){
  try{
   const d=JSON.parse(localStorage.getItem("reflatex")||"null");
   if(d){
-   state.x=d.x??innerWidth/2;state.y=d.y??innerHeight/2;state.scale=d.scale??1;state.nextId=d.nextId??1;
+   state.x=Number.isFinite(d.x)?d.x:innerWidth/2;
+   state.y=Number.isFinite(d.y)?d.y:innerHeight/2;
+   state.scale=clampScale(Number.isFinite(d.scale)?d.scale:1);
+   state.nextId=d.nextId??1;
    (d.notes||[]).forEach(n=>{if(typeof n.md==="string")makeNote(n.md,n.x||0,n.y||0,n.w||600,false,n.id,typeof n.font==="string"?n.font:"serif")})
   }
  }catch{}
