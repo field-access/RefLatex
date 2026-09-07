@@ -2,7 +2,7 @@
 "use strict";
 
 const $=s=>document.querySelector(s);
-const canvas=$("#canvas"),world=$("#world"),editor=$("#editor"),source=$("#source"),context=$("#context");
+const canvas=$("#canvas"),world=$("#world"),context=$("#context");
 const MIN_SCALE=.01;
 const MAX_SCALE=4;
 const DEFAULT_BOARD={left:-6000,top:-3500,width:12000,height:7000,margin:240};
@@ -13,7 +13,7 @@ const state={
  x:innerWidth/2,y:innerHeight/2,scale:1,
  targetX:innerWidth/2,targetY:innerHeight/2,targetScale:1,
  notes:[],selected:null,nextId:1,
- hand:true,spacePan:false,controlsVisible:true,pan:null,drag:null,rightPan:null,resize:null,editId:null,
+ hand:true,spacePan:false,controlsVisible:true,pan:null,drag:null,rightPan:null,resize:null,editing:null,
  undo:[],redo:[],historyLock:false,raf:0,saveTimer:0,hideTimer:0,
   board:{...DEFAULT_BOARD},
   glassRaf:0
@@ -24,7 +24,7 @@ function showControls(){
   state.controlsVisible=true;
   clearTimeout(state.hideTimer);
   state.hideTimer=setTimeout(()=>{
-    if(!editor.classList.contains("open") && !context.classList.contains("open")){
+    if(!state.editing && !context.classList.contains("open")){
       document.body.classList.add("controls-hidden");
       state.controlsVisible=false;
     }
@@ -624,11 +624,11 @@ function makeNote(md,x,y,w=600,record=true,id=null,font="serif"){
  n.el=el;world.appendChild(el);state.notes.push(n);
 
  el.addEventListener("mousedown",e=>{
-  if(e.button!==0||e.target.closest(".cardactions,.resize,a,button"))return;
+  if(e.button!==0||e.target.closest(".cardactions,.resize,a,button,.inline-editor"))return;
   select(n);startDrag(e,n);
  });
  el.addEventListener("dblclick",e=>{
-  if(e.target.closest(".cardactions,.resize"))return;
+  if(e.target.closest(".cardactions,.resize,.inline-editor"))return;
   e.preventDefault();e.stopPropagation();editNote(n);
  });
  el.querySelector("[data-edit]").onclick=()=>editNote(n);
@@ -806,28 +806,68 @@ function touchEnd(e){
 }
 canvas.addEventListener("pointerup",touchEnd);canvas.addEventListener("pointercancel",touchEnd);
 
-function editNote(n){
- state.editId=n.id;source.value=n.md;$("#apply").textContent="Update note";editor.classList.add("open");source.focus()
+function finishInlineEdit(n,cancel=false){
+ if(!n?.editing)return;
+ const edit=n.editing;
+ if(cancel)n.md=edit.initial;
+ n.editing=null;
+ if(state.editing===n)state.editing=null;
+ n.el.querySelector(".cardbody").innerHTML=render(n.md);
+ scheduleGlass();
+ save();
 }
-function closeEditor(){editor.classList.remove("open");state.editId=null}
-function applyEditor(){
- const md=source.value.trim();if(!md)return;
- if(state.editId!==null){
-  const n=state.notes.find(x=>x.id===state.editId);if(!n)return;
-  history();n.md=md;n.el.querySelector(".cardbody").innerHTML=render(md);
-  scheduleGlass();select(n);
- }else{
-  const p=worldPoint(innerWidth/2,innerHeight/2),n=makeNote(md,p.x-300,p.y-150,600,true);select(n)
+function editNote(n){
+ if(n.editing){
+  n.editing.textarea.focus();
+  return;
  }
- closeEditor();save()
+ if(state.editing&&state.editing!==n)finishInlineEdit(state.editing);
+ history();
+ const body=n.el.querySelector(".cardbody");
+ const edit=document.createElement("div");
+ const textarea=document.createElement("textarea");
+ const preview=document.createElement("div");
+ edit.className="inline-editor";
+ textarea.className="inline-source";
+ textarea.value=n.md;
+ textarea.spellcheck=false;
+ textarea.setAttribute("aria-label","Edit Markdown");
+ preview.className="inline-preview cardbody";
+ preview.innerHTML=render(n.md);
+ edit.append(textarea,preview);
+ body.replaceChildren(edit);
+ n.editing={initial:n.md,textarea,preview};
+ state.editing=n;
+ select(n);
+ textarea.addEventListener("input",()=>{
+  n.md=textarea.value;
+  preview.innerHTML=render(n.md);
+  scheduleGlass();
+  save();
+ });
+ textarea.addEventListener("keydown",e=>{
+  if(e.key==="Escape"){
+   e.preventDefault();
+   finishInlineEdit(n,true);
+  }else if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){
+   e.preventDefault();
+   finishInlineEdit(n);
+  }
+ });
+ textarea.focus();
+ textarea.setSelectionRange(textarea.value.length,textarea.value.length);
+ scheduleGlass();
 }
 async function quickPaste(){
- if(document.activeElement===source){applyEditor();return}
  try{
   const md=await navigator.clipboard.readText();
   if(!md.trim())return;
   const p=worldPoint(innerWidth/2,innerHeight/2),n=makeNote(md,p.x-300,p.y-150,600,true);select(n);save()
- }catch{editor.classList.add("open");source.value="";source.focus()}
+ }catch{
+  const p=worldPoint(innerWidth/2,innerHeight/2),n=makeNote("",p.x-300,p.y-150,600,true);
+  select(n);
+  editNote(n);
+ }
 }
 function deleteNote(n){history();n.el.remove();state.notes=state.notes.filter(x=>x!==n);if(state.selected===n)state.selected=null;
  updateGlass();empty();save()}
@@ -913,7 +953,7 @@ function arrange(){
 function toggleTheme(){document.body.classList.toggle("dark");localStorage.setItem("reflatex-theme",document.body.classList.contains("dark")?"dark":"light");$("#theme").textContent=document.body.classList.contains("dark")?"☀":"☾"}
 function revealControls(){
  showControls();clearTimeout(state.hideTimer);
- state.hideTimer=setTimeout(()=>{if(!editor.classList.contains("open"))document.body.classList.remove("controls")},2200)
+ state.hideTimer=setTimeout(()=>{if(!state.editing)document.body.classList.remove("controls")},2200)
 }
 async function toggleFull(){
  try{
@@ -936,7 +976,12 @@ $("#hand").onclick=()=>{
  updateHandUI();
 showControls();
 }
-$("#new").onclick=()=>{state.editId=null;source.value="";$("#apply").textContent="Place note";editor.classList.add("open");source.focus()}
+$("#new").onclick=()=>{
+ const p=worldPoint(innerWidth/2,innerHeight/2);
+ const n=makeNote("",p.x-300,p.y-150,600,true);
+ select(n);
+ editNote(n);
+}
 $("#fit").onclick=()=>{fit(true);save()}
 $("#center").onclick=()=>{
  const b=boardBounds();
@@ -960,16 +1005,18 @@ $("#canvasFile").addEventListener("change",e=>{
 $("#full").onclick=toggleFull
 $("#edge").onclick=revealControls
 $("#minus").onclick=()=>zoom(.9);$("#plus").onclick=()=>zoom(1.1);$("#reset").onclick=()=>moveTo(innerWidth/2,innerHeight/2,1)
-$("#close").onclick=closeEditor;$("#cancel").onclick=closeEditor;$("#apply").onclick=applyEditor
 $("#edit").onclick=()=>state.selected&&editNote(state.selected)
 $("#duplicate").onclick=duplicate
 $("#copy").onclick=copyNote
 $("#remove").onclick=()=>state.selected&&deleteNote(state.selected)
 document.addEventListener("click",e=>{if(!context.contains(e.target))context.classList.remove("open")})
 document.addEventListener("paste",e=>{
- if(document.activeElement===source)return;
+ if(document.activeElement?.classList.contains("inline-source"))return;
  const md=e.clipboardData?.getData("text/plain");if(!md?.trim())return;
  e.preventDefault();const p=worldPoint(innerWidth/2,innerHeight/2),n=makeNote(md,p.x-300,p.y-150,600,true);select(n);save()
+});
+document.addEventListener("mousedown",e=>{
+ if(state.editing&&!state.editing.el.contains(e.target))finishInlineEdit(state.editing);
 });
 
 function focusSelected(){
@@ -1012,7 +1059,7 @@ function cycleSelected(direction){
 
 window.addEventListener("keydown",e=>{
  const mod=e.ctrlKey||e.metaKey;
- const editing=document.activeElement===source ||
+ const editing=document.activeElement?.classList.contains("inline-source") ||
    document.activeElement?.tagName==="INPUT" ||
    document.activeElement?.tagName==="TEXTAREA";
 
@@ -1036,11 +1083,7 @@ window.addEventListener("keydown",e=>{
  }
 
  if(editing){
-   // Keep normal text-editor navigation untouched.
-   if(e.key==="Escape"){
-     e.preventDefault();
-     closeEditor();
-   }
+   // Keep normal inline-editor navigation untouched.
    return;
  }
 
@@ -1185,7 +1228,7 @@ window.addEventListener("keydown",e=>{
  }
 
  if(e.key==="Escape"){
-   closeEditor();
+   if(state.editing)finishInlineEdit(state.editing,true);
    context.classList.remove("open");
    return;
  }
