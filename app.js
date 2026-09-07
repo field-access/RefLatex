@@ -621,8 +621,9 @@ function makeNote(md,x,y,w=600,record=true,id=null,font="serif"){
  n.el=el;world.appendChild(el);state.notes.push(n);
 
  el.addEventListener("mousedown",e=>{
-  if(e.button!==0||!e.target.closest(".cardbar"))return;
-  select(n);startDrag(e,n);
+  if(e.button!==0||e.target.closest(".cardactions,.resize,a,button"))return;
+  select(n);
+  if(e.target.closest(".cardbar"))startDrag(e,n);
  });
  el.addEventListener("dblclick",e=>{
   if(e.target.closest(".cardactions,.resize"))return;
