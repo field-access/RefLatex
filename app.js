@@ -629,7 +629,7 @@ function makeNote(md,x,y,w=600,record=true,id=null,font="serif"){
  });
  el.addEventListener("dblclick",e=>{
   if(e.target.closest(".cardactions,.resize,.inline-editor"))return;
-  e.preventDefault();e.stopPropagation();editNote(n);
+ e.preventDefault();e.stopPropagation();editNote(n,e);
  });
  el.querySelector("[data-edit]").onclick=()=>editNote(n);
  el.querySelector("[data-delete]").onclick=()=>deleteNote(n);
@@ -812,11 +812,32 @@ function finishInlineEdit(n,cancel=false){
  if(cancel)n.md=edit.initial;
  n.editing=null;
  if(state.editing===n)state.editing=null;
+ edit.body.style.padding=edit.padding;
  n.el.querySelector(".cardbody").innerHTML=render(n.md);
  scheduleGlass();
  save();
 }
-function editNote(n){
+function placeCaretAtPoint(textarea,clientX,clientY){
+ if(!Number.isFinite(clientX)||!Number.isFinite(clientY)){
+  textarea.setSelectionRange(textarea.value.length,textarea.value.length);
+  return;
+ }
+ const style=getComputedStyle(textarea);
+ const lineHeight=parseFloat(style.lineHeight)||22;
+ const fontSize=parseFloat(style.fontSize)||14;
+ const charWidth=fontSize*.62;
+ const rect=textarea.getBoundingClientRect();
+ const paddingLeft=parseFloat(style.paddingLeft)||0;
+ const paddingTop=parseFloat(style.paddingTop)||0;
+ const line=Math.max(0,Math.floor((clientY-rect.top-paddingTop+textarea.scrollTop)/lineHeight));
+ const column=Math.max(0,Math.floor((clientX-rect.left-paddingLeft+textarea.scrollLeft)/charWidth));
+ const lines=textarea.value.split("\n");
+ let offset=0;
+ for(let i=0;i<Math.min(line,lines.length);i++)offset+=lines[i].length+1;
+ textarea.setSelectionRange(Math.min(textarea.value.length,offset+Math.min(column,lines[Math.min(line,lines.length-1)]?.length||0)),Math.min(textarea.value.length,offset+Math.min(column,lines[Math.min(line,lines.length-1)]?.length||0)));
+}
+
+function editNote(n,sourceEvent=null){
  if(n.editing){
   n.editing.textarea.focus();
   return;
@@ -824,24 +845,21 @@ function editNote(n){
  if(state.editing&&state.editing!==n)finishInlineEdit(state.editing);
  history();
  const body=n.el.querySelector(".cardbody");
- const edit=document.createElement("div");
  const textarea=document.createElement("textarea");
- const preview=document.createElement("div");
- edit.className="inline-editor";
  textarea.className="inline-source";
  textarea.value=n.md;
  textarea.spellcheck=false;
  textarea.setAttribute("aria-label","Edit Markdown");
- preview.className="inline-preview cardbody";
- preview.innerHTML=render(n.md);
- edit.append(textarea,preview);
- body.replaceChildren(edit);
- n.editing={initial:n.md,textarea,preview};
+ const bodyHeight=body.getBoundingClientRect().height;
+ const padding=body.style.padding;
+ body.style.padding="0";
+ textarea.style.height=Math.max(120,bodyHeight)+"px";
+ body.replaceChildren(textarea);
+ n.editing={initial:n.md,textarea,body,padding};
  state.editing=n;
  select(n);
  textarea.addEventListener("input",()=>{
   n.md=textarea.value;
-  preview.innerHTML=render(n.md);
   scheduleGlass();
   save();
  });
@@ -855,7 +873,7 @@ function editNote(n){
   }
  });
  textarea.focus();
- textarea.setSelectionRange(textarea.value.length,textarea.value.length);
+ placeCaretAtPoint(textarea,sourceEvent?.clientX,sourceEvent?.clientY);
  scheduleGlass();
 }
 async function quickPaste(){
@@ -1016,7 +1034,9 @@ document.addEventListener("paste",e=>{
  e.preventDefault();const p=worldPoint(innerWidth/2,innerHeight/2),n=makeNote(md,p.x-300,p.y-150,600,true);select(n);save()
 });
 document.addEventListener("mousedown",e=>{
- if(state.editing&&!state.editing.el.contains(e.target))finishInlineEdit(state.editing);
+ if(state.editing&&!state.editing.el.contains(e.target)){
+  finishInlineEdit(state.editing);
+ }
 });
 
 function focusSelected(){
