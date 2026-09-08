@@ -974,21 +974,20 @@ function focusSelected(){
   const n=state.selected;
   if(!n)return;
 
-  // Keep the selected card centered without changing its zoom level.
+  // Keep the selected card's front edge in view without changing its zoom level.
   const r={
     x:n.x,
     y:n.y,
-    w:n.el.offsetWidth,
-    h:n.el.offsetHeight
+    w:n.el.offsetWidth
   };
 
   const targetScale=Math.max(.35,Math.min(1.25,state.targetScale||state.scale));
   const cx=r.x+r.w/2;
-  const cy=r.y+r.h/2;
+  const frontOffset=Math.min(72,Math.max(32,innerHeight*.1));
 
   moveTo(
     innerWidth/2-cx*targetScale,
-    innerHeight/2-cy*targetScale,
+    frontOffset-r.y*targetScale,
     targetScale
   );
 }
