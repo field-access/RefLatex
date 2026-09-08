@@ -5,8 +5,6 @@ const $=s=>document.querySelector(s);
 const canvas=$("#canvas"),world=$("#world"),editor=$("#editor"),source=$("#source"),context=$("#context");
 const MIN_SCALE=.01;
 const MAX_SCALE=4;
-const DEFAULT_BOARD={left:-6000,top:-3500,width:12000,height:7000,margin:240};
-
 if(window.marked?.setOptions) marked.setOptions({gfm:true,breaks:true});
 
 const state={
@@ -15,8 +13,6 @@ const state={
  notes:[],selected:null,nextId:1,
  hand:true,spacePan:false,controlsVisible:true,pan:null,drag:null,rightPan:null,resize:null,editId:null,
  undo:[],redo:[],historyLock:false,raf:0,saveTimer:0,hideTimer:0,
-  board:{...DEFAULT_BOARD},
-  glassRaf:0
 };
 
 function showControls(){
@@ -379,19 +375,9 @@ function zoomPrecise(f,cx=innerWidth/2,cy=innerHeight/2){
  apply();
 }
 
-function updateGlass(){
- if(!state.notes.length){
-  state.board={...DEFAULT_BOARD};
-  board.style.left=state.board.left+"px";
-  board.style.top=state.board.top+"px";
-  board.style.width=state.board.width+"px";
-  board.style.height=state.board.height+"px";
-  return;
- }
-
- const pad=120;
+function cardBounds(){
+ if(!state.notes.length)return null;
  let left=Infinity,top=Infinity,right=-Infinity,bottom=-Infinity;
-
  state.notes.forEach(n=>{
   const w=n.el.offsetWidth;
   const h=n.el.offsetHeight;
@@ -400,44 +386,7 @@ function updateGlass(){
   right=Math.max(right,n.x+w);
   bottom=Math.max(bottom,n.y+h);
  });
-
- // A minimum readable glass area prevents it becoming a tiny box.
- const minW=12000,minH=7000;
- const contentW=right-left;
- const contentH=bottom-top;
- const width=Math.max(minW,contentW+pad*2);
- const height=Math.max(minH,contentH+pad*2);
-
- const cx=(left+right)/2;
- const cy=(top+bottom)/2;
-
- state.board.left=cx-width/2;
- state.board.top=cy-height/2;
- state.board.width=width;
- state.board.height=height;
-
- board.style.left=state.board.left+"px";
- board.style.top=state.board.top+"px";
- board.style.width=state.board.width+"px";
- board.style.height=state.board.height+"px";
-}
-function scheduleGlass(){
- if(state.glassRaf)return;
- state.glassRaf=requestAnimationFrame(()=>{
-  state.glassRaf=0;
-  updateGlass();
- });
-}
-
-function boardBounds(){
- updateGlass();
- const b=state.board;
- return {
-  minX:b.left,
-  minY:b.top,
-  maxX:b.left+b.width,
-  maxY:b.top+b.height
- };
+ return {minX:left,minY:top,maxX:right,maxY:bottom};
 }
 
 function sync(){state.targetX=state.x;state.targetY=state.y;state.targetScale=state.scale}
@@ -590,7 +539,6 @@ function openCanvasFile(file){
 
    sync();
    apply();
-   updateGlass();
    empty();
    save();
 
@@ -632,14 +580,13 @@ function makeNote(md,x,y,w=600,record=true,id=null,font="serif"){
  el.querySelector("[data-edit]").onclick=()=>editNote(n);
  el.querySelector("[data-delete]").onclick=()=>deleteNote(n);
  el.querySelector("[data-font]").onchange=e=>{
-  history();n.font=e.target.value;el.dataset.font=n.font;save();scheduleGlass();
+  history();n.font=e.target.value;el.dataset.font=n.font;save();
  };
  el.querySelectorAll(".resize").forEach(r=>r.onmousedown=e=>{
   if(e.button!==0)return;
   startResize(e,n,r.dataset.side);
  });
  empty();
- scheduleGlass();
  return n;
 }
 function startDrag(e,n){
@@ -652,21 +599,19 @@ window.addEventListener("mousemove",e=>{
   const d=state.drag,dx=(e.clientX-d.sx)/state.scale,dy=(e.clientY-d.sy)/state.scale;
   d.n.x=d.x+dx;d.n.y=d.y+dy;
   d.n.el.style.left=d.n.x+"px";d.n.el.style.top=d.n.y+"px";
-  scheduleGlass();
  }
  if(state.resize){
   const r=state.resize,dx=(e.clientX-r.sx)/state.scale;
   const w=Math.max(300,Math.min(1200,r.w+(r.side==="right"?dx:-dx)));
   r.n.el.style.width=w+"px";
   if(r.side==="left"){r.n.x=r.x+r.w-w;r.n.el.style.left=r.n.x+"px"}
-  scheduleGlass();
  }
  if(state.pan){
   state.x=state.pan.x+e.clientX-state.pan.sx;state.y=state.pan.y+e.clientY-state.pan.sy;sync();apply();
  }
 });
 window.addEventListener("mouseup",()=>{
- if(state.drag||state.resize||state.pan){flushSave();scheduleGlass()}
+ if(state.drag||state.resize||state.pan){flushSave()}
  state.drag=null;state.resize=null;state.pan=null;
  canvas.style.cursor=state.hand?"grab":"default";
 });
@@ -816,7 +761,7 @@ function applyEditor(){
  if(state.editId!==null){
   const n=state.notes.find(x=>x.id===state.editId);if(!n)return;
   history();n.md=md;n.el.querySelector(".cardbody").innerHTML=render(md);
-  scheduleGlass();select(n);
+  select(n);
  }else{
   const p=worldPoint(innerWidth/2,innerHeight/2),n=makeNote(md,p.x-300,p.y-150,600,true);select(n)
  }
@@ -831,7 +776,7 @@ async function quickPaste(){
  }catch{editor.classList.add("open");source.value="";source.focus()}
 }
 function deleteNote(n){history();n.el.remove();state.notes=state.notes.filter(x=>x!==n);if(state.selected===n)state.selected=null;
- updateGlass();empty();save()}
+ empty();save()}
 async function copyNote(){
  if(!state.selected)return;
  try{await navigator.clipboard.writeText(state.selected.md)}catch{}
@@ -839,10 +784,11 @@ async function copyNote(){
 function duplicate(){
  if(!state.selected)return;
  const n=state.selected,c=makeNote(n.md,n.x+45,n.y+45,n.el.offsetWidth,true);
- scheduleGlass();select(c);save()
+ select(c);save()
 }
 function fit(widthOnly=false){
- const b=boardBounds();
+ const b=cardBounds();
+ if(!b){moveTo(innerWidth/2,innerHeight/2,1);return}
  const w=Math.max(1,b.maxX-b.minX),h=Math.max(1,b.maxY-b.minY),p=100;
  const s=Math.max(MIN_SCALE,Math.min(1.5,widthOnly
   ? (innerWidth-2*p)/w
@@ -906,7 +852,6 @@ function arrange(){
  }
 
  requestAnimationFrame(()=>{
-  updateGlass();
   fit(false);
   save();
  });
@@ -940,7 +885,8 @@ showControls();
 $("#new").onclick=()=>{state.editId=null;source.value="";$("#apply").textContent="Place note";editor.classList.add("open");source.focus()}
 $("#fit").onclick=()=>{fit(true);save()}
 $("#center").onclick=()=>{
- const b=boardBounds();
+ const b=cardBounds();
+ if(!b){moveTo(innerWidth/2,innerHeight/2,1);save();return}
  const scale=MIN_SCALE;
  moveTo(
   innerWidth/2-(b.minX+b.maxX)*scale/2,
@@ -1063,6 +1009,8 @@ window.addEventListener("keydown",e=>{
      t:()=>$("#theme").click(),
      "-":()=>$("#minus").click(),
      "=":()=>$("#plus").click(),
+     "[":()=>$("#minus").click(),
+     "]":()=>$("#plus").click(),
      "0":()=>$("#reset").click()
    };
    if(actions[key]){
@@ -1233,12 +1181,12 @@ function load(){
  const dark=localStorage.getItem("reflatex-theme")==="dark";
  if(dark){document.body.classList.add("dark");$("#theme").textContent="☀"}
  state.hand=true;$("#hand").classList.add("active");canvas.style.cursor="grab";
- sync();apply();scheduleGlass();empty()
+ sync();apply();empty()
 }
 let resizeFrame=0;
 window.addEventListener("resize",()=>{
  if(resizeFrame)return;
- resizeFrame=requestAnimationFrame(()=>{resizeFrame=0;updateGlass();apply()});
+ resizeFrame=requestAnimationFrame(()=>{resizeFrame=0;apply()});
 });
 window.addEventListener("pagehide",flushSave);
 window.addEventListener("keyup",e=>{
