@@ -1036,12 +1036,40 @@ window.addEventListener("keydown",e=>{
  }
 
  if(editing){
-   // Keep normal text-editor navigation untouched.
+   if(mod&&e.key==="Enter"){
+     e.preventDefault();
+     applyEditor();
+     return;
+   }
    if(e.key==="Escape"){
      e.preventDefault();
      closeEditor();
    }
    return;
+ }
+
+ /*
+  * TOOLBAR AND ZOOM SHORTCUTS
+  * These mirror the visible buttons without interfering with card text input.
+  */
+ const key=e.key.toLowerCase();
+ if(!mod&&!e.altKey){
+   const actions={
+     h:()=>$("#hand").click(),
+     n:()=>$("#new").click(),
+     f:()=>$("#fit").click(),
+     c:()=>$("#center").click(),
+     a:()=>$("#arrange").click(),
+     t:()=>$("#theme").click(),
+     "-":()=>$("#minus").click(),
+     "=":()=>$("#plus").click(),
+     "0":()=>$("#reset").click()
+   };
+   if(actions[key]){
+     e.preventDefault();
+     actions[key]();
+     return;
+   }
  }
 
  /*
@@ -1190,17 +1218,6 @@ window.addEventListener("keydown",e=>{
    return;
  }
 
- if(e.key.toLowerCase()==="h"){
-   e.preventDefault();
-   $("#hand").click();
-   return;
- }
-
- if(e.key.toLowerCase()==="n"){
-   e.preventDefault();
-   $("#new").click();
-   return;
- }
 });
 function load(){
  try{

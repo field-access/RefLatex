@@ -21,23 +21,23 @@
 </div>
 
 <div class="toolbar" id="toolbar">
- <button class="tool active" id="hand" title="Hand: Zoom / Scroll">✋</button>
- <button class="tool primary" id="new" title="New Markdown card">＋</button>
- <button class="tool" id="fit" title="Fit canvas">⌗</button>
- <button class="tool" id="center" title="Center canvas">◎</button>
- <button class="tool" id="arrange" title="Arrange cards">⊞</button>
+ <button class="tool active" id="hand" title="Hand: Zoom / Scroll (H)">✋</button>
+ <button class="tool primary" id="new" title="New Markdown card (N)">＋</button>
+ <button class="tool" id="fit" title="Fit canvas (F)">⌗</button>
+ <button class="tool" id="center" title="Center canvas (C)">◎</button>
+ <button class="tool" id="arrange" title="Arrange cards (A)">⊞</button>
  <span class="divider"></span>
- <button class="tool" id="theme" title="Toggle dark mode">☾</button>
+ <button class="tool" id="theme" title="Toggle dark mode (T)">☾</button>
  <span class="divider"></span>
  <button class="tool" id="saveCanvas" title="Save canvas (Ctrl/Cmd+S)">↓</button>
  <button class="tool" id="openCanvas" title="Open canvas (Ctrl/Cmd+O)">↑</button>
  <input id="canvasFile" type="file" accept=".json,application/json" hidden>
- <button class="tool" id="full" title="Fullscreen">⛶</button>
+ <button class="tool" id="full" title="Fullscreen (Ctrl/Cmd+Shift+F)">⛶</button>
 </div>
 
 <div class="zoom">
- <button id="minus">−</button><span class="zlabel" id="zoomLabel">100%</span>
- <button id="plus">＋</button><button class="tool" id="reset">100%</button>
+ <button id="minus" title="Zoom out (-)">−</button><span class="zlabel" id="zoomLabel">100%</span>
+ <button id="plus" title="Zoom in (+)">＋</button><button class="tool" id="reset" title="Reset zoom (0)">100%</button>
 </div>
 
 <div class="hint" id="hint">✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · Drag notes · Double-click edit · Ctrl/Cmd+Enter paste · Ctrl/Cmd+S save · Ctrl/Cmd+O open</div>
