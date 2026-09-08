@@ -987,7 +987,7 @@ function cycleSelected(direction){
   let index=state.notes.indexOf(state.selected);
 
   if(index<0){
-    index=0;
+    index=direction>0?0:state.notes.length-1;
   }else{
     index=Math.max(0,Math.min(state.notes.length-1,index+direction));
   }
@@ -1064,17 +1064,17 @@ window.addEventListener("keydown",e=>{
  /*
   * CARD NAVIGATION
   *
-  * Arrow Left/Right:
-  *   previous / next card
+  * Arrow Left/Up:
+  *   previous card
+  *
+  * Arrow Right/Down:
+  *   next card
   *
   * PageUp/PageDown:
   *   previous / next card, stopping at the first or last card
   *
   * Home/End:
   *   first / last card
-  *
-  * Up/Down:
-  *   page-style canvas movement without changing card selection.
   */
  if(e.key==="PageUp"){
    e.preventDefault();
@@ -1096,12 +1096,14 @@ window.addEventListener("keydown",e=>{
    cycleSelected(-1);
    return;
  }
- if(e.key==="ArrowUp"||e.key==="ArrowDown"){
+ if(e.key==="ArrowDown"&&!mod){
    e.preventDefault();
-   const distance=innerHeight*.72;
-   if(e.key==="ArrowUp")state.targetY+=distance;
-   else state.targetY-=distance;
-   animate();
+   cycleSelected(1);
+   return;
+ }
+ if(e.key==="ArrowUp"&&!mod){
+   e.preventDefault();
+   cycleSelected(-1);
    return;
  }
 
@@ -1126,22 +1128,6 @@ window.addEventListener("keydown",e=>{
    return;
  }
 
- /*
-  * VIEWPORT NAVIGATION
-  * Arrow Up/Down = move the canvas without changing selection.
-  */
- if(mod&&e.key==="ArrowLeft"){
-   e.preventDefault();
-   state.targetX+=innerWidth*.72;
-   animate();
-   return;
- }
- if(mod&&e.key==="ArrowRight"){
-   e.preventDefault();
-   state.targetX-=innerWidth*.72;
-   animate();
-   return;
- }
  /* Canvas/file/edit shortcuts */
  if(mod&&e.key.toLowerCase()==="s"){
    e.preventDefault();
