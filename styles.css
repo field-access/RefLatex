@@ -42,15 +42,16 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
  padding:28px 42px 38px;
  overflow-wrap:anywhere;
  user-select:text;
+ --card-font-scale:1;
 }
 .cardbody h1,.cardbody h2,.cardbody h3,.cardbody h4,.cardbody h5{
  font-family:Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:-.025em;line-height:1.2;
 }
-.cardbody h1{font-size:31px;margin:0 0 18px}
-.cardbody h2{font-size:24px;margin:30px 0 12px}
-.cardbody h3{font-size:19px;margin:25px 0 9px}
+.cardbody h1{font-size:calc(31px * var(--card-font-scale));margin:0 0 18px}
+.cardbody h2{font-size:calc(24px * var(--card-font-scale));margin:30px 0 12px}
+.cardbody h3{font-size:calc(19px * var(--card-font-scale));margin:25px 0 9px}
 .cardbody p,.cardbody li{
- font:18px/1.78 Georgia,"Times New Roman",serif;
+ font:calc(18px * var(--card-font-scale))/1.78 Georgia,"Times New Roman",serif;
 }
 .cardbody p{margin:0 0 17px}
 .cardbody ul,.cardbody ol{padding-left:28px}
@@ -70,7 +71,7 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
 .cardbody pre code{background:none;padding:0;color:inherit}
 .cardbody table{
  border-collapse:collapse;width:100%;max-width:100%;
- font:14px/1.5 system-ui;margin:20px 0;
+ font:calc(14px * var(--card-font-scale))/1.5 system-ui;margin:20px 0;
 }
 .cardbody th,.cardbody td{
  border:1px solid #d2cec6;padding:8px 10px;
@@ -94,7 +95,7 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
 .card.selected .cardactions{display:flex}
 .cardactions select{
  border:0;border-radius:5px;background:transparent;color:#777;height:25px;
- padding:0 3px;font:10px system-ui;cursor:pointer;max-width:74px
+ padding:0 3px;font:10px system-ui;cursor:pointer;max-width:82px
 }
 .cardactions select:hover{background:#eeece6;color:#333}
 .cardactions button{
@@ -279,7 +280,7 @@ body.fullscreen.controls .edge{display:none}
 }
 body.fullscreen.controls .toolbar{transform:translateY(-50%)}
  .hint{display:none}.card{max-width:calc(100vw - 30px)}
- .cardbody{padding:22px 25px 30px}.cardbody p,.cardbody li{font-size:17px}
+ .cardbody{padding:22px 25px 30px}.cardbody p,.cardbody li{font-size:calc(17px * var(--card-font-scale))}
 }
 
 /* Crisp, readable math */
@@ -376,10 +377,16 @@ body.fullscreen.controls .toolbar{transform:translateY(-50%)}
 
 
 .card[data-font="sans"] .cardbody,.card[data-font="sans"] .cardbody p,.card[data-font="sans"] .cardbody li,.card[data-font="sans"] .cardbody table,.card[data-font="sans"] .cardbody th,.card[data-font="sans"] .cardbody td{font-family:ui-sans-serif,system-ui,sans-serif}
-.card[data-font="mono"] .cardbody,.card[data-font="mono"] .cardbody p,.card[data-font="mono"] .cardbody li,.card[data-font="mono"] .cardbody table,.card[data-font="mono"] .cardbody th,.card[data-font="mono"] .cardbody td{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:1em}
+.card[data-font="mono"] .cardbody,.card[data-font="mono"] .cardbody p,.card[data-font="mono"] .cardbody li,.card[data-font="mono"] .cardbody table,.card[data-font="mono"] .cardbody th,.card[data-font="mono"] .cardbody td{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
 .card[data-font="slab"] .cardbody,.card[data-font="slab"] .cardbody p,.card[data-font="slab"] .cardbody li,.card[data-font="slab"] .cardbody table,.card[data-font="slab"] .cardbody th,.card[data-font="slab"] .cardbody td{font-family:Rockwell,"Roboto Slab",Georgia,serif}
 .card[data-font="humanist"] .cardbody,.card[data-font="humanist"] .cardbody p,.card[data-font="humanist"] .cardbody li,.card[data-font="humanist"] .cardbody table,.card[data-font="humanist"] .cardbody th,.card[data-font="humanist"] .cardbody td{font-family:"Trebuchet MS",ui-sans-serif,sans-serif}
-.card[data-font="display"] .cardbody,.card[data-font="display"] .cardbody p,.card[data-font="display"] .cardbody li,.card[data-font="display"] .cardbody table,.card[data-font="display"] .cardbody th,.card[data-font="display"] .cardbody td{font-family:Impact,"Arial Black",ui-sans-serif,sans-serif;letter-spacing:.01em}
 .card[data-font="rounded"] .cardbody,.card[data-font="rounded"] .cardbody p,.card[data-font="rounded"] .cardbody li,.card[data-font="rounded"] .cardbody table,.card[data-font="rounded"] .cardbody th,.card[data-font="rounded"] .cardbody td{font-family:"Arial Rounded MT Bold","Trebuchet MS",ui-sans-serif,sans-serif}
 .card[data-font="editorial"] .cardbody,.card[data-font="editorial"] .cardbody p,.card[data-font="editorial"] .cardbody li,.card[data-font="editorial"] .cardbody table,.card[data-font="editorial"] .cardbody th,.card[data-font="editorial"] .cardbody td{font-family:Cambria,Georgia,"Times New Roman",serif}
 .card[data-font="hand"] .cardbody,.card[data-font="hand"] .cardbody p,.card[data-font="hand"] .cardbody li,.card[data-font="hand"] .cardbody table,.card[data-font="hand"] .cardbody th,.card[data-font="hand"] .cardbody td{font-family:"Segoe Print","Comic Sans MS",cursive}
+.card[data-font="hand-soft"] .cardbody,.card[data-font="hand-soft"] .cardbody p,.card[data-font="hand-soft"] .cardbody li,.card[data-font="hand-soft"] .cardbody table,.card[data-font="hand-soft"] .cardbody th,.card[data-font="hand-soft"] .cardbody td{font-family:"Comic Sans MS","Segoe Print",cursive}
+.card[data-font="hand-bold"] .cardbody,.card[data-font="hand-bold"] .cardbody p,.card[data-font="hand-bold"] .cardbody li,.card[data-font="hand-bold"] .cardbody table,.card[data-font="hand-bold"] .cardbody th,.card[data-font="hand-bold"] .cardbody td{font-family:"Bradley Hand","Segoe Print",cursive;font-weight:600}
+.card[data-font="hand-marker"] .cardbody,.card[data-font="hand-marker"] .cardbody p,.card[data-font="hand-marker"] .cardbody li,.card[data-font="hand-marker"] .cardbody table,.card[data-font="hand-marker"] .cardbody th,.card[data-font="hand-marker"] .cardbody td{font-family:"Marker Felt","Comic Sans MS",cursive}
+.card[data-font="hand-script"] .cardbody,.card[data-font="hand-script"] .cardbody p,.card[data-font="hand-script"] .cardbody li,.card[data-font="hand-script"] .cardbody table,.card[data-font="hand-script"] .cardbody th,.card[data-font="hand-script"] .cardbody td{font-family:"Segoe Print","Bradley Hand",cursive}
+.card[data-font-size="110"] .cardbody{--card-font-scale:1.1}
+.card[data-font-size="125"] .cardbody{--card-font-scale:1.25}
+.card[data-font-size="140"] .cardbody{--card-font-scale:1.4}

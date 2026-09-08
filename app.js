@@ -414,7 +414,7 @@ function zoom(f,cx=innerWidth/2,cy=innerHeight/2){
  zoomPrecise(f,cx,cy);
  clearTimeout(state.saveTimer);state.saveTimer=setTimeout(save,180);
 }
-function snapshot(){return JSON.stringify({x:state.x,y:state.y,scale:state.scale,nextId:state.nextId,notes:state.notes.map(n=>({id:n.id,md:n.md,x:n.x,y:n.y,w:n.el.offsetWidth,font:n.font||"serif"}))})}
+function snapshot(){return JSON.stringify({x:state.x,y:state.y,scale:state.scale,nextId:state.nextId,notes:state.notes.map(n=>({id:n.id,md:n.md,x:n.x,y:n.y,w:n.width||n.el.offsetWidth,font:n.font||"serif",size:n.size||"100"}))})}
 function history(){
  if(state.historyLock)return;
  const s=snapshot();
@@ -423,7 +423,7 @@ function history(){
 function restore(s){
  const d=JSON.parse(s);state.historyLock=true;
  state.notes.forEach(n=>n.el.remove());state.notes=[];state.selected=null;
- (d.notes||[]).forEach(n=>makeNote(n.md,n.x,n.y,n.w,false,n.id,n.font));
+ (d.notes||[]).forEach(n=>makeNote(n.md,n.x,n.y,n.w,false,n.id,n.font,n.size));
  state.x=Number.isFinite(d.x)?d.x:innerWidth/2;
  state.y=Number.isFinite(d.y)?d.y:innerHeight/2;
  state.scale=clampScale(Number.isFinite(d.scale)?d.scale:1);
@@ -458,12 +458,15 @@ function widenCardForTables(el){
   const maxWidth=table.style.maxWidth;
   table.style.width="max-content";
   table.style.maxWidth="none";
-  requiredWidth=Math.max(requiredWidth,table.offsetWidth+horizontalPadding+2);
+  requiredWidth=Math.max(requiredWidth,table.scrollWidth+horizontalPadding+2);
   table.style.width=width;
   table.style.maxWidth=maxWidth;
  });
 
- el.style.width=Math.max(el.offsetWidth,Math.min(1200,requiredWidth))+"px";
+ const width=Math.max(el.offsetWidth,Math.min(1200,requiredWidth));
+ el.style.width=width+"px";
+ const note=state.notes.find(item=>item.el===el);
+ if(note)note.width=width;
 }
 
 function select(n){
@@ -487,8 +490,9 @@ function canvasPayload(){
    markdown:n.md,
    x:n.x,
    y:n.y,
-   width:n.el.offsetWidth,
-   font:n.font||"serif"
+   width:n.width||n.el.offsetWidth,
+   font:n.font||"serif",
+   size:n.size||"100"
   }))
  };
 }
@@ -537,7 +541,8 @@ function openCanvasFile(file){
      Number.isFinite(n.width)?n.width:600,
      false,
       Number.isFinite(n.id)?n.id:null,
-      typeof n.font==="string"?n.font:"serif"
+     typeof n.font==="string"?n.font:"serif",
+     n.size
     );
    });
 
@@ -577,17 +582,20 @@ function openCanvasFile(file){
  reader.readAsText(file);
 }
 
-function makeNote(md,x,y,w=600,record=true,id=null,font="serif"){
+function makeNote(md,x,y,w=600,record=true,id=null,font="serif",size="100"){
  if(record)history();
- const n={id:id??state.nextId++,md,x,y,font,el:null};
+ const width=Math.max(300,Math.min(1200,w||600));
+ const n={id:id??state.nextId++,md,x,y,font,size,width,el:null};
  state.nextId=Math.max(state.nextId,n.id+1);
  const el=document.createElement("article");
- el.className="card";el.style.left=x+"px";el.style.top=y+"px";el.style.width=Math.max(300,Math.min(1200,w||600))+"px";
- el.innerHTML=`<div class="cardbar"></div><div class="cardactions"><select data-font aria-label="Card font" title="Card font (V / Shift+V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option><option value="slab">Slab</option><option value="humanist">Humanist</option><option value="display">Display</option><option value="rounded">Rounded</option><option value="editorial">Editorial</option><option value="hand">Handwritten</option></select><button data-edit>✎</button><button data-delete>×</button></div>
+ el.className="card";el.style.left=x+"px";el.style.top=y+"px";el.style.width=width+"px";
+ el.innerHTML=`<div class="cardbar"></div><div class="cardactions"><select data-font aria-label="Card font" title="Card font (V / Shift+V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option><option value="slab">Slab</option><option value="humanist">Humanist</option><option value="rounded">Rounded</option><option value="editorial">Editorial</option><option value="hand">Handwritten</option><option value="hand-soft">Hand Soft</option><option value="hand-bold">Hand Bold</option><option value="hand-marker">Hand Marker</option><option value="hand-script">Hand Script</option></select><select data-size aria-label="Card font size" title="Card font size"><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option></select><button data-edit>✎</button><button data-delete>×</button></div>
  <div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div>
  <div class="cardbody">${render(md)}</div>`;
  el.dataset.font=font;
  el.querySelector("[data-font]").value=font;
+ el.dataset.fontSize=["100","110","125","140"].includes(String(size))?String(size):"100";
+ el.querySelector("[data-size]").value=el.dataset.fontSize;
  n.el=el;world.appendChild(el);state.notes.push(n);
  widenCardForTables(el);
 
@@ -603,9 +611,13 @@ function makeNote(md,x,y,w=600,record=true,id=null,font="serif"){
  el.querySelector("[data-edit]").onclick=()=>editNote(n);
  el.querySelector("[data-delete]").onclick=()=>deleteNote(n);
  el.querySelector("[data-font]").onchange=e=>{
-  history();n.font=e.target.value;el.dataset.font=n.font;save();
+  history();n.font=e.target.value;el.dataset.font=n.font;widenCardForTables(el);save();
  };
  el.querySelector("[data-font]").onfocus=()=>select(n);
+ el.querySelector("[data-size]").onchange=e=>{
+  history();n.size=e.target.value;el.dataset.fontSize=n.size;widenCardForTables(el);save();
+ };
+ el.querySelector("[data-size]").onfocus=()=>select(n);
  el.querySelectorAll(".resize").forEach(r=>r.onmousedown=e=>{
   if(e.button!==0)return;
   startResize(e,n,r.dataset.side);
@@ -628,6 +640,7 @@ window.addEventListener("mousemove",e=>{
   const r=state.resize,dx=(e.clientX-r.sx)/state.scale;
   const w=Math.max(300,Math.min(1200,r.w+(r.side==="right"?dx:-dx)));
   r.n.el.style.width=w+"px";
+  r.n.width=w;
   if(r.side==="left"){r.n.x=r.x+r.w-w;r.n.el.style.left=r.n.x+"px"}
  }
  if(state.pan){
@@ -807,7 +820,7 @@ async function copyNote(){
 }
 function duplicate(){
  if(!state.selected)return;
- const n=state.selected,c=makeNote(n.md,n.x+45,n.y+45,n.el.offsetWidth,true);
+ const n=state.selected,c=makeNote(n.md,n.x+45,n.y+45,n.el.offsetWidth,true,null,n.font,n.size);
  select(c);save()
 }
 function fit(widthOnly=false){
@@ -824,52 +837,51 @@ function arrange(){
  if(!state.notes.length)return;
  history();
 
- // Wider PureRef-style packing: more cards visible at once.
- // Six columns fit comfortably inside the enlarged central workspace.
- const columns=10;
+ // Preserve each card's width, including widths expanded for tables.
+ const columns=4;
  const gapX=100;
  const gapY=120;
- const left=-3000;
- const cardWidth=500;
- const usableWidth=columns*cardWidth+(columns-1)*gapX;
 
  state.notes.forEach(n=>{
-  n.el.style.width=cardWidth+"px";
+  n.el.style.width=(n.width||n.el.offsetWidth)+"px";
   n.el.style.left="0px";
   n.el.style.top="0px";
  });
 
  // Force layout after Markdown/KaTeX rendering.
- state.notes.forEach(n=>void n.el.offsetHeight);
-
- state.notes.forEach((n,i)=>{
-  const col=i%columns;
-  const row=Math.floor(i/columns);
-
-  // Each row has its own height. We calculate row heights first so a tall
-  // card only affects the row containing it, never the whole arrangement.
+ state.notes.forEach(n=>{
+  widenCardForTables(n.el);
+  n.width=n.el.offsetWidth;
+  void n.el.offsetHeight;
  });
 
  const rows=Math.ceil(state.notes.length/columns);
  const rowHeights=Array(rows).fill(0);
+ const columnWidths=Array(columns).fill(0);
 
  state.notes.forEach((n,i)=>{
   const row=Math.floor(i/columns);
+  const col=i%columns;
   rowHeights[row]=Math.max(rowHeights[row],n.el.offsetHeight);
+  columnWidths[col]=Math.max(columnWidths[col],n.width||n.el.offsetWidth);
  });
 
+ const totalWidth=columnWidths.reduce((sum,width)=>sum+width,0)+gapX*(columns-1);
+ const left=-totalWidth/2;
  let rowTop=-900;
 
  for(let row=0;row<rows;row++){
+  let columnLeft=left;
   for(let col=0;col<columns;col++){
    const i=row*columns+col;
    if(i>=state.notes.length)break;
 
    const n=state.notes[i];
-   n.x=-usableWidth/2+col*(cardWidth+gapX);
+   n.x=columnLeft;
    n.y=rowTop;
    n.el.style.left=n.x+"px";
    n.el.style.top=n.y+"px";
+   columnLeft+=columnWidths[col]+gapX;
   }
 
   rowTop+=rowHeights[row]+gapY;
@@ -1240,7 +1252,7 @@ function load(){
    state.y=Number.isFinite(d.y)?d.y:innerHeight/2;
    state.scale=clampScale(Number.isFinite(d.scale)?d.scale:1);
    state.nextId=d.nextId??1;
-   (d.notes||[]).forEach(n=>{if(typeof n.md==="string")makeNote(n.md,n.x||0,n.y||0,n.w||600,false,n.id,typeof n.font==="string"?n.font:"serif")})
+   (d.notes||[]).forEach(n=>{if(typeof n.md==="string")makeNote(n.md,n.x||0,n.y||0,n.w||600,false,n.id,typeof n.font==="string"?n.font:"serif",n.size)})
   }
  }catch{}
  const dark=localStorage.getItem("reflatex-theme")==="dark";
