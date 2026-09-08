@@ -139,12 +139,24 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
  background:var(--accent);
  color:#fff;
 }
+.background-picker{position:relative}
 .toolbar .background-select{
- width:40px;height:40px;padding:0 3px;border:0;border-radius:10px;
- background:transparent;color:#3c3a36;font:11px system-ui;text-align:center;
- cursor:pointer;
+ width:40px;height:40px;padding:0;border:0;border-radius:10px;
+ background:transparent;color:#3c3a36;font-size:19px;cursor:pointer;
 }
-.toolbar .background-select:hover{background:#00000009}
+.toolbar .background-select:hover,.toolbar .background-select[aria-expanded="true"]{background:#00000009}
+.background-menu{
+ position:absolute;left:48px;top:0;display:none;width:150px;padding:5px;
+ background:#faf9f6;border:1px solid #00000018;border-radius:9px;z-index:50;
+}
+.background-menu.open{display:grid;gap:2px}
+.background-menu button{
+ display:flex;align-items:center;gap:8px;width:100%;height:31px;padding:3px 6px;
+ border:0;border-radius:6px;background:transparent;color:#383631;
+ font:11px system-ui;text-align:left;cursor:pointer;
+}
+.background-menu button:hover,.background-menu button.active{background:#ebe9e3}
+.background-menu svg{width:38px;height:25px;flex:none;border:1px solid #d0ccc4;border-radius:3px}
 .toolbar .tool[title]::after{
  content:attr(title);
  position:absolute;
@@ -248,6 +260,9 @@ body.dark .cardbody th,body.dark .cardbody td{border-color:#4b4841}
 body.dark .cardbody blockquote{border-color:#5b574f;color:#aaa59d}
 body.dark button.tool,.dark .zoom button{color:#dedbd5}
 body.dark .background-select{color:#dedbd5}
+body.dark .background-menu{background:#292824;border-color:#4a4740}
+body.dark .background-menu button{color:#eee}
+body.dark .background-menu button:hover,body.dark .background-menu button.active{background:#3a3832}
 body.dark button.tool:hover,body.dark .zoom button:hover{background:#37352f}
 body.dark #source{background:#1f1e1b;color:#e9e6df}
 body.dark .cancel{background:#383631}

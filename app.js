@@ -868,13 +868,21 @@ function setBackground(name){
  const background=backgrounds.includes(name)?name:"flat";
  canvas.dataset.background=background;
  localStorage.setItem("reflatex-background",background);
- $("#background").value=background;
  $("#background").title=`Background: ${backgroundLabels[background]} (B)`;
+ document.querySelectorAll("[data-background-choice]").forEach(button=>{
+  button.classList.toggle("active",button.dataset.backgroundChoice===background);
+ });
 }
 function cycleBackground(){
  const current=backgrounds.indexOf(canvas.dataset.background||"flat");
  setBackground(backgrounds[(current+1)%backgrounds.length]);
  showControls();
+}
+function toggleBackgroundMenu(force){
+ const menu=$("#backgroundMenu");
+ const open=force===undefined?!menu.classList.contains("open"):force;
+ menu.classList.toggle("open",open);
+ $("#background").setAttribute("aria-expanded",String(open));
 }
 function toggleTheme(){document.body.classList.toggle("dark");localStorage.setItem("reflatex-theme",document.body.classList.contains("dark")?"dark":"light");$("#theme").textContent=document.body.classList.contains("dark")?"☀":"☾"}
 function revealControls(){
@@ -916,7 +924,15 @@ $("#center").onclick=()=>{
  save();
 }
 $("#arrange").onclick=arrange
-$("#background").onchange=e=>setBackground(e.target.value)
+$("#background").onclick=e=>{e.stopPropagation();toggleBackgroundMenu()}
+document.querySelectorAll("[data-background-choice]").forEach(button=>{
+ button.onclick=e=>{
+  e.stopPropagation();
+  setBackground(button.dataset.backgroundChoice);
+  toggleBackgroundMenu(false);
+  showControls();
+ };
+});
 $("#theme").onclick=toggleTheme
 $("#saveCanvas").onclick=downloadCanvas
 $("#openCanvas").onclick=()=>$("#canvasFile").click()
@@ -933,7 +949,10 @@ $("#edit").onclick=()=>state.selected&&editNote(state.selected)
 $("#duplicate").onclick=duplicate
 $("#copy").onclick=copyNote
 $("#remove").onclick=()=>state.selected&&deleteNote(state.selected)
-document.addEventListener("click",e=>{if(!context.contains(e.target))context.classList.remove("open")})
+document.addEventListener("click",e=>{
+ if(!context.contains(e.target))context.classList.remove("open");
+ if(!e.target.closest(".background-picker"))toggleBackgroundMenu(false);
+})
 document.addEventListener("paste",e=>{
  if(document.activeElement===source)return;
  const md=e.clipboardData?.getData("text/plain");if(!md?.trim())return;
@@ -962,17 +981,15 @@ function focusSelected(){
   );
 }
 
-function cycleSelected(direction,wrap=false){
+function cycleSelected(direction){
   if(!state.notes.length)return;
 
   let index=state.notes.indexOf(state.selected);
 
   if(index<0){
-    index=direction>0?0:state.notes.length-1;
+    index=0;
   }else{
-    index=wrap
-      ? (index+direction+state.notes.length)%state.notes.length
-      : Math.max(0,Math.min(state.notes.length-1,index+direction));
+    index=Math.max(0,Math.min(state.notes.length-1,index+direction));
   }
 
   select(state.notes[index]);
@@ -1051,23 +1068,22 @@ window.addEventListener("keydown",e=>{
   *   previous / next card
   *
   * PageUp/PageDown:
-  *   previous / next card with circular browsing
+  *   previous / next card, stopping at the first or last card
   *
   * Home/End:
   *   first / last card
   *
-  * Ctrl + PageUp/PageDown:
-  *   previous / next card as an explicit Windows-style
-  *   document-navigation shortcut.
+  * Up/Down:
+  *   page-style canvas movement without changing card selection.
   */
  if(e.key==="PageUp"){
    e.preventDefault();
-   cycleSelected(-1,true);
+   cycleSelected(-1);
    return;
  }
  if(e.key==="PageDown"){
    e.preventDefault();
-   cycleSelected(1,true);
+   cycleSelected(1);
    return;
  }
  if(e.key==="ArrowRight"&&!mod){
