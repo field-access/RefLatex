@@ -589,12 +589,12 @@ function makeNote(md,x,y,w=600,record=true,id=null,font="serif",size="100"){
  state.nextId=Math.max(state.nextId,n.id+1);
  const el=document.createElement("article");
  el.className="card";el.style.left=x+"px";el.style.top=y+"px";el.style.width=width+"px";
- el.innerHTML=`<div class="cardbar"></div><div class="cardactions"><select data-font aria-label="Card font" title="Card font (V / Shift+V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option><option value="slab">Slab</option><option value="humanist">Humanist</option><option value="rounded">Rounded</option><option value="editorial">Editorial</option><option value="hand">Handwritten</option><option value="hand-soft">Hand Soft</option><option value="hand-bold">Hand Bold</option><option value="hand-marker">Hand Marker</option><option value="hand-script">Hand Script</option></select><select data-size aria-label="Card font size" title="Card font size"><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option></select><button data-edit>✎</button><button data-delete>×</button></div>
+ el.innerHTML=`<div class="cardbar"></div><div class="cardactions"><select data-font aria-label="Card font" title="Card font (V / Shift+V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option><option value="slab">Slab</option><option value="humanist">Humanist</option><option value="rounded">Rounded</option><option value="editorial">Editorial</option><option value="hand">Handwritten</option><option value="hand-soft">Hand Soft</option><option value="hand-bold">Hand Bold</option><option value="hand-marker">Hand Marker</option><option value="hand-script">Hand Script</option></select><select data-size aria-label="Card font size" title="Card font size"><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option><option value="180">180%</option></select><button data-edit>✎</button><button data-delete>×</button></div>
  <div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div>
  <div class="cardbody">${render(md)}</div>`;
  el.dataset.font=font;
  el.querySelector("[data-font]").value=font;
- el.dataset.fontSize=["100","110","125","140"].includes(String(size))?String(size):"100";
+ el.dataset.fontSize=["70","80","90","100","110","125","140","160","180"].includes(String(size))?String(size):"100";
  el.querySelector("[data-size]").value=el.dataset.fontSize;
  n.el=el;world.appendChild(el);state.notes.push(n);
  widenCardForTables(el);
@@ -892,11 +892,10 @@ function arrange(){
   save();
  });
 }
-const backgrounds=["dots","sun","box"];
+const backgrounds=["dots","sun"];
 const backgroundLabels={
  dots:"Dots",
- sun:"Sun",
- box:"3D Box"
+ sun:"Sun"
 };
 function setBackground(name){
  const background=backgrounds.includes(name)?name:"dots";
