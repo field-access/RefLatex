@@ -1061,10 +1061,10 @@ window.addEventListener("keydown",e=>{
  /*
   * CARD NAVIGATION
   *
-  * Arrow Left/Up:
+  * Arrow Left:
   *   previous card
   *
-  * Arrow Right/Down:
+  * Arrow Right:
   *   next card
   *
   * PageUp/PageDown:
@@ -1072,6 +1072,9 @@ window.addEventListener("keydown",e=>{
   *
   * Home/End:
   *   first / last card
+  *
+  * Arrow Up/Down:
+  *   page-style canvas movement without changing card selection.
   */
  if(e.key==="PageUp"){
    e.preventDefault();
@@ -1093,14 +1096,12 @@ window.addEventListener("keydown",e=>{
    cycleSelected(-1);
    return;
  }
- if(e.key==="ArrowDown"&&!mod){
+ if(e.key==="ArrowUp"||e.key==="ArrowDown"){
    e.preventDefault();
-   cycleSelected(1);
-   return;
- }
- if(e.key==="ArrowUp"&&!mod){
-   e.preventDefault();
-   cycleSelected(-1);
+   const distance=innerHeight*.72;
+   if(e.key==="ArrowUp")state.targetY+=distance;
+   else state.targetY-=distance;
+   animate();
    return;
  }
 
