@@ -634,7 +634,10 @@ function makeNote(md,x,y,w=600,record=true,id=null,font="serif"){
  el.querySelector("[data-font]").onchange=e=>{
   history();n.font=e.target.value;el.dataset.font=n.font;save();scheduleGlass();
  };
- el.querySelectorAll(".resize").forEach(r=>r.onmousedown=e=>startResize(e,n,r.dataset.side));
+ el.querySelectorAll(".resize").forEach(r=>r.onmousedown=e=>{
+  if(e.button!==0)return;
+  startResize(e,n,r.dataset.side);
+ });
  empty();
  scheduleGlass();
  return n;

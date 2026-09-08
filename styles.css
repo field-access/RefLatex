@@ -27,14 +27,11 @@ body.dark #board{background:#20201e;border-color:#494740}
 .card{
  position:absolute;width:500px;min-width:300px;max-width:1200px;
  background:var(--paper);border:1px solid #cbc7be;border-radius:6px;
- box-shadow:0 9px 28px #00000018,0 2px 5px #0000000d;
  z-index:3;
 }
 .card.selected{
  outline:2px solid var(--accent);
  outline-offset:4px;
- box-shadow:0 0 0 5px color-mix(in srgb,var(--accent) 14%,transparent),
-   0 12px 32px #00000020;
 }
 .cardbar{
  height:26px;cursor:grab;position:relative;border-bottom:1px solid transparent;
@@ -231,7 +228,7 @@ body.dark{
 }
 body.dark #canvas{background-color:#171716;background-image:radial-gradient(#aaa69d25 .7px,transparent .7px)}
 body.dark #board{background:#20201e;border-color:#494740}
-body.dark .card{border-color:#4a4740;box-shadow:0 12px 32px #0008}
+body.dark .card{border-color:#4a4740}
 body.dark .cardbody code{background:#36342f}
 body.dark .cardbody th{background:#302e2a}
 body.dark .cardbody th,body.dark .cardbody td{border-color:#4b4841}
@@ -353,11 +350,11 @@ body.fullscreen.controls .toolbar{transform:translateY(-50%)}
 }
 
 
-.card[data-font="sans"] .cardbody,.card[data-font="sans"] .cardbody p,.card[data-font="sans"] .cardbody li{font-family:ui-sans-serif,system-ui,sans-serif}
-.card[data-font="mono"] .cardbody,.card[data-font="mono"] .cardbody p,.card[data-font="mono"] .cardbody li{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:1em}
-.card[data-font="slab"] .cardbody,.card[data-font="slab"] .cardbody p,.card[data-font="slab"] .cardbody li{font-family:Rockwell,"Roboto Slab",Georgia,serif}
-.card[data-font="humanist"] .cardbody,.card[data-font="humanist"] .cardbody p,.card[data-font="humanist"] .cardbody li{font-family:"Trebuchet MS",ui-sans-serif,sans-serif}
-.card[data-font="display"] .cardbody,.card[data-font="display"] .cardbody p,.card[data-font="display"] .cardbody li{font-family:Impact,"Arial Black",ui-sans-serif,sans-serif;letter-spacing:.01em}
-.card[data-font="rounded"] .cardbody,.card[data-font="rounded"] .cardbody p,.card[data-font="rounded"] .cardbody li{font-family:"Arial Rounded MT Bold","Trebuchet MS",ui-sans-serif,sans-serif}
-.card[data-font="editorial"] .cardbody,.card[data-font="editorial"] .cardbody p,.card[data-font="editorial"] .cardbody li{font-family:Cambria,Georgia,"Times New Roman",serif}
-.card[data-font="hand"] .cardbody,.card[data-font="hand"] .cardbody p,.card[data-font="hand"] .cardbody li{font-family:"Segoe Print","Comic Sans MS",cursive}
+.card[data-font="sans"] .cardbody,.card[data-font="sans"] .cardbody p,.card[data-font="sans"] .cardbody li,.card[data-font="sans"] .cardbody table,.card[data-font="sans"] .cardbody th,.card[data-font="sans"] .cardbody td{font-family:ui-sans-serif,system-ui,sans-serif}
+.card[data-font="mono"] .cardbody,.card[data-font="mono"] .cardbody p,.card[data-font="mono"] .cardbody li,.card[data-font="mono"] .cardbody table,.card[data-font="mono"] .cardbody th,.card[data-font="mono"] .cardbody td{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:1em}
+.card[data-font="slab"] .cardbody,.card[data-font="slab"] .cardbody p,.card[data-font="slab"] .cardbody li,.card[data-font="slab"] .cardbody table,.card[data-font="slab"] .cardbody th,.card[data-font="slab"] .cardbody td{font-family:Rockwell,"Roboto Slab",Georgia,serif}
+.card[data-font="humanist"] .cardbody,.card[data-font="humanist"] .cardbody p,.card[data-font="humanist"] .cardbody li,.card[data-font="humanist"] .cardbody table,.card[data-font="humanist"] .cardbody th,.card[data-font="humanist"] .cardbody td{font-family:"Trebuchet MS",ui-sans-serif,sans-serif}
+.card[data-font="display"] .cardbody,.card[data-font="display"] .cardbody p,.card[data-font="display"] .cardbody li,.card[data-font="display"] .cardbody table,.card[data-font="display"] .cardbody th,.card[data-font="display"] .cardbody td{font-family:Impact,"Arial Black",ui-sans-serif,sans-serif;letter-spacing:.01em}
+.card[data-font="rounded"] .cardbody,.card[data-font="rounded"] .cardbody p,.card[data-font="rounded"] .cardbody li,.card[data-font="rounded"] .cardbody table,.card[data-font="rounded"] .cardbody th,.card[data-font="rounded"] .cardbody td{font-family:"Arial Rounded MT Bold","Trebuchet MS",ui-sans-serif,sans-serif}
+.card[data-font="editorial"] .cardbody,.card[data-font="editorial"] .cardbody p,.card[data-font="editorial"] .cardbody li,.card[data-font="editorial"] .cardbody table,.card[data-font="editorial"] .cardbody th,.card[data-font="editorial"] .cardbody td{font-family:Cambria,Georgia,"Times New Roman",serif}
+.card[data-font="hand"] .cardbody,.card[data-font="hand"] .cardbody p,.card[data-font="hand"] .cardbody li,.card[data-font="hand"] .cardbody table,.card[data-font="hand"] .cardbody th,.card[data-font="hand"] .cardbody td{font-family:"Segoe Print","Comic Sans MS",cursive}
