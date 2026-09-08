@@ -582,6 +582,7 @@ function makeNote(md,x,y,w=600,record=true,id=null,font="serif"){
  el.querySelector("[data-font]").onchange=e=>{
   history();n.font=e.target.value;el.dataset.font=n.font;save();
  };
+ el.querySelector("[data-font]").onfocus=()=>select(n);
  el.querySelectorAll(".resize").forEach(r=>r.onmousedown=e=>{
   if(e.button!==0)return;
   startResize(e,n,r.dataset.side);
@@ -856,10 +857,11 @@ function arrange(){
   save();
  });
 }
-const backgrounds=["dots","sun"];
+const backgrounds=["dots","sun","box"];
 const backgroundLabels={
  dots:"Dots",
- sun:"Sun"
+ sun:"Sun",
+ box:"3D Box"
 };
 function setBackground(name){
  const background=backgrounds.includes(name)?name:"dots";
@@ -994,14 +996,16 @@ function cycleSelected(direction){
 }
 
 function cycleFont(direction=1){
- const n=state.selected;
+ const activeCard=document.activeElement?.closest(".card");
+ const n=state.selected||state.notes.find(note=>note.el===activeCard);
  if(!n)return;
- const select=n.el.querySelector("[data-font]");
- const options=[...select.options];
- const index=options.findIndex(option=>option.value===select.value);
+ select(n);
+ const fontSelect=n.el.querySelector("[data-font]");
+ const options=[...fontSelect.options];
+ const index=options.findIndex(option=>option.value===fontSelect.value);
  const next=(index+direction+options.length)%options.length;
- select.value=options[next].value;
- select.dispatchEvent(new Event("change",{bubbles:true}));
+ fontSelect.value=options[next].value;
+ fontSelect.dispatchEvent(new Event("change",{bubbles:true}));
 }
 
 window.addEventListener("keydown",e=>{
@@ -1071,6 +1075,19 @@ window.addEventListener("keydown",e=>{
  if(key==="v"&&!mod&&!e.altKey){
    e.preventDefault();
    cycleFont(e.shiftKey?-1:1);
+   return;
+ }
+
+ if(mod&&e.key==="ArrowLeft"){
+   e.preventDefault();
+   state.targetX+=innerWidth*.72;
+   animate();
+   return;
+ }
+ if(mod&&e.key==="ArrowRight"){
+   e.preventDefault();
+   state.targetX-=innerWidth*.72;
+   animate();
    return;
  }
 
