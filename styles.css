@@ -14,25 +14,10 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
  background-image:radial-gradient(#77736b55 .7px,transparent .7px);
  background-size:24px 24px;
 }
-#canvas[data-background="room"]{
- background-image:
-  linear-gradient(90deg,transparent 49.8%,#77736b25 50%,transparent 50.2%),
-  repeating-linear-gradient(0deg,transparent 0 39px,#77736b22 40px 41px),
-  linear-gradient(180deg,#d9d6cf 0 58%,#c5c1b8 58% 100%);
- background-size:100% 100%,100% 100%,100% 100%;
-}
 #canvas[data-background="sun"]{
  background-image:
   radial-gradient(circle at 76% 20%,#f2c879aa 0 7%,#f2c87933 7.2% 14%,transparent 28%),
   linear-gradient(180deg,#d9d6cf,#c8c4bb);
-}
-#canvas[data-background="xyz"]{
- background-image:
-  repeating-linear-gradient(90deg,transparent 0 79px,#77736b20 80px 81px),
-  repeating-linear-gradient(0deg,transparent 0 79px,#77736b20 80px 81px),
-  linear-gradient(135deg,transparent 49.8%,#b05b5b55 50%,transparent 50.2%),
-  linear-gradient(45deg,transparent 49.8%,#5b7fb755 50%,transparent 50.2%);
- background-size:100% 100%;
 }
 #world{position:absolute;left:0;top:0;width:1px;height:1px;transform-origin:0 0;will-change:transform}
 .card{

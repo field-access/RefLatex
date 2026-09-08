@@ -856,16 +856,13 @@ function arrange(){
   save();
  });
 }
-const backgrounds=["flat","dots","room","sun","xyz"];
+const backgrounds=["dots","sun"];
 const backgroundLabels={
- flat:"Flat",
  dots:"Dots",
- room:"Matrix room",
- sun:"Sun",
- xyz:"XYZ perspective"
+ sun:"Sun"
 };
 function setBackground(name){
- const background=backgrounds.includes(name)?name:"flat";
+ const background=backgrounds.includes(name)?name:"dots";
  canvas.dataset.background=background;
  localStorage.setItem("reflatex-background",background);
  $("#background").title=`Background: ${backgroundLabels[background]} (B)`;
@@ -874,7 +871,7 @@ function setBackground(name){
  });
 }
 function cycleBackground(){
- const current=backgrounds.indexOf(canvas.dataset.background||"flat");
+ const current=backgrounds.indexOf(canvas.dataset.background||"dots");
  setBackground(backgrounds[(current+1)%backgrounds.length]);
  showControls();
 }
@@ -1191,7 +1188,7 @@ function load(){
  }catch{}
  const dark=localStorage.getItem("reflatex-theme")==="dark";
  if(dark){document.body.classList.add("dark");$("#theme").textContent="☀"}
- setBackground(localStorage.getItem("reflatex-background")||"flat");
+ setBackground(localStorage.getItem("reflatex-background")||"dots");
  state.hand=true;$("#hand").classList.add("active");canvas.style.cursor="grab";
  sync();apply();empty()
 }
