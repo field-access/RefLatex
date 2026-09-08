@@ -1003,7 +1003,7 @@ function focusSelected(){
     w:n.el.offsetWidth
   };
 
-  const targetScale=Math.max(.35,Math.min(1.25,state.targetScale||state.scale));
+  const targetScale=Math.max(.7,Math.min(1.25,state.targetScale||state.scale));
   const cx=r.x+r.w/2;
   const frontOffset=Math.min(72,Math.max(32,innerHeight*.1));
 
