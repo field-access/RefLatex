@@ -561,7 +561,7 @@ function makeNote(md,x,y,w=600,record=true,id=null,font="serif"){
  state.nextId=Math.max(state.nextId,n.id+1);
  const el=document.createElement("article");
  el.className="card";el.style.left=x+"px";el.style.top=y+"px";el.style.width=Math.max(300,Math.min(1200,w||600))+"px";
- el.innerHTML=`<div class="cardbar"></div><div class="cardactions"><select data-font aria-label="Card font" title="Card font"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option><option value="slab">Slab</option><option value="humanist">Humanist</option><option value="display">Display</option><option value="rounded">Rounded</option><option value="editorial">Editorial</option><option value="hand">Handwritten</option></select><button data-edit>✎</button><button data-delete>×</button></div>
+ el.innerHTML=`<div class="cardbar"></div><div class="cardactions"><select data-font aria-label="Card font" title="Card font (V / Shift+V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option><option value="slab">Slab</option><option value="humanist">Humanist</option><option value="display">Display</option><option value="rounded">Rounded</option><option value="editorial">Editorial</option><option value="hand">Handwritten</option></select><button data-edit>✎</button><button data-delete>×</button></div>
  <div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div>
  <div class="cardbody">${render(md)}</div>`;
  el.dataset.font=font;
@@ -993,6 +993,17 @@ function cycleSelected(direction){
   focusSelected();
 }
 
+function cycleFont(direction=1){
+ const n=state.selected;
+ if(!n)return;
+ const select=n.el.querySelector("[data-font]");
+ const options=[...select.options];
+ const index=options.findIndex(option=>option.value===select.value);
+ const next=(index+direction+options.length)%options.length;
+ select.value=options[next].value;
+ select.dispatchEvent(new Event("change",{bubbles:true}));
+}
+
 window.addEventListener("keydown",e=>{
  const mod=e.ctrlKey||e.metaKey;
  const editing=document.activeElement===source ||
@@ -1056,6 +1067,11 @@ window.addEventListener("keydown",e=>{
      actions[key]();
      return;
    }
+ }
+ if(key==="v"&&!mod&&!e.altKey){
+   e.preventDefault();
+   cycleFont(e.shiftKey?-1:1);
+   return;
  }
 
  /*
