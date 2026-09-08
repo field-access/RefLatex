@@ -139,6 +139,12 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
  background:var(--accent);
  color:#fff;
 }
+.toolbar .background-select{
+ width:40px;height:40px;padding:0 3px;border:0;border-radius:10px;
+ background:transparent;color:#3c3a36;font:11px system-ui;text-align:center;
+ cursor:pointer;
+}
+.toolbar .background-select:hover{background:#00000009}
 .toolbar .tool[title]::after{
  content:attr(title);
  position:absolute;
@@ -241,6 +247,7 @@ body.dark .cardbody th{background:#302e2a}
 body.dark .cardbody th,body.dark .cardbody td{border-color:#4b4841}
 body.dark .cardbody blockquote{border-color:#5b574f;color:#aaa59d}
 body.dark button.tool,.dark .zoom button{color:#dedbd5}
+body.dark .background-select{color:#dedbd5}
 body.dark button.tool:hover,body.dark .zoom button:hover{background:#37352f}
 body.dark #source{background:#1f1e1b;color:#e9e6df}
 body.dark .cancel{background:#383631}

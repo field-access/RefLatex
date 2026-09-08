@@ -25,7 +25,13 @@
  <button class="tool" id="fit" title="Fit canvas (F)">⌗</button>
  <button class="tool" id="center" title="Center canvas (C)">◎</button>
  <button class="tool" id="arrange" title="Arrange cards (A)">⊞</button>
- <button class="tool" id="background" title="Background: Flat (B)">◌</button>
+ <select class="background-select" id="background" title="Background (B)" aria-label="Background">
+  <option value="flat">BG</option>
+  <option value="dots">Dots</option>
+  <option value="room">Room</option>
+  <option value="sun">Sun</option>
+  <option value="xyz">XYZ</option>
+ </select>
  <span class="divider"></span>
  <button class="tool" id="theme" title="Toggle dark mode (T)">☾</button>
  <span class="divider"></span>

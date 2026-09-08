@@ -868,6 +868,7 @@ function setBackground(name){
  const background=backgrounds.includes(name)?name:"flat";
  canvas.dataset.background=background;
  localStorage.setItem("reflatex-background",background);
+ $("#background").value=background;
  $("#background").title=`Background: ${backgroundLabels[background]} (B)`;
 }
 function cycleBackground(){
@@ -915,7 +916,7 @@ $("#center").onclick=()=>{
  save();
 }
 $("#arrange").onclick=arrange
-$("#background").onclick=cycleBackground
+$("#background").onchange=e=>setBackground(e.target.value)
 $("#theme").onclick=toggleTheme
 $("#saveCanvas").onclick=downloadCanvas
 $("#openCanvas").onclick=()=>$("#canvasFile").click()
@@ -1028,7 +1029,7 @@ window.addEventListener("keydown",e=>{
      f:()=>$("#fit").click(),
      c:()=>$("#center").click(),
      a:()=>$("#arrange").click(),
-     b:()=>$("#background").click(),
+     b:cycleBackground,
      t:()=>$("#theme").click(),
      "-":()=>$("#minus").click(),
      "=":()=>$("#plus").click(),
@@ -1125,19 +1126,6 @@ window.addEventListener("keydown",e=>{
    animate();
    return;
  }
- if(mod&&e.key==="ArrowUp"){
-   e.preventDefault();
-   state.targetY+=innerHeight*.72;
-   animate();
-   return;
- }
- if(mod&&e.key==="ArrowDown"){
-   e.preventDefault();
-   state.targetY-=innerHeight*.72;
-   animate();
-   return;
- }
-
  /* Canvas/file/edit shortcuts */
  if(mod&&e.key.toLowerCase()==="s"){
    e.preventDefault();
