@@ -856,6 +856,25 @@ function arrange(){
   save();
  });
 }
+const backgrounds=["flat","dots","room","sun","xyz"];
+const backgroundLabels={
+ flat:"Flat",
+ dots:"Dots",
+ room:"Matrix room",
+ sun:"Sun",
+ xyz:"XYZ perspective"
+};
+function setBackground(name){
+ const background=backgrounds.includes(name)?name:"flat";
+ canvas.dataset.background=background;
+ localStorage.setItem("reflatex-background",background);
+ $("#background").title=`Background: ${backgroundLabels[background]} (B)`;
+}
+function cycleBackground(){
+ const current=backgrounds.indexOf(canvas.dataset.background||"flat");
+ setBackground(backgrounds[(current+1)%backgrounds.length]);
+ showControls();
+}
 function toggleTheme(){document.body.classList.toggle("dark");localStorage.setItem("reflatex-theme",document.body.classList.contains("dark")?"dark":"light");$("#theme").textContent=document.body.classList.contains("dark")?"☀":"☾"}
 function revealControls(){
  showControls();clearTimeout(state.hideTimer);
@@ -896,6 +915,7 @@ $("#center").onclick=()=>{
  save();
 }
 $("#arrange").onclick=arrange
+$("#background").onclick=cycleBackground
 $("#theme").onclick=toggleTheme
 $("#saveCanvas").onclick=downloadCanvas
 $("#openCanvas").onclick=()=>$("#canvasFile").click()
@@ -906,7 +926,7 @@ $("#canvasFile").addEventListener("change",e=>{
 })
 $("#full").onclick=toggleFull
 $("#edge").onclick=revealControls
-$("#minus").onclick=()=>zoom(.9);$("#plus").onclick=()=>zoom(1.1);$("#reset").onclick=()=>moveTo(innerWidth/2,innerHeight/2,1)
+$("#minus").onclick=()=>zoom(.72);$("#plus").onclick=()=>zoom(1.38);$("#reset").onclick=()=>moveTo(innerWidth/2,innerHeight/2,1)
 $("#close").onclick=closeEditor;$("#cancel").onclick=closeEditor;$("#apply").onclick=applyEditor
 $("#edit").onclick=()=>state.selected&&editNote(state.selected)
 $("#duplicate").onclick=duplicate
@@ -941,7 +961,7 @@ function focusSelected(){
   );
 }
 
-function cycleSelected(direction){
+function cycleSelected(direction,wrap=false){
   if(!state.notes.length)return;
 
   let index=state.notes.indexOf(state.selected);
@@ -949,7 +969,9 @@ function cycleSelected(direction){
   if(index<0){
     index=direction>0?0:state.notes.length-1;
   }else{
-    index=(index+direction+state.notes.length)%state.notes.length;
+    index=wrap
+      ? (index+direction+state.notes.length)%state.notes.length
+      : Math.max(0,Math.min(state.notes.length-1,index+direction));
   }
 
   select(state.notes[index]);
@@ -1006,6 +1028,7 @@ window.addEventListener("keydown",e=>{
      f:()=>$("#fit").click(),
      c:()=>$("#center").click(),
      a:()=>$("#arrange").click(),
+     b:()=>$("#background").click(),
      t:()=>$("#theme").click(),
      "-":()=>$("#minus").click(),
      "=":()=>$("#plus").click(),
@@ -1027,7 +1050,7 @@ window.addEventListener("keydown",e=>{
   *   previous / next card
   *
   * PageUp/PageDown:
-  *   previous / next card, PureRef-style quick browsing
+  *   previous / next card with circular browsing
   *
   * Home/End:
   *   first / last card
@@ -1038,12 +1061,12 @@ window.addEventListener("keydown",e=>{
   */
  if(e.key==="PageUp"){
    e.preventDefault();
-   cycleSelected(-1);
+   cycleSelected(-1,true);
    return;
  }
  if(e.key==="PageDown"){
    e.preventDefault();
-   cycleSelected(1);
+   cycleSelected(1,true);
    return;
  }
  if(e.key==="ArrowRight"&&!mod){
@@ -1056,14 +1079,12 @@ window.addEventListener("keydown",e=>{
    cycleSelected(-1);
    return;
  }
- if(e.key==="ArrowDown"&&!mod){
+ if(e.key==="ArrowUp"||e.key==="ArrowDown"){
    e.preventDefault();
-   cycleSelected(1);
-   return;
- }
- if(e.key==="ArrowUp"&&!mod){
-   e.preventDefault();
-   cycleSelected(-1);
+   const distance=innerHeight*.72;
+   if(e.key==="ArrowUp")state.targetY+=distance;
+   else state.targetY-=distance;
+   animate();
    return;
  }
 
@@ -1090,7 +1111,7 @@ window.addEventListener("keydown",e=>{
 
  /*
   * VIEWPORT NAVIGATION
-  * Ctrl+Arrow = move the canvas without changing selection.
+  * Arrow Up/Down = move the canvas without changing selection.
   */
  if(mod&&e.key==="ArrowLeft"){
    e.preventDefault();
@@ -1180,6 +1201,7 @@ function load(){
  }catch{}
  const dark=localStorage.getItem("reflatex-theme")==="dark";
  if(dark){document.body.classList.add("dark");$("#theme").textContent="☀"}
+ setBackground(localStorage.getItem("reflatex-background")||"flat");
  state.hand=true;$("#hand").classList.add("active");canvas.style.cursor="grab";
  sync();apply();empty()
 }
