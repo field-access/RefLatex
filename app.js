@@ -444,6 +444,28 @@ function flushSave(){
 }
 function empty(){$("#empty").style.display=state.notes.length?"none":"grid"}
 
+function widenCardForTables(el){
+ const tables=[...el.querySelectorAll(".cardbody table")];
+ if(!tables.length)return;
+
+ const body=el.querySelector(".cardbody");
+ const styles=getComputedStyle(body);
+ const horizontalPadding=parseFloat(styles.paddingLeft)+parseFloat(styles.paddingRight);
+ let requiredWidth=el.offsetWidth;
+
+ tables.forEach(table=>{
+  const width=table.style.width;
+  const maxWidth=table.style.maxWidth;
+  table.style.width="max-content";
+  table.style.maxWidth="none";
+  requiredWidth=Math.max(requiredWidth,table.offsetWidth+horizontalPadding+2);
+  table.style.width=width;
+  table.style.maxWidth=maxWidth;
+ });
+
+ el.style.width=Math.max(el.offsetWidth,Math.min(1200,requiredWidth))+"px";
+}
+
 function select(n){
  state.notes.forEach(x=>x.el.classList.remove("selected"));
  state.selected=n;if(n)n.el.classList.add("selected");
@@ -567,6 +589,7 @@ function makeNote(md,x,y,w=600,record=true,id=null,font="serif"){
  el.dataset.font=font;
  el.querySelector("[data-font]").value=font;
  n.el=el;world.appendChild(el);state.notes.push(n);
+ widenCardForTables(el);
 
  el.addEventListener("mousedown",e=>{
   if(e.button!==0||e.target.closest(".cardactions,.resize,a,button"))return;
@@ -761,7 +784,7 @@ function applyEditor(){
  const md=source.value.trim();if(!md)return;
  if(state.editId!==null){
   const n=state.notes.find(x=>x.id===state.editId);if(!n)return;
-  history();n.md=md;n.el.querySelector(".cardbody").innerHTML=render(md);
+  history();n.md=md;n.el.querySelector(".cardbody").innerHTML=render(md);widenCardForTables(n.el);
   select(n);
  }else{
   const p=worldPoint(innerWidth/2,innerHeight/2),n=makeNote(md,p.x-300,p.y-150,600,true);select(n)
