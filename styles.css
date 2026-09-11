@@ -292,6 +292,40 @@ body.dark button.tool:hover,body.dark .zoom button:hover{background:#37352f}
 body.dark #source{background:#1f1e1b;color:#e9e6df}
 body.dark .map-card .cardbar{background:linear-gradient(90deg,#302c4a,#292735);border-bottom-color:#494168}
 body.dark .map-card .map-title{color:#c3bcff}
+body.dark .map-card .map-source-preview{
+ background:color-mix(in srgb,var(--paper) 88%,var(--canvas));
+ border-right-color:#494640;
+}
+body.dark .map-card .map-pane{
+ background:#1d1c1a;
+ color:#e9e6df;
+}
+body.dark .map-card .map-pane svg{
+ color-scheme:dark;
+}
+body.dark .map-card .markmap-node text,
+body.dark .map-card .markmap-node foreignObject,
+body.dark .map-card .markmap-node .markmap-foreign{
+ color:#eeeae2;
+ fill:#eeeae2;
+}
+body.dark .map-card .markmap-node foreignObject > div{
+ color:#eeeae2;
+}
+body.dark .map-card .markmap-link{
+ opacity:.86;
+}
+body.dark .map-card .map-loading{color:#b8b3aa}
+body.dark .map-card .map-error{color:#f29b91}
+body.dark .map-card .cardactions select{
+ background:#302e3b;
+ color:#e5e0ff;
+}
+body.dark .map-card .cardactions select:hover,
+body.dark .map-card .cardactions button:hover{
+ background:#403b4d;
+ color:#fff;
+}
 body.dark .map-card[data-map-color="warm"] .cardbar{background:linear-gradient(90deg,#493a29,#302a20)}
 body.dark .map-options select{background:#292824}
 body.dark .cancel{background:#383631}
