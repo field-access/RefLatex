@@ -242,16 +242,6 @@ body.controls .hint{opacity:1;pointer-events:auto}
  background:#faf9f6f5;border:1px solid #00000018;border-radius:10px;
  overflow:hidden
 }
-.map-editor{
- position:fixed;z-index:100;right:16px;top:64px;width:min(500px,calc(100vw - 32px));
- height:min(720px,calc(100vh - 80px));display:none;flex-direction:column;
- background:#faf9f6f5;border:1px solid #00000018;border-radius:10px;overflow:hidden
-}
-.map-editor.open{display:flex}
-.map-editor #mapSource{
- flex:1;resize:none;border:0;outline:0;padding:17px;background:#fffefa;color:#2b2926;
- font:13px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace
-}
 .map-options{display:flex;gap:12px;padding:9px 12px;border-top:1px solid var(--border);font-size:11px}
 .map-options label{display:flex;align-items:center;gap:6px;color:var(--muted)}
 .map-options select{border:1px solid var(--border);border-radius:5px;background:transparent;color:inherit;padding:4px 6px;font-size:11px}
@@ -292,7 +282,6 @@ body.dark .background-menu button{color:#eee}
 body.dark .background-menu button:hover,body.dark .background-menu button.active{background:#3a3832}
 body.dark button.tool:hover,body.dark .zoom button:hover{background:#37352f}
 body.dark #source{background:#1f1e1b;color:#e9e6df}
-body.dark .map-editor #mapSource{background:#1f1e1b;color:#e9e6df}
 body.dark .map-card .cardbar{background:linear-gradient(90deg,#302c4a,#292735);border-bottom-color:#494168}
 body.dark .map-card .map-title{color:#c3bcff}
 body.dark .map-card[data-map-color="warm"] .cardbar{background:linear-gradient(90deg,#493a29,#302a20)}

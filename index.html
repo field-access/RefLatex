@@ -54,7 +54,7 @@
 <div class="edge" id="edge">☰</div>
 
 <div class="editor" id="editor">
- <div class="editorhead"><div><div class="etitle">Markdown</div><div class="esub">AI response → readable knowledge card</div></div><button class="tool" id="close">×</button></div>
+ <div class="editorhead"><div><div class="etitle">Markdown source</div><div class="esub">Use the same source as a readable card or a Markmap</div></div><button class="tool" id="close" title="Close editor (Esc)">×</button></div>
  <textarea id="source" spellcheck="false" placeholder="# Concept
 
 Explain the idea here.
@@ -62,25 +62,11 @@ Explain the idea here.
 For $T(n)=2T(n/2)+n$,
 
 $$T(n)=O(n\log n)$$"></textarea>
- <div class="editorfoot"><button class="cancel" id="cancel">Cancel</button><button class="apply" id="apply">Place note</button></div>
-</div>
-
-<div class="map-editor" id="mapEditor">
- <div class="editorhead"><div><div class="etitle">Mind map</div><div class="esub">Turn an outline into a navigable Markmap</div></div><button class="tool" id="closeMap" title="Close map editor (Esc)">×</button></div>
- <textarea id="mapSource" spellcheck="false" placeholder="# Research topic
-
-## Question
-- Context
-- Constraints
-
-## Approach
-- First idea
-- Second idea"></textarea>
  <div class="map-options">
   <label>Layout <select id="mapLayout"><option value="mindmap">Mindmap</option><option value="tree">Tree</option><option value="logicRight">Logic right</option><option value="logicLeft">Logic left</option></select></label>
   <label>Color <select id="mapColor"><option value="default">Default</option><option value="purple">Purple</option><option value="warm">Warm</option></select></label>
  </div>
- <div class="editorfoot"><button class="cancel" id="cancelMap">Cancel</button><button class="apply" id="applyMap">Place map</button></div>
+ <div class="editorfoot"><button class="cancel" id="cancel">Cancel</button><button class="apply" id="applyCard">Place card</button><button class="apply map-apply" id="applyMap">Place map</button></div>
 </div>
 
 <div class="context" id="context">

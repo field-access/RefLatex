@@ -11,7 +11,7 @@ const state={
  x:innerWidth/2,y:innerHeight/2,scale:1,
  targetX:innerWidth/2,targetY:innerHeight/2,targetScale:1,
  notes:[],selected:null,nextId:1,
- hand:true,spacePan:false,controlsVisible:true,pan:null,drag:null,rightPan:null,resize:null,editId:null,
+ hand:true,spacePan:false,controlsVisible:true,pan:null,drag:null,rightPan:null,resize:null,editId:null,editorMode:"note",
  undo:[],redo:[],historyLock:false,raf:0,saveTimer:0,hideTimer:0,
 };
 const MAP_COLORS=["default","purple","warm"];
@@ -22,7 +22,7 @@ function showControls(){
   state.controlsVisible=true;
   clearTimeout(state.hideTimer);
   state.hideTimer=setTimeout(()=>{
-    if(!editor.classList.contains("open") && !$("#mapEditor").classList.contains("open") && !context.classList.contains("open")){
+    if(!editor.classList.contains("open") && !context.classList.contains("open")){
       document.body.classList.add("controls-hidden");
       state.controlsVisible=false;
     }
@@ -877,21 +877,16 @@ function touchEnd(e){
 canvas.addEventListener("pointerup",touchEnd);canvas.addEventListener("pointercancel",touchEnd);
 
 function editNote(n){
- if(n.type==="map"){
-  state.editId=n.id;
-  $("#mapSource").value=n.md;
-  $("#mapLayout").value=n.mapLayout||"mindmap";
-  $("#mapColor").value=n.mapColor||"default";
-  $("#applyMap").textContent="Update map";
-  $("#mapEditor").classList.add("open");
-  $("#mapSource").focus();
-  return;
- }
- state.editId=n.id;source.value=n.md;$("#apply").textContent="Update note";editor.classList.add("open");source.focus()
+ state.editId=n.id;
+ state.editorMode=n.type==="map"?"map":"note";
+ source.value=n.md;
+ $("#mapLayout").value=n.mapLayout||"mindmap";
+ $("#mapColor").value=n.mapColor||"default";
+ $("#applyCard").textContent="Update card";
+ $("#applyMap").textContent="Update map";
+ editor.classList.add("open");source.focus()
 }
-function closeEditor(){editor.classList.remove("open");state.editId=null}
-function closeMapEditor(){$("#mapEditor").classList.remove("open");state.editId=null}
-function mapEditorOpen(){return $("#mapEditor").classList.contains("open")}
+function closeEditor(){editor.classList.remove("open");state.editId=null;state.editorMode="note"}
 function selectedMap(){return state.selected?.type==="map"?state.selected:null}
 function cycleMapLayout(){
  const n=selectedMap();if(!n)return;
@@ -901,62 +896,43 @@ function cycleMapLayout(){
  n.el.querySelector("[data-map-layout]").value=n.mapLayout;
  renderMap(n);save();
 }
-function applyEditor(){
+function applyEditor(type=state.editorMode){
  const md=source.value.trim();if(!md)return;
  if(state.editId!==null){
   const n=state.notes.find(x=>x.id===state.editId);if(!n)return;
-  history();n.md=md;n.el.querySelector(".cardbody").innerHTML=render(md);widenCardForTables(n.el);
+  history();n.md=md;n.mapColor=$("#mapColor").value;n.mapLayout=$("#mapLayout").value;
+  if(n.type!==type)setCardType(n,type,false);
+  else if(type==="map")renderMap(n);
+  else n.el.querySelector(".cardbody").innerHTML=render(md);
+  n.el.dataset.mapColor=n.mapColor;
+  if(type!=="map")widenCardForTables(n.el);
   select(n);
  }else{
-  const p=worldPoint(innerWidth/2,innerHeight/2),n=makeNote(md,p.x-300,p.y-150,600,true);select(n)
+  const p=worldPoint(innerWidth/2,innerHeight/2);
+  const n=type==="map"
+   ? makeMap(md,p.x-360,p.y-250,720,true,null,$("#mapColor").value,$("#mapLayout").value)
+   : makeNote(md,p.x-300,p.y-150,600,true);
+  select(n)
  }
  closeEditor();save()
 }
- function applyMapEditor(){
-  const md=$("#mapSource").value.trim();if(!md)return;
-  const color=$("#mapColor").value,layout=$("#mapLayout").value;
-  if(state.editId!==null){
-   const n=state.notes.find(x=>x.id===state.editId);if(!n)return;
-   history();n.md=md;n.mapColor=color;n.mapLayout=layout;n.el.dataset.mapColor=color;
-   n.el.querySelector("[data-map-layout]").value=layout;renderMap(n);select(n);
-  }else{
-   const p=worldPoint(innerWidth/2,innerHeight/2),n=makeMap(md,p.x-360,p.y-250,720,true,null,color,layout);select(n);
-  }
-  closeMapEditor();save();
- }
- function openMapTab(n){
+function openMapTab(n){
   const payload=JSON.stringify(n.md).replace(/</g,"\\u003c");
   const title=escapeHtml((n.md.match(/^#\s+(.+)$/m)||[])[1]||"RefLatex mind map");
   const html=`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><style>html,body{height:100%;margin:0;background:#f7f5f0;color:#272622;font:14px system-ui}svg{width:100%;height:100%}</style></head><body><svg id="map"></svg><script src="https://cdn.jsdelivr.net/npm/d3@7"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18.12"><\/script><script>const md=${payload};const root=new markmap.Transformer().transform(md).root;markmap.Markmap.create("#map",{duration:350},root);<\/script></body></html>`;
   const tab=window.open();if(!tab){alert("Allow pop-ups to open this mind map.");return}
   tab.document.write(html);tab.document.close();
-  }
+}
 async function quickPaste(){
- if(document.activeElement===$("#mapSource")){
-  try{
-   const md=await navigator.clipboard.readText();
-   if(md.trim())$("#mapSource").value=md;
-  }catch{}
-  applyMapEditor();
-  return;
- }
- if(document.activeElement===source){applyEditor();return}
+ if(document.activeElement===source){return}
  try{
   const md=await navigator.clipboard.readText();
   if(!md.trim())return;
-  if($("#mapEditor").classList.contains("open")){
-   $("#mapSource").value=md;
-   $("#mapSource").focus();
-   applyMapEditor();
-   return;
-  }
-  const p=worldPoint(innerWidth/2,innerHeight/2),n=makeNote(md,p.x-300,p.y-150,600,true);select(n);save()
+  source.value=md;
+  editor.classList.add("open");
+  source.focus();
  }catch{
-  if($("#mapEditor").classList.contains("open")){
-   $("#mapSource").focus();
-  }else{
-   editor.classList.add("open");source.value="";source.focus();
-  }
+  editor.classList.add("open");source.value="";source.focus();
  }
 }
 function deleteNote(n){history();n.el.remove();state.notes=state.notes.filter(x=>x!==n);if(state.selected===n)state.selected=null;
@@ -1093,8 +1069,8 @@ $("#hand").onclick=()=>{
  updateHandUI();
 showControls();
 }
-$("#new").onclick=()=>{state.editId=null;source.value="";$("#apply").textContent="Place note";editor.classList.add("open");source.focus()}
-$("#newMap").onclick=()=>{state.editId=null;$("#mapSource").value="";$("#mapLayout").value="mindmap";$("#mapColor").value="default";$("#applyMap").textContent="Place map";$("#mapEditor").classList.add("open");$("#mapSource").focus()}
+$("#new").onclick=()=>{state.editId=null;state.editorMode="note";source.value="";$("#applyCard").textContent="Place card";$("#applyMap").textContent="Place map";editor.classList.add("open");source.focus()}
+$("#newMap").onclick=()=>{state.editId=null;state.editorMode="map";source.value="";$("#mapLayout").value="mindmap";$("#mapColor").value="default";$("#applyCard").textContent="Place card";$("#applyMap").textContent="Place map";editor.classList.add("open");source.focus()}
 $("#fit").onclick=()=>{fit(true);save()}
 $("#center").onclick=()=>{
  const b=cardBounds();
@@ -1128,8 +1104,7 @@ $("#canvasFile").addEventListener("change",e=>{
 $("#full").onclick=toggleFull
 $("#edge").onclick=revealControls
 $("#minus").onclick=()=>zoom(.72);$("#plus").onclick=()=>zoom(1.38);$("#reset").onclick=()=>moveTo(innerWidth/2,innerHeight/2,1)
-$("#close").onclick=closeEditor;$("#cancel").onclick=closeEditor;$("#apply").onclick=applyEditor
-$("#closeMap").onclick=closeMapEditor;$("#cancelMap").onclick=closeMapEditor;$("#applyMap").onclick=applyMapEditor
+$("#close").onclick=closeEditor;$("#cancel").onclick=closeEditor;$("#applyCard").onclick=()=>applyEditor("note");$("#applyMap").onclick=()=>applyEditor("map")
 $("#edit").onclick=()=>state.selected&&editNote(state.selected)
 $("#duplicate").onclick=duplicate
 $("#copy").onclick=copyNote
@@ -1139,19 +1114,9 @@ document.addEventListener("click",e=>{
  if(!e.target.closest(".background-picker"))toggleBackgroundMenu(false);
 })
 document.addEventListener("paste",e=>{
- if(document.activeElement===source||document.activeElement===$("#mapSource"))return;
+ if(document.activeElement===source)return;
  const md=e.clipboardData?.getData("text/plain");if(!md?.trim())return;
  e.preventDefault();const p=worldPoint(innerWidth/2,innerHeight/2),n=makeNote(md,p.x-300,p.y-150,600,true);select(n);save()
-});
-$("#mapSource").addEventListener("paste",e=>{
- const md=e.clipboardData?.getData("text/plain");
- if(!md)return;
- e.preventDefault();
- const field=e.currentTarget;
- const start=field.selectionStart;
- const end=field.selectionEnd;
- field.value=field.value.slice(0,start)+md+field.value.slice(end);
- field.selectionStart=field.selectionEnd=start+md.length;
 });
 
 function focusSelected(){
@@ -1207,7 +1172,6 @@ function cycleFont(direction=1){
 window.addEventListener("keydown",e=>{
  const mod=e.ctrlKey||e.metaKey;
  const editing=document.activeElement===source ||
-   document.activeElement===$("#mapSource") ||
    document.activeElement?.tagName==="INPUT" ||
    document.activeElement?.tagName==="TEXTAREA";
 
@@ -1233,14 +1197,12 @@ window.addEventListener("keydown",e=>{
  if(editing){
    if(mod&&e.key==="Enter"){
      e.preventDefault();
-     document.activeElement===$("#mapSource")?applyMapEditor():applyEditor();
+     applyEditor(state.editorMode);
      return;
    }
    if(e.key==="Escape"){
      e.preventDefault();
-     document.activeElement===$("#mapSource")||mapEditorOpen()
-      ? closeMapEditor()
-      : closeEditor();
+     closeEditor();
    }
    return;
  }
@@ -1416,8 +1378,7 @@ window.addEventListener("keydown",e=>{
  }
 
  if(e.key==="Escape"){
-   if(mapEditorOpen())closeMapEditor();
-   else if(editor.classList.contains("open"))closeEditor();
+   if(editor.classList.contains("open"))closeEditor();
    else context.classList.remove("open");
    return;
  }
