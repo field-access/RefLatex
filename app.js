@@ -374,6 +374,7 @@ async function renderMap(n){
   const transformer=new window.markmap.Transformer();
   const {root}=transformer.transform(n.md);
   body.innerHTML=`<div class="map-split"><div class="map-source-preview">${render(n.md)}</div><div class="map-pane"></div></div>`;
+  n.el.dataset.mapDisplay=n.mapDisplay||"both";
   const pane=body.querySelector(".map-pane");
   const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
   pane.appendChild(svg);
@@ -393,10 +394,22 @@ function setCardType(n,type,record=true){
  n.type=type;
  n.el.classList.toggle("map-card",type==="map");
  n.el.dataset.mapColor=n.mapColor||"default";
+ n.el.dataset.mapDisplay=n.mapDisplay||"both";
  const title=n.el.querySelector(".map-title");
  if(title)title.textContent=type==="map"?"Mind map":"";
  const view=n.el.querySelector("[data-view]");
  if(view)view.value=type;
+ const display=n.el.querySelector("[data-map-display]");
+ if(display){
+  display.value=n.mapDisplay||"both";
+  display.onchange=event=>{
+   history();
+   n.mapDisplay=event.target.value==="map"?"map":"both";
+   n.el.dataset.mapDisplay=n.mapDisplay;
+   renderMap(n);
+   save();
+  };
+ }
  const body=n.el.querySelector(".cardbody");
  if(type==="map"){
   renderMap(n);
@@ -481,7 +494,7 @@ function zoom(f,cx=innerWidth/2,cy=innerHeight/2){
  zoomPrecise(f,cx,cy);
  clearTimeout(state.saveTimer);state.saveTimer=setTimeout(save,180);
 }
-function snapshot(){return JSON.stringify({x:state.x,y:state.y,scale:state.scale,nextId:state.nextId,notes:state.notes.map(n=>({id:n.id,md:n.md,x:n.x,y:n.y,w:n.width||n.el.offsetWidth,font:n.font||"serif",size:n.size||"100",type:n.type||"note",mapColor:n.mapColor||"default",mapLayout:n.mapLayout||"mindmap"}))})}
+function snapshot(){return JSON.stringify({x:state.x,y:state.y,scale:state.scale,nextId:state.nextId,notes:state.notes.map(n=>({id:n.id,md:n.md,x:n.x,y:n.y,w:n.width||n.el.offsetWidth,font:n.font||"serif",size:n.size||"100",type:n.type||"note",mapColor:n.mapColor||"default",mapDisplay:n.mapDisplay||"both"}))})}
 function history(){
  if(state.historyLock)return;
  const s=snapshot();
@@ -491,7 +504,7 @@ function restore(s){
  const d=JSON.parse(s);state.historyLock=true;
  state.notes.forEach(n=>n.el.remove());state.notes=[];state.selected=null;
  (d.notes||[]).forEach(n=>n.type==="map"
-  ? makeMap(n.md,n.x,n.y,n.w,false,n.id,n.mapColor,n.mapLayout)
+  ? makeMap(n.md,n.x,n.y,n.w,false,n.id,n.mapColor,n.mapDisplay)
   : makeNote(n.md,n.x,n.y,n.w,false,n.id,n.font,n.size));
  state.x=Number.isFinite(d.x)?d.x:innerWidth/2;
  state.y=Number.isFinite(d.y)?d.y:innerHeight/2;
@@ -564,7 +577,7 @@ function canvasPayload(){
    font:n.font||"serif",
    size:n.size||"100",
    mapColor:n.mapColor||"default",
-   mapLayout:n.mapLayout||"mindmap"
+   mapDisplay:n.mapDisplay||"both"
   }))
  };
 }
@@ -608,7 +621,7 @@ function openCanvasFile(file){
     if(typeof n.markdown!=="string")return;
     const args=[n.markdown,Number.isFinite(n.x)?n.x:0,Number.isFinite(n.y)?n.y:0,Number.isFinite(n.width)?n.width:600,false,Number.isFinite(n.id)?n.id:null];
     n.type==="map"
-      ? makeMap(...args, n.mapColor, n.mapLayout)
+      ? makeMap(...args, n.mapColor, n.mapDisplay)
       : makeNote(...args,typeof n.font==="string"?n.font:"serif",n.size);
    });
 
@@ -655,7 +668,7 @@ function makeNote(md,x,y,w=600,record=true,id=null,font="serif",size="100"){
  state.nextId=Math.max(state.nextId,n.id+1);
  const el=document.createElement("article");
  el.className="card";el.style.left=x+"px";el.style.top=y+"px";el.style.width=width+"px";
- el.innerHTML=`<div class="cardbar"><div class="map-title"></div></div><div class="cardactions"><select data-view aria-label="Card rendering" title="Render card"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-font aria-label="Card font" title="Card font (V / Shift+V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option><option value="slab">Slab</option><option value="humanist">Humanist</option><option value="rounded">Rounded</option><option value="editorial">Editorial</option><option value="hand">Handwritten</option><option value="hand-soft">Hand Soft</option><option value="hand-bold">Hand Bold</option><option value="hand-marker">Hand Marker</option><option value="hand-script">Hand Script</option></select><select data-size aria-label="Card font size" title="Card font size"><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option><option value="180">180%</option></select><button data-map-edit class="map-only" title="Edit map">✎</button><button data-map-open class="map-only" title="Open map in new tab">↗</button><button data-edit>✎</button><button data-delete>×</button></div>
+ el.innerHTML=`<div class="cardbar"><div class="map-title"></div></div><div class="cardactions"><select data-view aria-label="Card rendering" title="Render card"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-map-display class="map-only" aria-label="Map display" title="Show map or map and Markdown"><option value="both">Map + Markdown</option><option value="map">Map only</option></select><select data-font aria-label="Card font" title="Card font (V / Shift+V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option><option value="slab">Slab</option><option value="humanist">Humanist</option><option value="rounded">Rounded</option><option value="editorial">Editorial</option><option value="hand">Handwritten</option><option value="hand-soft">Hand Soft</option><option value="hand-bold">Hand Bold</option><option value="hand-marker">Hand Marker</option><option value="hand-script">Hand Script</option></select><select data-size aria-label="Card font size" title="Card font size"><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option><option value="180">180%</option></select><button data-map-edit class="map-only" title="Edit map">✎</button><button data-map-open class="map-only" title="Open map in new tab">↗</button><button data-edit>✎</button><button data-delete>×</button></div>
  <div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div>
  <div class="cardbody">${render(md)}</div>`;
  el.dataset.font=font;
@@ -681,6 +694,7 @@ function makeNote(md,x,y,w=600,record=true,id=null,font="serif",size="100"){
  el.querySelector("[data-map-edit]").onclick=()=>editNote(n);
  el.querySelector("[data-map-open]").onclick=()=>openMapTab(n);
  el.querySelector("[data-view]").onchange=e=>setCardType(n,e.target.value);
+ el.querySelector("[data-map-display]").onchange=e=>{history();n.mapDisplay=e.target.value==="map"?"map":"both";el.dataset.mapDisplay=n.mapDisplay;renderMap(n);save()};
  el.querySelector("[data-font]").onchange=e=>{
   history();n.font=e.target.value;el.dataset.font=n.font;widenCardForTables(el);save();
  };
@@ -696,17 +710,19 @@ function makeNote(md,x,y,w=600,record=true,id=null,font="serif",size="100"){
  empty();
  return n;
 }
-function makeMap(md,x,y,w=720,record=true,id=null,mapColor="default",mapLayout="mindmap"){
+function makeMap(md,x,y,w=720,record=true,id=null,mapColor="default",mapDisplay="both"){
  if(record)history();
  const width=Math.max(420,Math.min(1200,w||720));
- const n={id:id??state.nextId++,md,x,y,width,type:"map",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapLayout:"mindmap",el:null,mapInstance:null};
+ const n={id:id??state.nextId++,md,x,y,width,type:"map",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapDisplay:mapDisplay==="map"?"map":"both",el:null,mapInstance:null};
  state.nextId=Math.max(state.nextId,n.id+1);
  const el=document.createElement("article");
  el.className="card map-card";el.style.left=x+"px";el.style.top=y+"px";el.style.width=width+"px";
  el.dataset.mapColor=n.mapColor;
- el.innerHTML=`<div class="cardbar"><div class="map-title">Mind map</div></div><div class="cardactions"><select data-view aria-label="Card rendering" title="Render card"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-font aria-label="Card font" title="Card font"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option></select><select data-size aria-label="Card font size" title="Card font size"><option value="100">100%</option><option value="125">125%</option><option value="140">140%</option></select><button data-map-edit title="Edit map">✎</button><button data-map-open title="Open map in new tab">↗</button><button data-edit>✎</button><button data-delete title="Delete map">×</button></div><div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div><div class="cardbody"><div class="map-loading">Rendering mind map…</div></div>`;
+ el.dataset.mapDisplay=n.mapDisplay;
+ el.innerHTML=`<div class="cardbar"><div class="map-title">Mind map</div></div><div class="cardactions"><select data-view aria-label="Card rendering" title="Render card"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-map-display aria-label="Map display" title="Show map or map and Markdown"><option value="both">Map + Markdown</option><option value="map">Map only</option></select><select data-font aria-label="Card font" title="Card font"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option></select><select data-size aria-label="Card font size" title="Card font size"><option value="100">100%</option><option value="125">125%</option><option value="140">140%</option></select><button data-map-edit title="Edit map">✎</button><button data-map-open title="Open map in new tab">↗</button><button data-edit>✎</button><button data-delete title="Delete map">×</button></div><div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div><div class="cardbody"><div class="map-loading">Rendering mind map…</div></div>`;
  n.el=el;world.appendChild(el);state.notes.push(n);
  el.querySelector("[data-view]").value="map";
+ el.querySelector("[data-map-display]").value=n.mapDisplay;
  el.querySelector("[data-font]").value=n.font||"serif";
  el.querySelector("[data-size]").value=n.size||"100";
  el.addEventListener("mousedown",e=>{
@@ -720,6 +736,7 @@ function makeMap(md,x,y,w=720,record=true,id=null,mapColor="default",mapLayout="
  el.querySelector("[data-edit]").onclick=()=>editNote(n);
  el.querySelector("[data-delete]").onclick=()=>deleteNote(n);
  el.querySelector("[data-view]").onchange=e=>setCardType(n,e.target.value);
+ el.querySelector("[data-map-display]").onchange=e=>{history();n.mapDisplay=e.target.value==="map"?"map":"both";el.dataset.mapDisplay=n.mapDisplay;renderMap(n);save()};
  el.querySelector("[data-font]").onchange=e=>{history();n.font=e.target.value;el.dataset.font=n.font;save()};
  el.querySelector("[data-size]").onchange=e=>{history();n.size=e.target.value;el.dataset.fontSize=n.size;save()};
  el.querySelectorAll(".resize").forEach(r=>r.onmousedown=e=>{if(e.button===0)startResize(e,n,r.dataset.side)});
@@ -959,7 +976,7 @@ function duplicate(){
  if(!state.selected)return;
  const n=state.selected;
  const c=n.type==="map"
-  ? makeMap(n.md,n.x+45,n.y+45,n.el.offsetWidth,true,null,n.mapColor,n.mapLayout)
+  ? makeMap(n.md,n.x+45,n.y+45,n.el.offsetWidth,true,null,n.mapColor,n.mapDisplay)
   : makeNote(n.md,n.x+45,n.y+45,n.el.offsetWidth,true,null,n.font,n.size);
  select(c);save()
 }
@@ -1137,19 +1154,15 @@ function focusSelected(){
   if(!n)return;
 
   // Keep the selected card's front edge in view without changing its zoom level.
-  const r={
-    x:n.x,
-    y:n.y,
-    w:n.el.offsetWidth
-  };
-
-  const targetScale=Math.max(.7,Math.min(1.25,state.targetScale||state.scale));
-  const cx=r.x+r.w/2;
-  const frontOffset=Math.min(72,Math.max(32,innerHeight*.1));
+  const r={x:n.x,y:n.y,w:n.el.offsetWidth,h:n.el.offsetHeight};
+  const horizontalFit=(innerWidth-96)/Math.max(1,r.w);
+  const verticalFit=(innerHeight-96)/Math.max(1,r.h);
+  const targetScale=Math.max(.95,Math.min(2.4,Math.min(horizontalFit,verticalFit)));
+  const cx=r.x+r.w/2,cy=r.y+r.h/2;
 
   moveTo(
     innerWidth/2-cx*targetScale,
-    frontOffset-r.y*targetScale,
+    innerHeight/2-cy*targetScale,
     targetScale
   );
 }
@@ -1403,7 +1416,7 @@ function load(){
    (d.notes||[]).forEach(n=>{
     if(typeof n.md!=="string")return;
     n.type==="map"
-      ? makeMap(n.md,n.x||0,n.y||0,n.w||720,false,n.id,n.mapColor,n.mapLayout)
+      ? makeMap(n.md,n.x||0,n.y||0,n.w||720,false,n.id,n.mapColor,n.mapDisplay)
       : makeNote(n.md,n.x||0,n.y||0,n.w||600,false,n.id,typeof n.font==="string"?n.font:"serif",n.size);
    })
   }
