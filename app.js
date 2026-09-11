@@ -30,6 +30,10 @@ function showControls(){
 function wakeControls(){
   showControls();
 }
+document.querySelectorAll(".toolbar,.zoom,.editor").forEach(panel=>{
+ panel.addEventListener("pointerenter",showControls);
+ panel.addEventListener("focusin",showControls);
+});
 function safeMarkdown(md){
  let out;
  try{

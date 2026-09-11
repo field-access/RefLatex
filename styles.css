@@ -219,12 +219,12 @@ button.tool.active{background:#e8e6ff;color:var(--accent)}
 body.controls-hidden .toolbar{
  opacity:0;
  transform:translate(-18px,-50%);
- pointer-events:none;
+ pointer-events:auto;
 }
 body.controls-hidden .zoom{
  opacity:0;
  transform:translateY(12px);
- pointer-events:none;
+ pointer-events:auto;
 }
 body.controls-hidden .hint{
  opacity:0;
