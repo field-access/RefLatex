@@ -356,6 +356,27 @@ function renderMap(n){
   body.innerHTML='<div class="map-error">Markmap could not load. Check your connection, then reopen this map.</div>';
   return;
  }
+ function setCardType(n,type,record=true){
+  if(n.type===type)return;
+  if(record)history();
+  n.type=type;
+  n.el.classList.toggle("map-card",type==="map");
+  n.el.dataset.mapColor=n.mapColor||"default";
+  const title=n.el.querySelector(".map-title");
+  if(title)title.textContent=type==="map"?"Mind map":"";
+  const view=n.el.querySelector("[data-view]");
+  if(view)view.value=type;
+  const body=n.el.querySelector(".cardbody");
+  if(type==="map"){
+   n.el.style.height="";
+   renderMap(n);
+  }else{
+   n.el.style.height="";
+   body.innerHTML=render(n.md);
+   widenCardForTables(n.el);
+  }
+  save();
+ }
  try{
   const transformer=new window.markmap.Transformer();
   const {root}=transformer.transform(n.md);
@@ -619,10 +640,13 @@ function makeNote(md,x,y,w=600,record=true,id=null,font="serif",size="100"){
  state.nextId=Math.max(state.nextId,n.id+1);
  const el=document.createElement("article");
  el.className="card";el.style.left=x+"px";el.style.top=y+"px";el.style.width=width+"px";
- el.innerHTML=`<div class="cardbar"></div><div class="cardactions"><select data-font aria-label="Card font" title="Card font (V / Shift+V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option><option value="slab">Slab</option><option value="humanist">Humanist</option><option value="rounded">Rounded</option><option value="editorial">Editorial</option><option value="hand">Handwritten</option><option value="hand-soft">Hand Soft</option><option value="hand-bold">Hand Bold</option><option value="hand-marker">Hand Marker</option><option value="hand-script">Hand Script</option></select><select data-size aria-label="Card font size" title="Card font size"><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option><option value="180">180%</option></select><button data-edit>✎</button><button data-delete>×</button></div>
+ el.innerHTML=`<div class="cardbar"><div class="map-title"></div></div><div class="cardactions"><select data-view aria-label="Card rendering" title="Render card"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-map-layout class="map-only" aria-label="Map layout" title="Map layout"><option value="mindmap">Mindmap</option><option value="tree">Tree</option><option value="logicRight">Logic right</option><option value="logicLeft">Logic left</option></select><select data-font aria-label="Card font" title="Card font (V / Shift+V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option><option value="slab">Slab</option><option value="humanist">Humanist</option><option value="rounded">Rounded</option><option value="editorial">Editorial</option><option value="hand">Handwritten</option><option value="hand-soft">Hand Soft</option><option value="hand-bold">Hand Bold</option><option value="hand-marker">Hand Marker</option><option value="hand-script">Hand Script</option></select><select data-size aria-label="Card font size" title="Card font size"><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option><option value="180">180%</option></select><button data-map-edit class="map-only" title="Edit map">✎</button><button data-map-open class="map-only" title="Open map in new tab">↗</button><button data-edit>✎</button><button data-delete>×</button></div>
  <div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div>
  <div class="cardbody">${render(md)}</div>`;
  el.dataset.font=font;
+ el.dataset.mapColor=n.mapColor||"default";
+ el.querySelector("[data-map-layout]").value=n.mapLayout||"mindmap";
+ el.querySelector("[data-view]").value="note";
  el.querySelector("[data-font]").value=font;
  el.dataset.fontSize=["70","80","90","100","110","125","140","160","180"].includes(String(size))?String(size):"100";
  el.querySelector("[data-size]").value=el.dataset.fontSize;
@@ -640,6 +664,9 @@ function makeNote(md,x,y,w=600,record=true,id=null,font="serif",size="100"){
  });
  el.querySelector("[data-edit]").onclick=()=>editNote(n);
  el.querySelector("[data-delete]").onclick=()=>deleteNote(n);
+ el.querySelector("[data-map-edit]").onclick=()=>editNote(n);
+ el.querySelector("[data-map-open]").onclick=()=>openMapTab(n);
+ el.querySelector("[data-view]").onchange=e=>setCardType(n,e.target.value);
  el.querySelector("[data-font]").onchange=e=>{
   history();n.font=e.target.value;el.dataset.font=n.font;widenCardForTables(el);save();
  };
@@ -663,8 +690,11 @@ function makeMap(md,x,y,w=720,record=true,id=null,mapColor="default",mapLayout="
  const el=document.createElement("article");
  el.className="card map-card";el.style.left=x+"px";el.style.top=y+"px";el.style.width=width+"px";
  el.dataset.mapColor=n.mapColor;
- el.innerHTML=`<div class="cardbar"><div class="map-title">Mind map</div></div><div class="cardactions"><select data-map-layout aria-label="Map layout" title="Map layout"><option value="mindmap">Mindmap</option><option value="tree">Tree</option><option value="logicRight">Logic right</option><option value="logicLeft">Logic left</option></select><button data-map-edit title="Edit map">✎</button><button data-map-open title="Open map in new tab">↗</button><button data-delete title="Delete map">×</button></div><div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div><div class="cardbody"><div class="map-loading">Rendering mind map…</div></div>`;
+ el.innerHTML=`<div class="cardbar"><div class="map-title">Mind map</div></div><div class="cardactions"><select data-view aria-label="Card rendering" title="Render card"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-map-layout aria-label="Map layout" title="Map layout"><option value="mindmap">Mindmap</option><option value="tree">Tree</option><option value="logicRight">Logic right</option><option value="logicLeft">Logic left</option></select><select data-font aria-label="Card font" title="Card font"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option></select><select data-size aria-label="Card font size" title="Card font size"><option value="100">100%</option><option value="125">125%</option><option value="140">140%</option></select><button data-map-edit title="Edit map">✎</button><button data-map-open title="Open map in new tab">↗</button><button data-edit>✎</button><button data-delete title="Delete map">×</button></div><div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div><div class="cardbody"><div class="map-loading">Rendering mind map…</div></div>`;
  n.el=el;world.appendChild(el);state.notes.push(n);
+ el.querySelector("[data-view]").value="map";
+ el.querySelector("[data-font]").value=n.font||"serif";
+ el.querySelector("[data-size]").value=n.size||"100";
  el.querySelector("[data-map-layout]").value=n.mapLayout;
  el.addEventListener("mousedown",e=>{
   if(e.button!==0||e.target.closest(".cardactions,.resize,a,button"))return;
@@ -674,7 +704,11 @@ function makeMap(md,x,y,w=720,record=true,id=null,mapColor="default",mapLayout="
  el.addEventListener("dblclick",e=>{if(!e.target.closest(".cardactions,.resize")){e.preventDefault();e.stopPropagation();editNote(n)}});
  el.querySelector("[data-map-edit]").onclick=()=>editNote(n);
  el.querySelector("[data-map-open]").onclick=()=>openMapTab(n);
+ el.querySelector("[data-edit]").onclick=()=>editNote(n);
  el.querySelector("[data-delete]").onclick=()=>deleteNote(n);
+ el.querySelector("[data-view]").onchange=e=>setCardType(n,e.target.value);
+ el.querySelector("[data-font]").onchange=e=>{history();n.font=e.target.value;el.dataset.font=n.font;save()};
+ el.querySelector("[data-size]").onchange=e=>{history();n.size=e.target.value;el.dataset.fontSize=n.size;save()};
  el.querySelector("[data-map-layout]").onchange=e=>{history();n.mapLayout=e.target.value;renderMap(n);save()};
  el.querySelector("[data-map-layout]").onfocus=()=>select(n);
  el.querySelectorAll(".resize").forEach(r=>r.onmousedown=e=>{if(e.button===0)startResize(e,n,r.dataset.side)});
