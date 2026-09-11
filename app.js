@@ -356,27 +356,6 @@ function renderMap(n){
   body.innerHTML='<div class="map-error">Markmap could not load. Check your connection, then reopen this map.</div>';
   return;
  }
- function setCardType(n,type,record=true){
-  if(n.type===type)return;
-  if(record)history();
-  n.type=type;
-  n.el.classList.toggle("map-card",type==="map");
-  n.el.dataset.mapColor=n.mapColor||"default";
-  const title=n.el.querySelector(".map-title");
-  if(title)title.textContent=type==="map"?"Mind map":"";
-  const view=n.el.querySelector("[data-view]");
-  if(view)view.value=type;
-  const body=n.el.querySelector(".cardbody");
-  if(type==="map"){
-   n.el.style.height="";
-   renderMap(n);
-  }else{
-   n.el.style.height="";
-   body.innerHTML=render(n.md);
-   widenCardForTables(n.el);
-  }
-  save();
- }
  try{
   const transformer=new window.markmap.Transformer();
   const {root}=transformer.transform(n.md);
@@ -390,6 +369,25 @@ function renderMap(n){
  }catch(err){
   body.innerHTML=`<div class="map-error">${escapeHtml(err.message||"Could not render this map.")}</div>`;
  }
+}
+function setCardType(n,type,record=true){
+ if(n.type===type)return;
+ if(record)history();
+ n.type=type;
+ n.el.classList.toggle("map-card",type==="map");
+ n.el.dataset.mapColor=n.mapColor||"default";
+ const title=n.el.querySelector(".map-title");
+ if(title)title.textContent=type==="map"?"Mind map":"";
+ const view=n.el.querySelector("[data-view]");
+ if(view)view.value=type;
+ const body=n.el.querySelector(".cardbody");
+ if(type==="map"){
+  renderMap(n);
+ }else{
+  body.innerHTML=render(n.md);
+  widenCardForTables(n.el);
+ }
+ save();
 }
 function apply(){
  if(!Number.isFinite(state.x)||!Number.isFinite(state.y)||!Number.isFinite(state.scale)){
@@ -1144,6 +1142,16 @@ document.addEventListener("paste",e=>{
  if(document.activeElement===source||document.activeElement===$("#mapSource"))return;
  const md=e.clipboardData?.getData("text/plain");if(!md?.trim())return;
  e.preventDefault();const p=worldPoint(innerWidth/2,innerHeight/2),n=makeNote(md,p.x-300,p.y-150,600,true);select(n);save()
+});
+$("#mapSource").addEventListener("paste",e=>{
+ const md=e.clipboardData?.getData("text/plain");
+ if(!md)return;
+ e.preventDefault();
+ const field=e.currentTarget;
+ const start=field.selectionStart;
+ const end=field.selectionEnd;
+ field.value=field.value.slice(0,start)+md+field.value.slice(end);
+ field.selectionStart=field.selectionEnd=start+md.length;
 });
 
 function focusSelected(){
