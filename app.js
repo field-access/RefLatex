@@ -42,6 +42,14 @@ function safeMarkdown(md){
 function escapeHtml(s){
  return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+function showRuntimeError(message){
+ const emptyMessage=$("#empty");
+ if(emptyMessage){
+  emptyMessage.innerHTML=`<div><b>RefLatex could not start</b><span>${escapeHtml(message)}</span></div>`;
+  emptyMessage.style.display="grid";
+ }
+ console.error("RefLatex:",message);
+}
 function normalizeEscapedLatex(s){
   let text=String(s);
 
@@ -1427,5 +1435,9 @@ window.addEventListener("keyup",e=>{
   canvas.style.cursor=state.hand?"grab":"default";
  }
 });
-load();
+try{
+ load();
+}catch(err){
+ showRuntimeError(err?.message||"Refresh the page and try again.");
+}
 })();
