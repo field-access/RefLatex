@@ -547,7 +547,7 @@ function downloadCanvas(){
  setTimeout(()=>URL.revokeObjectURL(url),1000);
 
  $("#hint").textContent="Canvas saved";
- setTimeout(()=>$("#hint").textContent="✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · Drag notes · Double-click edit · Ctrl/Cmd+Enter paste · Ctrl/Cmd+S save · Ctrl/Cmd+O open",1800);
+ setTimeout(()=>$("#hint").textContent="✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · M new map · E edit · Shift+M open map · Shift+L layout · Esc close",1800);
 }
 
 function openCanvasFile(file){
@@ -600,7 +600,7 @@ function openCanvasFile(file){
    save();
 
    $("#hint").textContent=`Opened ${file.name}`;
-   setTimeout(()=>$("#hint").textContent="✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · Drag notes · Double-click edit · Ctrl/Cmd+Enter paste · Ctrl/Cmd+S save · Ctrl/Cmd+O open",2200);
+   setTimeout(()=>$("#hint").textContent="✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · M new map · E edit · Shift+M open map · Shift+L layout · Esc close",2200);
 
   }catch(err){
    state.historyLock=false;
@@ -859,6 +859,16 @@ function editNote(n){
 }
 function closeEditor(){editor.classList.remove("open");state.editId=null}
 function closeMapEditor(){$("#mapEditor").classList.remove("open");state.editId=null}
+function mapEditorOpen(){return $("#mapEditor").classList.contains("open")}
+function selectedMap(){return state.selected?.type==="map"?state.selected:null}
+function cycleMapLayout(){
+ const n=selectedMap();if(!n)return;
+ history();
+ const index=MAP_LAYOUTS.indexOf(n.mapLayout);
+ n.mapLayout=MAP_LAYOUTS[(index+1)%MAP_LAYOUTS.length];
+ n.el.querySelector("[data-map-layout]").value=n.mapLayout;
+ renderMap(n);save();
+}
 function applyEditor(){
  const md=source.value.trim();if(!md)return;
  if(state.editId!==null){
@@ -1186,7 +1196,9 @@ window.addEventListener("keydown",e=>{
    }
    if(e.key==="Escape"){
      e.preventDefault();
-     closeEditor();
+     document.activeElement===$("#mapSource")||mapEditorOpen()
+      ? closeMapEditor()
+      : closeEditor();
    }
    return;
  }
@@ -1196,11 +1208,24 @@ window.addEventListener("keydown",e=>{
   * These mirror the visible buttons without interfering with card text input.
   */
  const key=e.key.toLowerCase();
+ if(!mod&&!e.altKey&&e.shiftKey){
+   if(key==="m"&&selectedMap()){
+     e.preventDefault();
+     openMapTab(selectedMap());
+     return;
+   }
+   if(key==="l"&&selectedMap()){
+     e.preventDefault();
+     cycleMapLayout();
+     return;
+   }
+ }
  if(!mod&&!e.altKey){
    const actions={
      h:()=>$("#hand").click(),
      n:()=>$("#new").click(),
      m:()=>$("#newMap").click(),
+     e:()=>state.selected&&editNote(state.selected),
      f:()=>$("#fit").click(),
      c:()=>$("#center").click(),
      a:()=>$("#arrange").click(),
@@ -1349,9 +1374,9 @@ window.addEventListener("keydown",e=>{
  }
 
  if(e.key==="Escape"){
-   closeEditor();
-   closeMapEditor();
-   context.classList.remove("open");
+   if(mapEditorOpen())closeMapEditor();
+   else if(editor.classList.contains("open"))closeEditor();
+   else context.classList.remove("open");
    return;
  }
 
