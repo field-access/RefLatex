@@ -890,12 +890,32 @@ function applyEditor(){
   tab.document.write(html);tab.document.close();
   }
 async function quickPaste(){
+ if(document.activeElement===$("#mapSource")){
+  try{
+   const md=await navigator.clipboard.readText();
+   if(md.trim())$("#mapSource").value=md;
+  }catch{}
+  applyMapEditor();
+  return;
+ }
  if(document.activeElement===source){applyEditor();return}
  try{
   const md=await navigator.clipboard.readText();
   if(!md.trim())return;
+  if($("#mapEditor").classList.contains("open")){
+   $("#mapSource").value=md;
+   $("#mapSource").focus();
+   applyMapEditor();
+   return;
+  }
   const p=worldPoint(innerWidth/2,innerHeight/2),n=makeNote(md,p.x-300,p.y-150,600,true);select(n);save()
- }catch{editor.classList.add("open");source.value="";source.focus()}
+ }catch{
+  if($("#mapEditor").classList.contains("open")){
+   $("#mapSource").focus();
+  }else{
+   editor.classList.add("open");source.value="";source.focus();
+  }
+ }
 }
 function deleteNote(n){history();n.el.remove();state.notes=state.notes.filter(x=>x!==n);if(state.selected===n)state.selected=null;
  empty();save()}
@@ -1077,7 +1097,7 @@ document.addEventListener("click",e=>{
  if(!e.target.closest(".background-picker"))toggleBackgroundMenu(false);
 })
 document.addEventListener("paste",e=>{
- if(document.activeElement===source)return;
+ if(document.activeElement===source||document.activeElement===$("#mapSource"))return;
  const md=e.clipboardData?.getData("text/plain");if(!md?.trim())return;
  e.preventDefault();const p=worldPoint(innerWidth/2,innerHeight/2),n=makeNote(md,p.x-300,p.y-150,600,true);select(n);save()
 });
