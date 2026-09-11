@@ -31,7 +31,11 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
 }
 .map-card .cardbar{height:32px;background:linear-gradient(90deg,#eeebff,#f8f6ff);border-bottom-color:#ded9f6}
 .map-card .cardbody{height:calc(100% - 32px);padding:0;overflow:hidden}
-.map-card svg{display:block;width:100%;height:100%;font-family:Inter,ui-sans-serif,system-ui,sans-serif}
+.map-split{display:grid;grid-template-columns:minmax(190px,.82fr) minmax(280px,1.18fr);height:100%}
+.map-source-preview{padding:24px 26px;overflow:auto;border-right:1px solid #dedbd4;background:color-mix(in srgb,var(--paper) 92%,var(--canvas))}
+.map-source-preview .cardbody{height:auto;padding:0;overflow:visible}
+.map-pane{min-width:0;height:100%;overflow:hidden;background:var(--paper)}
+.map-pane svg{display:block;width:100%;height:100%;font-family:Inter,ui-sans-serif,system-ui,sans-serif}
 .map-card .map-loading{display:grid;place-items:center;height:100%;color:var(--muted);font-size:12px}
 .map-card .map-error{padding:24px;color:#a34a42;font:12px/1.5 ui-monospace,monospace}
 .map-card .map-title{position:absolute;left:12px;top:8px;font-size:11px;font-weight:700;color:#524b8b;pointer-events:none}
@@ -309,6 +313,8 @@ body.fullscreen.controls .toolbar{transform:translateY(-50%)}
  .hint{display:none}.card{max-width:calc(100vw - 30px)}
  .cardbody{padding:22px 25px 30px}.cardbody p,.cardbody li{font-size:calc(17px * var(--card-font-scale))}
  .map-card{min-width:320px;width:calc(100vw - 30px);height:420px}
+ .map-split{grid-template-columns:1fr}
+ .map-source-preview{display:none}
 }
 
 /* Crisp, readable math */
