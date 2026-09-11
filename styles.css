@@ -25,6 +25,24 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
  background:var(--paper);border:1px solid #cbc7be;border-radius:6px;
  z-index:3;
 }
+.map-card{
+ width:720px;min-width:420px;height:500px;min-height:280px;
+ background:var(--paper);overflow:hidden;
+}
+.map-card .cardbar{height:32px;background:linear-gradient(90deg,#eeebff,#f8f6ff);border-bottom-color:#ded9f6}
+.map-card .cardbody{height:calc(100% - 32px);padding:0;overflow:hidden}
+.map-card svg{display:block;width:100%;height:100%;font-family:Inter,ui-sans-serif,system-ui,sans-serif}
+.map-card .map-loading{display:grid;place-items:center;height:100%;color:var(--muted);font-size:12px}
+.map-card .map-error{padding:24px;color:#a34a42;font:12px/1.5 ui-monospace,monospace}
+.map-card .map-title{position:absolute;left:12px;top:8px;font-size:11px;font-weight:700;color:#524b8b;pointer-events:none}
+.map-card .cardactions{top:3px}
+.map-card .cardactions button{font-size:14px}
+.map-card .cardactions select{background:#f7f5ff}
+.map-card[data-map-color="purple"] .cardbar{background:linear-gradient(90deg,#e7e2ff,#f6f3ff)}
+.map-card[data-map-color="warm"] .cardbar{background:linear-gradient(90deg,#fff0d9,#fffaf2)}
+.map-card[data-map-color="warm"] .map-title{color:#93632e}
+.map-card[data-map-color="warm"] .markmap-node circle{fill:#d8944c}
+.map-card[data-map-color="purple"] .markmap-node circle{fill:#7167c5}
 .card.selected{
  outline:2px solid var(--accent);
  outline-offset:4px;
@@ -219,6 +237,19 @@ body.controls .hint{opacity:1;pointer-events:auto}
  background:#faf9f6f5;border:1px solid #00000018;border-radius:10px;
  overflow:hidden
 }
+.map-editor{
+ position:fixed;z-index:100;right:16px;top:64px;width:min(500px,calc(100vw - 32px));
+ height:min(720px,calc(100vh - 80px));display:none;flex-direction:column;
+ background:#faf9f6f5;border:1px solid #00000018;border-radius:10px;overflow:hidden
+}
+.map-editor.open{display:flex}
+.map-editor #mapSource{
+ flex:1;resize:none;border:0;outline:0;padding:17px;background:#fffefa;color:#2b2926;
+ font:13px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace
+}
+.map-options{display:flex;gap:12px;padding:9px 12px;border-top:1px solid var(--border);font-size:11px}
+.map-options label{display:flex;align-items:center;gap:6px;color:var(--muted)}
+.map-options select{border:1px solid var(--border);border-radius:5px;background:transparent;color:inherit;padding:4px 6px;font-size:11px}
 .editor.open{display:flex}
 .editorhead{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between}
 .etitle{font-size:12px;font-weight:700}.esub{font-size:10px;color:#88837b;margin-top:2px}
@@ -256,6 +287,11 @@ body.dark .background-menu button{color:#eee}
 body.dark .background-menu button:hover,body.dark .background-menu button.active{background:#3a3832}
 body.dark button.tool:hover,body.dark .zoom button:hover{background:#37352f}
 body.dark #source{background:#1f1e1b;color:#e9e6df}
+body.dark .map-editor #mapSource{background:#1f1e1b;color:#e9e6df}
+body.dark .map-card .cardbar{background:linear-gradient(90deg,#302c4a,#292735);border-bottom-color:#494168}
+body.dark .map-card .map-title{color:#c3bcff}
+body.dark .map-card[data-map-color="warm"] .cardbar{background:linear-gradient(90deg,#493a29,#302a20)}
+body.dark .map-options select{background:#292824}
 body.dark .cancel{background:#383631}
 body.dark .context{background:#292824;color:#eee}
 body.dark .context button{color:#eee}
@@ -276,6 +312,7 @@ body.fullscreen.controls .edge{display:none}
 body.fullscreen.controls .toolbar{transform:translateY(-50%)}
  .hint{display:none}.card{max-width:calc(100vw - 30px)}
  .cardbody{padding:22px 25px 30px}.cardbody p,.cardbody li{font-size:calc(17px * var(--card-font-scale))}
+ .map-card{min-width:320px;width:calc(100vw - 30px);height:420px}
 }
 
 /* Crisp, readable math */

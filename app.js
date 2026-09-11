@@ -14,13 +14,15 @@ const state={
  hand:true,spacePan:false,controlsVisible:true,pan:null,drag:null,rightPan:null,resize:null,editId:null,
  undo:[],redo:[],historyLock:false,raf:0,saveTimer:0,hideTimer:0,
 };
+const MAP_COLORS=["default","purple","warm"];
+const MAP_LAYOUTS=["mindmap","tree","logicRight","logicLeft"];
 
 function showControls(){
   document.body.classList.remove("controls-hidden");
   state.controlsVisible=true;
   clearTimeout(state.hideTimer);
   state.hideTimer=setTimeout(()=>{
-    if(!editor.classList.contains("open") && !context.classList.contains("open")){
+    if(!editor.classList.contains("open") && !$("#mapEditor").classList.contains("open") && !context.classList.contains("open")){
       document.body.classList.add("controls-hidden");
       state.controlsVisible=false;
     }
@@ -339,6 +341,35 @@ function render(md){
 
   return box.innerHTML;
 }
+function markmapOptions(n){
+ const color=n.mapColor==="purple"
+  ? ["#7167c5","#8d84d4","#aaa2e2","#c5c0ee"]
+  : n.mapColor==="warm"
+   ? ["#d8944c","#e3aa70","#efc18f","#f5d7b4"]
+   : ["#5b57b7","#7c78c8","#9b98d8","#bbb9e8"];
+ return {color,layout:n.mapLayout||"mindmap",duration:350,maxWidth:280,spacingVertical:12,spacingHorizontal:70};
+}
+function renderMap(n){
+ const body=n.el?.querySelector(".cardbody");
+ if(!body)return;
+ if(!window.markmap?.Transformer||!window.markmap?.Markmap){
+  body.innerHTML='<div class="map-error">Markmap could not load. Check your connection, then reopen this map.</div>';
+  return;
+ }
+ try{
+  const transformer=new window.markmap.Transformer();
+  const {root}=transformer.transform(n.md);
+  body.innerHTML="";
+  const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+  body.appendChild(svg);
+  const options=markmapOptions(n);
+  options.initialExpandLevel=6;
+  const map=window.markmap.Markmap.create(svg,options,root);
+  n.mapInstance=map;
+ }catch(err){
+  body.innerHTML=`<div class="map-error">${escapeHtml(err.message||"Could not render this map.")}</div>`;
+ }
+}
 function apply(){
  if(!Number.isFinite(state.x)||!Number.isFinite(state.y)||!Number.isFinite(state.scale)){
   state.x=innerWidth/2;state.y=innerHeight/2;state.scale=1;
@@ -414,7 +445,7 @@ function zoom(f,cx=innerWidth/2,cy=innerHeight/2){
  zoomPrecise(f,cx,cy);
  clearTimeout(state.saveTimer);state.saveTimer=setTimeout(save,180);
 }
-function snapshot(){return JSON.stringify({x:state.x,y:state.y,scale:state.scale,nextId:state.nextId,notes:state.notes.map(n=>({id:n.id,md:n.md,x:n.x,y:n.y,w:n.width||n.el.offsetWidth,font:n.font||"serif",size:n.size||"100"}))})}
+function snapshot(){return JSON.stringify({x:state.x,y:state.y,scale:state.scale,nextId:state.nextId,notes:state.notes.map(n=>({id:n.id,md:n.md,x:n.x,y:n.y,w:n.width||n.el.offsetWidth,font:n.font||"serif",size:n.size||"100",type:n.type||"note",mapColor:n.mapColor||"default",mapLayout:n.mapLayout||"mindmap"}))})}
 function history(){
  if(state.historyLock)return;
  const s=snapshot();
@@ -423,7 +454,9 @@ function history(){
 function restore(s){
  const d=JSON.parse(s);state.historyLock=true;
  state.notes.forEach(n=>n.el.remove());state.notes=[];state.selected=null;
- (d.notes||[]).forEach(n=>makeNote(n.md,n.x,n.y,n.w,false,n.id,n.font,n.size));
+ (d.notes||[]).forEach(n=>n.type==="map"
+  ? makeMap(n.md,n.x,n.y,n.w,false,n.id,n.mapColor,n.mapLayout)
+  : makeNote(n.md,n.x,n.y,n.w,false,n.id,n.font,n.size));
  state.x=Number.isFinite(d.x)?d.x:innerWidth/2;
  state.y=Number.isFinite(d.y)?d.y:innerHeight/2;
  state.scale=clampScale(Number.isFinite(d.scale)?d.scale:1);
@@ -488,11 +521,14 @@ function canvasPayload(){
   notes:state.notes.map(n=>({
    id:n.id,
    markdown:n.md,
+   type:n.type||"note",
    x:n.x,
    y:n.y,
    width:n.width||n.el.offsetWidth,
    font:n.font||"serif",
-   size:n.size||"100"
+   size:n.size||"100",
+   mapColor:n.mapColor||"default",
+   mapLayout:n.mapLayout||"mindmap"
   }))
  };
 }
@@ -534,16 +570,10 @@ function openCanvasFile(file){
 
    data.notes.forEach(n=>{
     if(typeof n.markdown!=="string")return;
-    makeNote(
-     n.markdown,
-     Number.isFinite(n.x)?n.x:0,
-     Number.isFinite(n.y)?n.y:0,
-     Number.isFinite(n.width)?n.width:600,
-     false,
-      Number.isFinite(n.id)?n.id:null,
-     typeof n.font==="string"?n.font:"serif",
-     n.size
-    );
+    const args=[n.markdown,Number.isFinite(n.x)?n.x:0,Number.isFinite(n.y)?n.y:0,Number.isFinite(n.width)?n.width:600,false,Number.isFinite(n.id)?n.id:null];
+    n.type==="map"
+      ? makeMap(...args, n.mapColor, n.mapLayout)
+      : makeNote(...args,typeof n.font==="string"?n.font:"serif",n.size);
    });
 
    state.nextId=Number.isFinite(data.nextId)
@@ -585,7 +615,7 @@ function openCanvasFile(file){
 function makeNote(md,x,y,w=600,record=true,id=null,font="serif",size="100"){
  if(record)history();
  const width=Math.max(300,Math.min(1200,w||600));
- const n={id:id??state.nextId++,md,x,y,font,size,width,el:null};
+ const n={id:id??state.nextId++,md,x,y,font,size,width,type:"note",el:null};
  state.nextId=Math.max(state.nextId,n.id+1);
  const el=document.createElement("article");
  el.className="card";el.style.left=x+"px";el.style.top=y+"px";el.style.width=width+"px";
@@ -624,6 +654,31 @@ function makeNote(md,x,y,w=600,record=true,id=null,font="serif",size="100"){
  });
  empty();
  return n;
+}
+function makeMap(md,x,y,w=720,record=true,id=null,mapColor="default",mapLayout="mindmap"){
+ if(record)history();
+ const width=Math.max(420,Math.min(1200,w||720));
+ const n={id:id??state.nextId++,md,x,y,width,type:"map",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapLayout:MAP_LAYOUTS.includes(mapLayout)?mapLayout:"mindmap",el:null,mapInstance:null};
+ state.nextId=Math.max(state.nextId,n.id+1);
+ const el=document.createElement("article");
+ el.className="card map-card";el.style.left=x+"px";el.style.top=y+"px";el.style.width=width+"px";
+ el.dataset.mapColor=n.mapColor;
+ el.innerHTML=`<div class="cardbar"><div class="map-title">Mind map</div></div><div class="cardactions"><select data-map-layout aria-label="Map layout" title="Map layout"><option value="mindmap">Mindmap</option><option value="tree">Tree</option><option value="logicRight">Logic right</option><option value="logicLeft">Logic left</option></select><button data-map-edit title="Edit map">✎</button><button data-map-open title="Open map in new tab">↗</button><button data-delete title="Delete map">×</button></div><div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div><div class="cardbody"><div class="map-loading">Rendering mind map…</div></div>`;
+ n.el=el;world.appendChild(el);state.notes.push(n);
+ el.querySelector("[data-map-layout]").value=n.mapLayout;
+ el.addEventListener("mousedown",e=>{
+  if(e.button!==0||e.target.closest(".cardactions,.resize,a,button"))return;
+  select(n);
+  if(e.target.closest(".cardbar"))startDrag(e,n);
+ });
+ el.addEventListener("dblclick",e=>{if(!e.target.closest(".cardactions,.resize")){e.preventDefault();e.stopPropagation();editNote(n)}});
+ el.querySelector("[data-map-edit]").onclick=()=>editNote(n);
+ el.querySelector("[data-map-open]").onclick=()=>openMapTab(n);
+ el.querySelector("[data-delete]").onclick=()=>deleteNote(n);
+ el.querySelector("[data-map-layout]").onchange=e=>{history();n.mapLayout=e.target.value;renderMap(n);save()};
+ el.querySelector("[data-map-layout]").onfocus=()=>select(n);
+ el.querySelectorAll(".resize").forEach(r=>r.onmousedown=e=>{if(e.button===0)startResize(e,n,r.dataset.side)});
+ renderMap(n);empty();return n;
 }
 function startDrag(e,n){
  e.preventDefault();e.stopPropagation();history();
@@ -790,9 +845,20 @@ function touchEnd(e){
 canvas.addEventListener("pointerup",touchEnd);canvas.addEventListener("pointercancel",touchEnd);
 
 function editNote(n){
+ if(n.type==="map"){
+  state.editId=n.id;
+  $("#mapSource").value=n.md;
+  $("#mapLayout").value=n.mapLayout||"mindmap";
+  $("#mapColor").value=n.mapColor||"default";
+  $("#applyMap").textContent="Update map";
+  $("#mapEditor").classList.add("open");
+  $("#mapSource").focus();
+  return;
+ }
  state.editId=n.id;source.value=n.md;$("#apply").textContent="Update note";editor.classList.add("open");source.focus()
 }
 function closeEditor(){editor.classList.remove("open");state.editId=null}
+function closeMapEditor(){$("#mapEditor").classList.remove("open");state.editId=null}
 function applyEditor(){
  const md=source.value.trim();if(!md)return;
  if(state.editId!==null){
@@ -804,6 +870,25 @@ function applyEditor(){
  }
  closeEditor();save()
 }
+ function applyMapEditor(){
+  const md=$("#mapSource").value.trim();if(!md)return;
+  const color=$("#mapColor").value,layout=$("#mapLayout").value;
+  if(state.editId!==null){
+   const n=state.notes.find(x=>x.id===state.editId);if(!n)return;
+   history();n.md=md;n.mapColor=color;n.mapLayout=layout;n.el.dataset.mapColor=color;
+   n.el.querySelector("[data-map-layout]").value=layout;renderMap(n);select(n);
+  }else{
+   const p=worldPoint(innerWidth/2,innerHeight/2),n=makeMap(md,p.x-360,p.y-250,720,true,null,color,layout);select(n);
+  }
+  closeMapEditor();save();
+ }
+ function openMapTab(n){
+  const payload=JSON.stringify(n.md).replace(/</g,"\\u003c");
+  const title=escapeHtml((n.md.match(/^#\s+(.+)$/m)||[])[1]||"RefLatex mind map");
+  const html=`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><style>html,body{height:100%;margin:0;background:#f7f5f0;color:#272622;font:14px system-ui}svg{width:100%;height:100%}</style></head><body><svg id="map"></svg><script src="https://cdn.jsdelivr.net/npm/d3@7"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18.12"><\/script><script>const md=${payload};const root=new markmap.Transformer().transform(md).root;markmap.Markmap.create("#map",{duration:350},root);<\/script></body></html>`;
+  const tab=window.open();if(!tab){alert("Allow pop-ups to open this mind map.");return}
+  tab.document.write(html);tab.document.close();
+  }
 async function quickPaste(){
  if(document.activeElement===source){applyEditor();return}
  try{
@@ -820,7 +905,10 @@ async function copyNote(){
 }
 function duplicate(){
  if(!state.selected)return;
- const n=state.selected,c=makeNote(n.md,n.x+45,n.y+45,n.el.offsetWidth,true,null,n.font,n.size);
+ const n=state.selected;
+ const c=n.type==="map"
+  ? makeMap(n.md,n.x+45,n.y+45,n.el.offsetWidth,true,null,n.mapColor,n.mapLayout)
+  : makeNote(n.md,n.x+45,n.y+45,n.el.offsetWidth,true,null,n.font,n.size);
  select(c);save()
 }
 function fit(widthOnly=false){
@@ -944,6 +1032,7 @@ $("#hand").onclick=()=>{
 showControls();
 }
 $("#new").onclick=()=>{state.editId=null;source.value="";$("#apply").textContent="Place note";editor.classList.add("open");source.focus()}
+$("#newMap").onclick=()=>{state.editId=null;$("#mapSource").value="";$("#mapLayout").value="mindmap";$("#mapColor").value="default";$("#applyMap").textContent="Place map";$("#mapEditor").classList.add("open");$("#mapSource").focus()}
 $("#fit").onclick=()=>{fit(true);save()}
 $("#center").onclick=()=>{
  const b=cardBounds();
@@ -978,6 +1067,7 @@ $("#full").onclick=toggleFull
 $("#edge").onclick=revealControls
 $("#minus").onclick=()=>zoom(.72);$("#plus").onclick=()=>zoom(1.38);$("#reset").onclick=()=>moveTo(innerWidth/2,innerHeight/2,1)
 $("#close").onclick=closeEditor;$("#cancel").onclick=closeEditor;$("#apply").onclick=applyEditor
+$("#closeMap").onclick=closeMapEditor;$("#cancelMap").onclick=closeMapEditor;$("#applyMap").onclick=applyMapEditor
 $("#edit").onclick=()=>state.selected&&editNote(state.selected)
 $("#duplicate").onclick=duplicate
 $("#copy").onclick=copyNote
@@ -1045,6 +1135,7 @@ function cycleFont(direction=1){
 window.addEventListener("keydown",e=>{
  const mod=e.ctrlKey||e.metaKey;
  const editing=document.activeElement===source ||
+   document.activeElement===$("#mapSource") ||
    document.activeElement?.tagName==="INPUT" ||
    document.activeElement?.tagName==="TEXTAREA";
 
@@ -1070,7 +1161,7 @@ window.addEventListener("keydown",e=>{
  if(editing){
    if(mod&&e.key==="Enter"){
      e.preventDefault();
-     applyEditor();
+     document.activeElement===$("#mapSource")?applyMapEditor():applyEditor();
      return;
    }
    if(e.key==="Escape"){
@@ -1089,6 +1180,7 @@ window.addEventListener("keydown",e=>{
    const actions={
      h:()=>$("#hand").click(),
      n:()=>$("#new").click(),
+     m:()=>$("#newMap").click(),
      f:()=>$("#fit").click(),
      c:()=>$("#center").click(),
      a:()=>$("#arrange").click(),
@@ -1238,6 +1330,7 @@ window.addEventListener("keydown",e=>{
 
  if(e.key==="Escape"){
    closeEditor();
+   closeMapEditor();
    context.classList.remove("open");
    return;
  }
@@ -1251,7 +1344,12 @@ function load(){
    state.y=Number.isFinite(d.y)?d.y:innerHeight/2;
    state.scale=clampScale(Number.isFinite(d.scale)?d.scale:1);
    state.nextId=d.nextId??1;
-   (d.notes||[]).forEach(n=>{if(typeof n.md==="string")makeNote(n.md,n.x||0,n.y||0,n.w||600,false,n.id,typeof n.font==="string"?n.font:"serif",n.size)})
+   (d.notes||[]).forEach(n=>{
+    if(typeof n.md!=="string")return;
+    n.type==="map"
+      ? makeMap(n.md,n.x||0,n.y||0,n.w||720,false,n.id,n.mapColor,n.mapLayout)
+      : makeNote(n.md,n.x||0,n.y||0,n.w||600,false,n.id,typeof n.font==="string"?n.font:"serif",n.size);
+   })
   }
  }catch{}
  const dark=localStorage.getItem("reflatex-theme")==="dark";
