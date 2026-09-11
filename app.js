@@ -876,17 +876,27 @@ function touchEnd(e){
 }
 canvas.addEventListener("pointerup",touchEnd);canvas.addEventListener("pointercancel",touchEnd);
 
-function editNote(n){
- state.editId=n.id;
- state.editorMode=n.type==="map"?"map":"note";
- source.value=n.md;
- $("#mapLayout").value=n.mapLayout||"mindmap";
- $("#mapColor").value=n.mapColor||"default";
- $("#applyCard").textContent="Update card";
- $("#applyMap").textContent="Update map";
- editor.classList.add("open");source.focus()
+function openEditor(mode="note",n=null){
+ state.editId=n?.id??null;
+ state.editorMode=mode;
+ source.value=n?.md||"";
+ $("#mapLayout").value=n?.mapLayout||"mindmap";
+ $("#mapColor").value=n?.mapColor||"default";
+ $("#applyCard").textContent=n?"Update card":"Place card";
+ $("#applyMap").textContent=n?"Update map":"Place map";
+ editor.dataset.mode=mode;
+ editor.classList.add("open");
+ source.focus();
 }
-function closeEditor(){editor.classList.remove("open");state.editId=null;state.editorMode="note"}
+function editNote(n){
+ openEditor(n.type==="map"?"map":"note",n);
+}
+function closeEditor(){
+ editor.classList.remove("open");
+ state.editId=null;
+ state.editorMode="note";
+ editor.dataset.mode="note";
+}
 function selectedMap(){return state.selected?.type==="map"?state.selected:null}
 function cycleMapLayout(){
  const n=selectedMap();if(!n)return;
@@ -1069,8 +1079,7 @@ $("#hand").onclick=()=>{
  updateHandUI();
 showControls();
 }
-$("#new").onclick=()=>{state.editId=null;state.editorMode="note";source.value="";$("#applyCard").textContent="Place card";$("#applyMap").textContent="Place map";editor.classList.add("open");source.focus()}
-$("#newMap").onclick=()=>{state.editId=null;state.editorMode="map";source.value="";$("#mapLayout").value="mindmap";$("#mapColor").value="default";$("#applyCard").textContent="Place card";$("#applyMap").textContent="Place map";editor.classList.add("open");source.focus()}
+$("#new").onclick=()=>openEditor("note")
 $("#fit").onclick=()=>{fit(true);save()}
 $("#center").onclick=()=>{
  const b=cardBounds();
@@ -1228,7 +1237,7 @@ window.addEventListener("keydown",e=>{
    const actions={
      h:()=>$("#hand").click(),
      n:()=>$("#new").click(),
-     m:()=>$("#newMap").click(),
+     m:()=>openEditor("map"),
      e:()=>state.selected&&editNote(state.selected),
      f:()=>$("#fit").click(),
      c:()=>$("#center").click(),

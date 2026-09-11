@@ -243,6 +243,8 @@ body.controls .hint{opacity:1;pointer-events:auto}
  overflow:hidden
 }
 .map-options{display:flex;gap:12px;padding:9px 12px;border-top:1px solid var(--border);font-size:11px}
+.editor:not([data-mode="map"]) .map-options{display:none}
+.editor[data-mode="map"] .map-options{display:flex}
 .map-options label{display:flex;align-items:center;gap:6px;color:var(--muted)}
 .map-options select{border:1px solid var(--border);border-radius:5px;background:transparent;color:inherit;padding:4px 6px;font-size:11px}
 .editor.open{display:flex}

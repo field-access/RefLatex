@@ -25,7 +25,6 @@
 <div class="toolbar" id="toolbar">
  <button class="tool active" id="hand" title="Hand: Zoom / Scroll (H)">✋</button>
  <button class="tool primary" id="new" title="New Markdown card (N)">＋</button>
- <button class="tool map-tool" id="newMap" title="New mind map (M)">⌘</button>
  <button class="tool" id="fit" title="Fit canvas (F)">⌗</button>
  <button class="tool" id="center" title="Center canvas (C)">◎</button>
  <button class="tool" id="arrange" title="Arrange cards (A)">⊞</button>
@@ -62,7 +61,7 @@ Explain the idea here.
 For $T(n)=2T(n/2)+n$,
 
 $$T(n)=O(n\log n)$$"></textarea>
- <div class="map-options">
+ <div class="map-options" id="mapOptions">
   <label>Layout <select id="mapLayout"><option value="mindmap">Mindmap</option><option value="tree">Tree</option><option value="logicRight">Logic right</option><option value="logicLeft">Logic left</option></select></label>
   <label>Color <select id="mapColor"><option value="default">Default</option><option value="purple">Purple</option><option value="warm">Warm</option></select></label>
  </div>
