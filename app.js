@@ -1153,16 +1153,19 @@ function focusSelected(){
   const n=state.selected;
   if(!n)return;
 
-  // Keep the selected card's front edge in view without changing its zoom level.
-  const r={x:n.x,y:n.y,w:n.el.offsetWidth,h:n.el.offsetHeight};
-  const horizontalFit=(innerWidth-96)/Math.max(1,r.w);
-  const verticalFit=(innerHeight-96)/Math.max(1,r.h);
-  const targetScale=Math.max(.95,Math.min(2.4,Math.min(horizontalFit,verticalFit)));
-  const cx=r.x+r.w/2,cy=r.y+r.h/2;
+  // Frame the selected card's front edge, preserving the prior card-view behavior.
+  const r={
+    x:n.x,
+    y:n.y,
+    w:n.el.offsetWidth
+  };
+  const targetScale=Math.max(.7,Math.min(1.25,state.targetScale||state.scale));
+  const cx=r.x+r.w/2;
+  const frontOffset=Math.min(72,Math.max(32,innerHeight*.1));
 
   moveTo(
     innerWidth/2-cx*targetScale,
-    innerHeight/2-cy*targetScale,
+    frontOffset-r.y*targetScale,
     targetScale
   );
 }
