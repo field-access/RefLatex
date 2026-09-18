@@ -22,14 +22,14 @@
  <div class="empty" id="empty"><div><b>Paste Markdown + LaTeX here</b><span>A quiet PureRef-style reading board</span></div></div>
 </div>
 
-<div class="toolbar" id="toolbar">
+<div class="toolbar" id="toolbar" aria-label="Canvas buttons">
  <button class="tool active" id="hand" title="Hand: Zoom / Scroll (H)">✋</button>
  <button class="tool primary" id="new" title="New Markdown card (N)">＋</button>
  <button class="tool" id="fit" title="Fit canvas (F)">⌗</button>
  <button class="tool" id="center" title="Center canvas (C)">◎</button>
  <button class="tool" id="arrange" title="Arrange cards (A)">⊞</button>
  <div class="background-picker">
-  <button class="tool background-select" id="background" title="Background (B)" aria-label="Background" aria-expanded="false">◌</button>
+  <button class="tool background-select" id="background" title="Background" aria-label="Background" aria-expanded="false">◌</button>
   <div class="background-menu" id="backgroundMenu" role="menu">
    <button type="button" data-background-choice="dots" role="menuitem"><svg viewBox="0 0 32 22" aria-hidden="true"><rect width="32" height="22" fill="#d9d6cf"/><path d="M5 5h.1M16 5h.1M27 5h.1M5 16h.1M16 16h.1M27 16h.1" stroke="#77736b" stroke-width="2" stroke-linecap="round"/></svg><span>Dots</span></button>
    <button type="button" data-background-choice="sun" role="menuitem"><svg viewBox="0 0 32 22" aria-hidden="true"><rect width="32" height="22" fill="#d9d6cf"/><circle cx="24" cy="7" r="4" fill="#edbe62"/><path d="M24 1v-2M24 16v-2M18 7h-2M30 7h-2M20 3l-2-2M28 3l2-2" stroke="#c79239" stroke-width="1"/></svg><span>Sun</span></button>
@@ -49,7 +49,7 @@
  <button id="plus" title="Zoom in (+ or ])">＋</button><button class="tool" id="reset" title="Reset zoom (0)">100%</button>
 </div>
 
-<div class="hint" id="hint">✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · M new map · E edit · Shift+M open map · Esc close</div>
+<div class="hint" id="hint">✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · B toggle buttons · M new map · E edit · Shift+M open map · Esc close</div>
 <div class="edge" id="edge">☰</div>
 
 <div class="editor" id="editor">

@@ -1068,6 +1068,14 @@ function cycleBackground(){
  setBackground(backgrounds[(current+1)%backgrounds.length]);
  showControls();
 }
+function toggleToolbar(force){
+ const hidden=force===undefined
+  ? !document.body.classList.contains("toolbar-hidden")
+  : !force;
+ document.body.classList.toggle("toolbar-hidden",hidden);
+ localStorage.setItem("reflatex-toolbar-hidden",hidden?"1":"0");
+ $("#toolbar").setAttribute("aria-hidden",String(hidden));
+}
 function toggleBackgroundMenu(force){
  const menu=$("#backgroundMenu");
  const open=force===undefined?!menu.classList.contains("open"):force;
@@ -1257,7 +1265,7 @@ window.addEventListener("keydown",e=>{
      f:()=>$("#fit").click(),
      c:()=>$("#center").click(),
      a:()=>$("#arrange").click(),
-     b:cycleBackground,
+     b:()=>toggleToolbar(),
      t:()=>$("#theme").click(),
      "-":()=>$("#minus").click(),
      "=":()=>$("#plus").click(),
@@ -1427,6 +1435,7 @@ function load(){
  const dark=localStorage.getItem("reflatex-theme")==="dark";
  if(dark){document.body.classList.add("dark");$("#theme").textContent="☀"}
  setBackground(localStorage.getItem("reflatex-background")||"dots");
+ toggleToolbar(localStorage.getItem("reflatex-toolbar-hidden")!=="1");
  state.hand=true;$("#hand").classList.add("active");canvas.style.cursor="grab";
  sync();apply();empty()
 }
