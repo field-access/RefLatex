@@ -666,7 +666,7 @@ function downloadCanvas(){
  setTimeout(()=>URL.revokeObjectURL(url),1000);
 
  $("#hint").textContent="Canvas saved";
- setTimeout(()=>$("#hint").textContent="✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · M new map · K Markmap · Shift+K Markdown · Shift+M new window · Ctrl/Cmd+click to group cards · Esc close",1800);
+ setTimeout(()=>$("#hint").textContent="✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · −/+ zoom · [/] selected card width · M new map · K Markmap · Shift+K Markdown · Shift+M new window · Ctrl/Cmd+click to group cards · Esc close",1800);
 }
 
 function openCanvasFile(file){
@@ -720,7 +720,7 @@ function openCanvasFile(file){
    save();
 
    $("#hint").textContent=`Opened ${file.name}`;
-   setTimeout(()=>$("#hint").textContent="✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · M new map · K Markmap · Shift+K Markdown · Shift+M new window · Ctrl/Cmd+click to group cards · Esc close",2200);
+   setTimeout(()=>$("#hint").textContent="✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · −/+ zoom · [/] selected card width · M new map · K Markmap · Shift+K Markdown · Shift+M new window · Ctrl/Cmd+click to group cards · Esc close",2200);
 
   }catch(err){
    state.historyLock=false;
@@ -1322,6 +1322,19 @@ function cycleFont(direction=1){
  fontSelect.dispatchEvent(new Event("change",{bubbles:true}));
 }
 
+function resizeSelectedWidth(direction){
+ const n=state.selected;if(!n)return;
+ const min=n.type==="map"?420:300,max=n.type==="map"?1600:1200;
+ const current=n.type==="map"?(n.mapWidth||n.el.offsetWidth):(n.width||n.el.offsetWidth);
+ const width=Math.max(min,Math.min(max,current+direction*40));
+ if(width===current)return;
+ history();
+ n.el.style.width=width+"px";
+ if(n.type==="map")n.mapWidth=width;
+ else n.width=width;
+ save();
+}
+
 window.addEventListener("keydown",e=>{
  const mod=e.ctrlKey||e.metaKey;
  const editing=document.activeElement===source ||
@@ -1395,9 +1408,9 @@ window.addEventListener("keydown",e=>{
      b:()=>toggleToolbar(),
      t:()=>$("#theme").click(),
      "-":()=>$("#minus").click(),
-     "=":()=>$("#plus").click(),
-     "[":()=>$("#minus").click(),
-     "]":()=>$("#plus").click(),
+     "+":()=>$("#plus").click(),
+     "[":()=>resizeSelectedWidth(-1),
+     "]":()=>resizeSelectedWidth(1),
      "0":()=>$("#reset").click()
    };
    if(actions[key]){
