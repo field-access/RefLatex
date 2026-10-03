@@ -673,7 +673,7 @@ function downloadCanvas(){
  setTimeout(()=>URL.revokeObjectURL(url),1000);
 
  $("#hint").textContent="Canvas saved";
- setTimeout(()=>$("#hint").textContent="✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · −/+ zoom · [/] selected card width · M new map · K Markmap · Shift+K Markdown · Shift+M new window · Ctrl/Cmd+click to group cards · Esc close",1800);
+ setTimeout(()=>$("#hint").textContent="✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · −/+ zoom · [/] selected card width · N new card · K cycle Markdown/Markmap · M Markmap window · Ctrl/Cmd+click to group cards · Esc close",1800);
 }
 
 function openCanvasFile(file){
@@ -727,7 +727,7 @@ function openCanvasFile(file){
    save();
 
    $("#hint").textContent=`Opened ${file.name}`;
-   setTimeout(()=>$("#hint").textContent="✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · −/+ zoom · [/] selected card width · M new map · K Markmap · Shift+K Markdown · Shift+M new window · Ctrl/Cmd+click to group cards · Esc close",2200);
+   setTimeout(()=>$("#hint").textContent="✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · −/+ zoom · [/] selected card width · N new card · K cycle Markdown/Markmap · M Markmap window · Ctrl/Cmd+click to group cards · Esc close",2200);
 
   }catch(err){
    state.historyLock=false;
@@ -746,7 +746,7 @@ function makeNote(md,x,y,w=600,record=true,id=null,font="mono",size="100",mapCol
  state.nextId=Math.max(state.nextId,n.id+1);
  const el=document.createElement("article");
  el.className="card";el.style.left=x+"px";el.style.top=y+"px";el.style.width=width+"px";
- el.innerHTML=`<div class="cardbar"><div class="map-title"></div></div><div class="cardactions"><select data-view aria-label="Card view" title="Card view"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-map-color class="map-only" aria-label="Map color scheme" title="Map color scheme"><option value="default">Violet</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select><select data-map-font class="map-only" aria-label="Map font" title="Map font"><option value="modern">Modern</option><option value="editorial">Editorial</option><option value="geometric">Geometric</option><option value="humanist">Humanist</option><option value="mono">Mono</option><option value="rounded">Rounded</option><option value="handwritten">Handwritten</option></select><select data-font aria-label="Card font" title="Card font (V / Shift+V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option><option value="slab">Slab</option><option value="humanist">Humanist</option><option value="rounded">Rounded</option><option value="editorial">Editorial</option><option value="hand">Handwritten</option><option value="hand-soft">Hand Soft</option><option value="hand-bold">Hand Bold</option><option value="hand-marker">Hand Marker</option><option value="hand-script">Hand Script</option></select><select data-size aria-label="Card font size" title="Card font size"><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option><option value="180">180%</option></select><button data-map-edit class="map-only" title="Edit map">✎</button><button data-map-open class="map-only" title="Open map in new tab">↗</button><button data-edit>✎</button><button data-delete>×</button></div>
+ el.innerHTML=`<div class="cardbar"><div class="map-title"></div></div><div class="cardactions"><select data-view aria-label="Card view" title="Card view"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-map-color class="map-only" aria-label="Map color scheme" title="Map color scheme"><option value="default">Violet</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select><select data-map-font class="map-only" aria-label="Map font" title="Map font"><option value="modern">Modern</option><option value="editorial">Editorial</option><option value="geometric">Geometric</option><option value="humanist">Humanist</option><option value="mono">Mono</option><option value="rounded">Rounded</option><option value="handwritten">Handwritten</option></select><select data-font aria-label="Card font" title="Card font (V / Shift+V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option><option value="slab">Slab</option><option value="humanist">Humanist</option><option value="rounded">Rounded</option><option value="editorial">Editorial</option><option value="hand">Handwritten</option><option value="hand-soft">Hand Soft</option><option value="hand-bold">Hand Bold</option><option value="hand-marker">Hand Marker</option><option value="hand-script">Hand Script</option></select><select data-size aria-label="Card font size" title="Card font size"><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option><option value="180">180%</option></select><button data-map-open class="map-only" title="Open Markmap in new window (M)">↗</button><button data-edit title="Edit card">✎</button><button data-delete>×</button></div>
  <div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div><div class="resize bottom" data-side="bottom" title="Resize map height"></div>
  <div class="cardbody">${render(md)}</div>`;
  el.dataset.font=font;
@@ -776,7 +776,6 @@ function makeNote(md,x,y,w=600,record=true,id=null,font="mono",size="100",mapCol
  });
  el.querySelector("[data-edit]").onclick=()=>editNote(n);
  el.querySelector("[data-delete]").onclick=()=>deleteNote(n);
- el.querySelector("[data-map-edit]").onclick=()=>editNote(n);
  el.querySelector("[data-map-open]").onclick=()=>openMapTab(n);
  el.querySelector("[data-view]").onchange=e=>setCardType(n,e.target.value);
  el.querySelector("[data-map-color]").onchange=e=>{
@@ -813,7 +812,7 @@ function makeMap(md,x,y,w=null,h=null,record=true,id=null,mapColor="default",map
  el.dataset.mapFont=n.mapFont;
  el.dataset.groupColor=n.groupColor;
  el.dataset.font=n.font;
- el.innerHTML=`<div class="cardbar"><div class="map-title">Mind map</div></div><div class="cardactions"><select data-view aria-label="Card view" title="Card view"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-map-color class="map-only" aria-label="Map color scheme" title="Map color scheme"><option value="default">Violet</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select><select data-map-font class="map-only" aria-label="Map font" title="Map font"><option value="modern">Modern</option><option value="editorial">Editorial</option><option value="geometric">Geometric</option><option value="humanist">Humanist</option><option value="mono">Mono</option><option value="rounded">Rounded</option><option value="handwritten">Handwritten</option></select><select data-font aria-label="Card font" title="Card font"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option></select><select data-size aria-label="Card font size" title="Card font size"><option value="100">100%</option><option value="125">125%</option><option value="140">140%</option></select><button data-map-edit title="Edit map">✎</button><button data-map-open title="Open map in new tab">↗</button><button data-edit>✎</button><button data-delete title="Delete map">×</button></div><div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div><div class="resize bottom" data-side="bottom" title="Resize map height"></div><div class="cardbody"><div class="map-loading">Rendering mind map…</div></div>`;
+ el.innerHTML=`<div class="cardbar"><div class="map-title">Mind map</div></div><div class="cardactions"><select data-view aria-label="Card view" title="Card view"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-map-color class="map-only" aria-label="Map color scheme" title="Map color scheme"><option value="default">Violet</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select><select data-map-font class="map-only" aria-label="Map font" title="Map font"><option value="modern">Modern</option><option value="editorial">Editorial</option><option value="geometric">Geometric</option><option value="humanist">Humanist</option><option value="mono">Mono</option><option value="rounded">Rounded</option><option value="handwritten">Handwritten</option></select><select data-font aria-label="Card font" title="Card font"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option></select><select data-size aria-label="Card font size" title="Card font size"><option value="100">100%</option><option value="125">125%</option><option value="140">140%</option></select><button data-map-open title="Open Markmap in new window (M)">↗</button><button data-edit title="Edit card">✎</button><button data-delete title="Delete map">×</button></div><div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div><div class="resize bottom" data-side="bottom" title="Resize map height"></div><div class="cardbody"><div class="map-loading">Rendering mind map…</div></div>`;
  n.el=el;world.appendChild(el);state.notes.push(n);
  addGroupColorControl(n,el);
  el.querySelector("[data-view]").value="map";
@@ -829,7 +828,6 @@ function makeMap(md,x,y,w=null,h=null,record=true,id=null,mapColor="default",map
   if(e.target.closest(".cardbar")&&!additive)startDrag(e,n);
  });
  el.addEventListener("dblclick",e=>{if(!e.target.closest(".cardactions,.resize")){e.preventDefault();e.stopPropagation();editNote(n)}});
- el.querySelector("[data-map-edit]").onclick=()=>editNote(n);
  el.querySelector("[data-map-open]").onclick=()=>openMapTab(n);
  el.querySelector("[data-edit]").onclick=()=>editNote(n);
  el.querySelector("[data-delete]").onclick=()=>deleteNote(n);
@@ -1396,31 +1394,20 @@ window.addEventListener("keydown",e=>{
  /*
   * TOOLBAR AND ZOOM SHORTCUTS
   * These mirror the visible buttons without interfering with card text input.
-  */
+ */
  const key=e.key.toLowerCase();
- if(!mod&&!e.altKey&&e.shiftKey){
-   if(key==="k"&&state.selected){
-     e.preventDefault();
-     setCardType(state.selected,"note");
+ if(!mod&&!e.altKey&&!e.shiftKey&&(key==="n"||key==="k"||key==="m")){
+   e.preventDefault();
+   if(key==="n")$("#new").click();
+   else if(key==="k"&&state.selected){
+     setCardType(state.selected,state.selected.type==="map"?"note":"map");
      focusSelected();
-     return;
-   }
-   if(key==="m"&&state.selected){
-     e.preventDefault();
-     openMapTab(state.selected);
-     return;
-   }
+   }else if(key==="m"&&state.selected)openMapTab(state.selected);
+   return;
  }
  if(!mod&&!e.altKey){
    const actions={
      h:()=>$("#hand").click(),
-     n:()=>$("#new").click(),
-     m:()=>openEditor("map"),
-     k:()=>{
-       if(!state.selected)return;
-       setCardType(state.selected,"map");
-       focusSelected();
-     },
      e:()=>state.selected&&editNote(state.selected),
      f:()=>$("#fit").click(),
      c:()=>$("#center").click(),
