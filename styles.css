@@ -42,6 +42,27 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
   radial-gradient(circle at 76% 20%,#f2c879aa 0 7%,#f2c87933 7.2% 14%,transparent 28%),
   linear-gradient(180deg,#d9d6cf,#c8c4bb);
 }
+#canvas[data-background="planets"]{
+ background-color:#0b1020;
+ background-image:
+  radial-gradient(ellipse 250px 74px at 76% 49%,transparent 49%,#ead3b477 50%,#a987a488 52%,transparent 54%),
+  radial-gradient(circle 100px at calc(76% - 48px) calc(47% - 56px),#fff1cf33 0%,transparent 100%),
+  radial-gradient(circle 130px at 76% 47%,#f1d7ad 0%,#c99082 42%,#806984 74%,#354668 98%,#293953 100%),
+  radial-gradient(ellipse 260px 78px at 76% 49%,transparent 48%,#cfb18e55 49%,#94789077 51%,transparent 54%),
+  radial-gradient(1px 1px at 14px 27px,#dce7ff77 98%,transparent),
+  radial-gradient(1px 1px at 68px 9px,#ffffff55 98%,transparent),
+  radial-gradient(1.3px 1.3px at 42px 79px,#d9e8ff88 98%,transparent),
+  radial-gradient(1px 1px at 112px 34px,#ffffff66 98%,transparent),
+  radial-gradient(1px 1px at 27px 99px,#c6d8ff66 98%,transparent),
+  radial-gradient(1.2px 1.2px at 103px 70px,#ffffff66 98%,transparent),
+  radial-gradient(1px 1px at 17px 142px,#dce7ff77 98%,transparent),
+  radial-gradient(1px 1px at 205px 166px,#ffffff55 98%,transparent),
+  radial-gradient(1.5px 1.5px at 149px 39px,#ffffff77 98%,transparent),
+  radial-gradient(1px 1px at 299px 127px,#dce7ff66 98%,transparent),
+  radial-gradient(1px 1px at 43px 213px,#ffffff55 98%,transparent),
+  radial-gradient(1.2px 1.2px at 367px 112px,#dce7ff77 98%,transparent);
+ background-size:100% 100%,100% 100%,100% 100%,100% 100%,83px 71px,107px 89px,131px 109px,157px 131px,181px 149px,211px 173px,239px 197px,271px 223px,307px 251px,337px 271px,389px 313px,443px 359px;
+}
 #world{position:absolute;left:0;top:0;width:1px;height:1px;transform-origin:0 0;will-change:transform}
 .card{
  position:absolute;width:500px;min-width:300px;max-width:1200px;
@@ -120,6 +141,7 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
 }
 body.dark #canvas[data-background="stars"]{background-color:#0d0f14}
 body.dark #canvas[data-background="light"]{background-color:#d9d6cf}
+body.dark #canvas[data-background="planets"]{background-color:#0b1020}
 .cardbar{
  height:56px;cursor:grab;position:relative;border-bottom:1px solid transparent;
 }

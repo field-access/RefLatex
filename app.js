@@ -12,6 +12,7 @@ const state={
  targetX:innerWidth/2,targetY:innerHeight/2,targetScale:1,
  notes:[],selected:null,nextId:1,
  hand:true,spacePan:false,controlsVisible:true,pan:null,drag:null,rightPan:null,resize:null,editId:null,editorMode:"note",
+ spaceFocusStep:0,
  undo:[],redo:[],historyLock:false,raf:0,saveTimer:0,hideTimer:0,
 };
 const MAP_COLORS=["default","purple","warm","ocean","forest","sunset","slate"];
@@ -614,6 +615,7 @@ function widenCardForTables(el){
 }
 
 function select(n){
+ if(state.selected!==n)state.spaceFocusStep=0;
  state.notes.forEach(x=>x.el.classList.remove("selected"));
  state.selected=n;if(n)n.el.classList.add("selected");
  context.classList.remove("open");
@@ -1151,17 +1153,18 @@ function arrange(record=true){
   save();
  });
 }
-const backgrounds=["light","sun","stars"];
+const backgrounds=["light","sun","stars","planets"];
 const backgroundLabels={
  light:"Light",
  stars:"Stars",
- sun:"Sun"
+ sun:"Sun",
+ planets:"Planets"
 };
 function setBackground(name){
  const background=name==="dots"?"stars":backgrounds.includes(name)?name:"stars";
  canvas.dataset.background=background;
  localStorage.setItem("reflatex-background",background);
- $("#background").title=`Background: ${backgroundLabels[background]} (B)`;
+ $("#background").title=`Background: ${backgroundLabels[background]} (B · S toggles Sun/Stars)`;
  document.querySelectorAll("[data-background-choice]").forEach(button=>{
   button.classList.toggle("active",button.dataset.backgroundChoice===background);
  });
@@ -1169,6 +1172,10 @@ function setBackground(name){
 function cycleBackground(){
  const current=backgrounds.indexOf(canvas.dataset.background||"stars");
  setBackground(backgrounds[(current+1)%backgrounds.length]);
+ showControls();
+}
+function toggleSunStarBackground(){
+ setBackground(canvas.dataset.background==="sun"?"stars":"sun");
  showControls();
 }
 function toggleToolbar(force){
@@ -1260,9 +1267,10 @@ document.addEventListener("paste",e=>{
  e.preventDefault();const p=worldPoint(innerWidth/2,innerHeight/2),n=makeNote(md,p.x-300,p.y-150,600,true);select(n);save()
 });
 
-function focusSelected(){
+function focusSelected(mode="readable"){
   const n=state.selected;
   if(!n)return;
+  state.spaceFocusStep=mode==="fit"?1:0;
 
   if(n.type==="map"){
    const size=mapViewportSize();
@@ -1286,6 +1294,15 @@ function focusSelected(){
   const availableWidth=Math.max(240,innerWidth-180);
   const availableHeight=Math.max(240,innerHeight-titleOffset-40);
   const widthScale=availableWidth/r.w;
+  if(mode==="fit"){
+    const fitScale=clampScale(Math.min(widthScale,availableHeight/r.h));
+    moveTo(
+      innerWidth/2-(r.x+r.w/2)*fitScale,
+      innerHeight/2-(r.y+r.h/2)*fitScale,
+      fitScale
+    );
+    return;
+  }
   const fitScale=n.type==="map"?Math.min(widthScale,availableHeight/r.h):widthScale;
   const targetScale=clampScale(Math.min(1.2,fitScale));
   const cx=r.x+r.w/2;
@@ -1364,8 +1381,9 @@ window.addEventListener("keydown",e=>{
   */
  if(e.code==="Space"&&!editing){
    e.preventDefault();
+   if(e.repeat)return;
    if(state.selected){
-     focusSelected();
+     focusSelected(state.spaceFocusStep===0?"fit":"readable");
      state.spacePan=false;
    }else{
      state.spacePan=true;
@@ -1413,6 +1431,7 @@ window.addEventListener("keydown",e=>{
      a:()=>$("#arrange").click(),
      b:()=>toggleToolbar(),
      t:()=>$("#theme").click(),
+     s:()=>toggleSunStarBackground(),
      "-":()=>$("#minus").click(),
      "=":()=>$("#plus").click(),
      "[":()=>resizeSelectedWidth(-1),
