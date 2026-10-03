@@ -17,6 +17,18 @@ const state={
 const MAP_COLORS=["default","purple","warm","ocean","forest","sunset","slate"];
 const MAP_FONTS=["modern","editorial","geometric","humanist","mono","rounded","handwritten"];
 const GROUP_COLORS=["none","blue","teal","amber","rose","violet","green"];
+const CARD_FONTS=[
+ ["mono","Mono"],["mono-code","Mono Code"],["mono-terminal","Mono Terminal"],["mono-typewriter","Mono Typewriter"],
+ ["sans","Sans"],["serif","Serif"],["slab","Slab"],["humanist","Humanist"],["rounded","Rounded"],["editorial","Editorial"],["hand","Handwritten"]
+];
+const LEGACY_HAND_FONTS={"hand-soft":"Hand Soft","hand-bold":"Hand Bold","hand-marker":"Hand Marker","hand-script":"Hand Script"};
+
+function populateCardFontSelect(el,font){
+ const selectEl=el.querySelector("[data-font]");
+ selectEl.replaceChildren(...CARD_FONTS.map(([value,label])=>new Option(label,value)));
+ if(LEGACY_HAND_FONTS[font])selectEl.add(new Option(`${LEGACY_HAND_FONTS[font]} (saved)`,font));
+ selectEl.value=font;
+}
 
 function showControls(){
   document.body.classList.remove("controls-hidden");
@@ -513,7 +525,7 @@ function zoom(f,cx=innerWidth/2,cy=innerHeight/2){
  zoomPrecise(f,cx,cy);
  clearTimeout(state.saveTimer);state.saveTimer=setTimeout(save,180);
 }
-function snapshot(){return JSON.stringify({x:state.x,y:state.y,scale:state.scale,nextId:state.nextId,notes:state.notes.map(n=>({id:n.id,md:n.md,x:n.x,y:n.y,w:n.type==="map"?(n.mapWidth||n.width||n.el.offsetWidth):(n.width||n.el.offsetWidth),h:n.mapHeight,mapWidth:n.mapWidth,mapHeight:n.mapHeight,font:n.font||"serif",size:n.size||"100",type:n.type||"note",mapColor:n.mapColor||"default",mapFont:n.mapFont||"modern",groupColor:n.groupColor||"none"}))})}
+function snapshot(){return JSON.stringify({x:state.x,y:state.y,scale:state.scale,nextId:state.nextId,notes:state.notes.map(n=>({id:n.id,md:n.md,x:n.x,y:n.y,w:n.type==="map"?(n.mapWidth||n.width||n.el.offsetWidth):(n.width||n.el.offsetWidth),h:n.mapHeight,mapWidth:n.mapWidth,mapHeight:n.mapHeight,font:n.font||"mono",size:n.size||"100",type:n.type||"note",mapColor:n.mapColor||"default",mapFont:n.mapFont||"modern",groupColor:n.groupColor||"none"}))})}
 function history(){
  if(state.historyLock)return;
  const s=snapshot();
@@ -631,7 +643,7 @@ function canvasPayload(){
    height:n.type==="map"?(n.mapHeight||n.el.offsetHeight):undefined,
    mapWidth:n.mapWidth,
    mapHeight:n.mapHeight,
-   font:n.font||"serif",
+   font:n.font||"mono",
    size:n.size||"100",
    mapColor:n.mapColor||"default",
    mapFont:n.mapFont||"modern",
@@ -681,7 +693,7 @@ function openCanvasFile(file){
     const width=Number.isFinite(n.width)?n.width:600,id=Number.isFinite(n.id)?n.id:null;
     n.type==="map"
       ? makeMap(n.markdown,x,y,width,Number.isFinite(n.height)?n.height:640,false,id,n.mapColor,n.mapFont,n.groupColor)
-      : makeNote(n.markdown,x,y,width,false,id,typeof n.font==="string"?n.font:"serif",n.size,n.mapColor,n.mapFont,n.mapWidth,n.mapHeight,n.groupColor);
+      : makeNote(n.markdown,x,y,width,false,id,typeof n.font==="string"?n.font:"mono",n.size,n.mapColor,n.mapFont,n.mapWidth,n.mapHeight,n.groupColor);
    });
 
    state.nextId=Number.isFinite(data.nextId)
@@ -720,7 +732,7 @@ function openCanvasFile(file){
  reader.readAsText(file);
 }
 
-function makeNote(md,x,y,w=600,record=true,id=null,font="serif",size="100",mapColor="default",mapFont="modern",mapWidth=null,mapHeight=null,groupColor="none"){
+function makeNote(md,x,y,w=600,record=true,id=null,font="mono",size="100",mapColor="default",mapFont="modern",mapWidth=null,mapHeight=null,groupColor="none"){
  if(record)history();
  const width=Math.max(300,Math.min(1200,w||600));
  const n={id:id??state.nextId++,md,x,y,font,size,width,type:"note",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:MAP_FONTS.includes(mapFont)?mapFont:"modern",mapWidth:Number.isFinite(mapWidth)?Math.max(420,Math.min(1600,mapWidth)):null,mapHeight:Number.isFinite(mapHeight)?Math.max(320,Math.min(1200,mapHeight)):null,groupColor:GROUP_COLORS.includes(groupColor)?groupColor:"none",el:null};
@@ -738,7 +750,7 @@ function makeNote(md,x,y,w=600,record=true,id=null,font="serif",size="100",mapCo
  el.querySelector("[data-map-color]").value=n.mapColor||"default";
  el.querySelector("[data-map-font]").value=n.mapFont||"modern";
  el.querySelector("[data-view]").value="note";
- el.querySelector("[data-font]").value=font;
+ populateCardFontSelect(el,font);
  el.dataset.fontSize=["70","80","90","100","110","125","140","160","180"].includes(String(size))?String(size):"100";
  el.querySelector("[data-size]").value=el.dataset.fontSize;
  n.el=el;world.appendChild(el);state.notes.push(n);
@@ -785,20 +797,21 @@ function makeMap(md,x,y,w=960,h=640,record=true,id=null,mapColor="default",mapFo
  if(record)history();
  const width=Math.max(420,Math.min(1600,w||960));
  const height=Math.max(320,Math.min(1200,h||640));
- const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type:"map",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:MAP_FONTS.includes(mapFont)?mapFont:"modern",groupColor:GROUP_COLORS.includes(groupColor)?groupColor:"none",font:"sans",size:"100",el:null,mapInstance:null};
+ const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type:"map",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:MAP_FONTS.includes(mapFont)?mapFont:"modern",groupColor:GROUP_COLORS.includes(groupColor)?groupColor:"none",font:"mono",size:"100",el:null,mapInstance:null};
  state.nextId=Math.max(state.nextId,n.id+1);
  const el=document.createElement("article");
  el.className="card map-card";el.style.left=x+"px";el.style.top=y+"px";el.style.width=width+"px";el.style.height=height+"px";
  el.dataset.mapColor=n.mapColor;
  el.dataset.mapFont=n.mapFont;
  el.dataset.groupColor=n.groupColor;
+ el.dataset.font=n.font;
  el.innerHTML=`<div class="cardbar"><div class="map-title">Mind map</div></div><div class="cardactions"><select data-view aria-label="Card view" title="Card view"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-map-color class="map-only" aria-label="Map color scheme" title="Map color scheme"><option value="default">Violet</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select><select data-map-font class="map-only" aria-label="Map font" title="Map font"><option value="modern">Modern</option><option value="editorial">Editorial</option><option value="geometric">Geometric</option><option value="humanist">Humanist</option><option value="mono">Mono</option><option value="rounded">Rounded</option><option value="handwritten">Handwritten</option></select><select data-font aria-label="Card font" title="Card font"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option></select><select data-size aria-label="Card font size" title="Card font size"><option value="100">100%</option><option value="125">125%</option><option value="140">140%</option></select><button data-map-edit title="Edit map">✎</button><button data-map-open title="Open map in new tab">↗</button><button data-edit>✎</button><button data-delete title="Delete map">×</button></div><div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div><div class="resize bottom" data-side="bottom" title="Resize map height"></div><div class="cardbody"><div class="map-loading">Rendering mind map…</div></div>`;
  n.el=el;world.appendChild(el);state.notes.push(n);
  addGroupColorControl(n,el);
  el.querySelector("[data-view]").value="map";
  el.querySelector("[data-map-color]").value=n.mapColor;
  el.querySelector("[data-map-font]").value=n.mapFont;
- el.querySelector("[data-font]").value=n.font;
+ populateCardFontSelect(el,n.font);
  el.querySelector("[data-size]").value=n.size;
  el.addEventListener("mousedown",e=>{
   if(e.button!==0||e.target.closest(".cardactions,.resize,a,button"))return;
@@ -1542,7 +1555,7 @@ function load(){
     if(typeof n.md!=="string")return;
     n.type==="map"
       ? makeMap(n.md,n.x||0,n.y||0,n.w||960,n.h||640,false,n.id,n.mapColor,n.mapFont,n.groupColor)
-      : makeNote(n.md,n.x||0,n.y||0,n.w||600,false,n.id,typeof n.font==="string"?n.font:"serif",n.size,n.mapColor,n.mapFont,n.mapWidth,n.mapHeight,n.groupColor);
+      : makeNote(n.md,n.x||0,n.y||0,n.w||600,false,n.id,typeof n.font==="string"?n.font:"mono",n.size,n.mapColor,n.mapFont,n.mapWidth,n.mapHeight,n.groupColor);
    })
   }
  }catch{}
