@@ -384,6 +384,12 @@ function markmapOptions(n){
   duration:350,maxWidth:300,spacingVertical:15,spacingHorizontal:82
  };
 }
+function mapViewportSize(){
+ return {
+  width:Math.max(320,Math.min(1600,innerWidth-80)),
+  height:Math.max(320,Math.min(1200,innerHeight-120))
+ };
+}
 function prepareMarkmapMarkdown(markdown){
  const code=[];
  let source=String(markdown).replace(/(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]*`)/g,match=>{
@@ -427,8 +433,9 @@ function setCardType(n,type,record=true){
  if(type==="map"){
   n.mapColor=MAP_COLORS.includes(n.mapColor)?n.mapColor:"default";
   n.mapFont=MAP_FONTS.includes(n.mapFont)?n.mapFont:"modern";
-  n.mapWidth=Math.max(420,Math.min(1600,n.mapWidth||Math.max(960,n.width||n.el.offsetWidth)));
-  n.mapHeight=Math.max(320,Math.min(1200,n.mapHeight||640));
+  const size=mapViewportSize();
+  n.mapWidth=size.width;
+  n.mapHeight=size.height;
   n.el.style.width=n.mapWidth+"px";
   n.el.style.height=n.mapHeight+"px";
   n.el.dataset.mapFont=n.mapFont;
@@ -793,10 +800,11 @@ function makeNote(md,x,y,w=600,record=true,id=null,font="mono",size="100",mapCol
  empty();
  return n;
 }
-function makeMap(md,x,y,w=960,h=640,record=true,id=null,mapColor="default",mapFont="modern",groupColor="none"){
+function makeMap(md,x,y,w=null,h=null,record=true,id=null,mapColor="default",mapFont="modern",groupColor="none"){
  if(record)history();
- const width=Math.max(420,Math.min(1600,w||960));
- const height=Math.max(320,Math.min(1200,h||640));
+ const viewport=mapViewportSize();
+ const width=Math.max(420,Math.min(1600,w||viewport.width));
+ const height=Math.max(320,Math.min(1200,h||viewport.height));
  const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type:"map",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:MAP_FONTS.includes(mapFont)?mapFont:"modern",groupColor:GROUP_COLORS.includes(groupColor)?groupColor:"none",font:"mono",size:"100",el:null,mapInstance:null};
  state.nextId=Math.max(state.nextId,n.id+1);
  const el=document.createElement("article");
@@ -1048,8 +1056,9 @@ function applyEditor(type=state.editorMode){
   select(n);
  }else{
   const p=worldPoint(innerWidth/2,innerHeight/2);
+  const size=mapViewportSize();
   const n=type==="map"
-   ? makeMap(md,p.x-480,p.y-320,960,640,true,null,$("#mapColor").value,$("#mapFont").value)
+   ? makeMap(md,p.x-size.width/2,p.y-size.height/2,size.width,size.height,true,null,$("#mapColor").value,$("#mapFont").value)
    : makeNote(md,p.x-300,p.y-150,600,true);
   select(n)
  }
@@ -1273,7 +1282,18 @@ function focusSelected(){
   const n=state.selected;
   if(!n)return;
 
-  // Center and scale the complete selected card into the visible canvas.
+  if(n.type==="map"){
+   const size=mapViewportSize();
+   if(n.mapWidth!==size.width||n.mapHeight!==size.height){
+    history();
+    n.mapWidth=size.width;n.mapHeight=size.height;
+    n.el.style.width=size.width+"px";n.el.style.height=size.height+"px";
+    save();
+   }
+   n.mapInstance?.fit();
+  }
+
+  // Fit Markdown cards to the available width; Markmaps also fit vertically.
   const r={
     x:n.x,
     y:n.y,
@@ -1282,8 +1302,8 @@ function focusSelected(){
   };
   const availableWidth=Math.max(240,innerWidth-100);
   const availableHeight=Math.max(240,innerHeight-120);
-  const currentScale=state.targetScale||state.scale||1;
-  const targetScale=clampScale(Math.min(currentScale,availableWidth/r.w,availableHeight/r.h));
+  const widthScale=availableWidth/r.w;
+  const targetScale=clampScale(n.type==="map"?Math.min(widthScale,availableHeight/r.h):widthScale);
   const cx=r.x+r.w/2;
   const cy=r.y+r.h/2;
 
