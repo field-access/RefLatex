@@ -536,10 +536,9 @@ body.fullscreen.controls .toolbar{transform:translateY(-50%)}
 .card[data-font="serif"] .cardbody,.card[data-font="serif"] .cardbody p,.card[data-font="serif"] .cardbody li,.card[data-font="serif"] .cardbody table,.card[data-font="serif"] .cardbody th,.card[data-font="serif"] .cardbody td{font-family:Georgia,"Times New Roman",serif}
 .card[data-font] .cardbody h1,.card[data-font] .cardbody h2,.card[data-font] .cardbody h3,.card[data-font] .cardbody h4,.card[data-font] .cardbody h5,.card[data-font] .cardbody h6{font-family:inherit}
 .card[data-font="mono"] .cardbody,.card[data-font="mono"] .cardbody p,.card[data-font="mono"] .cardbody li,.card[data-font="mono"] .cardbody table,.card[data-font="mono"] .cardbody th,.card[data-font="mono"] .cardbody td{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
-.card[data-font="mono-code"] .cardbody,.card[data-font="mono-code"] .cardbody p,.card[data-font="mono-code"] .cardbody li,.card[data-font="mono-code"] .cardbody table,.card[data-font="mono-code"] .cardbody th,.card[data-font="mono-code"] .cardbody td{font-family:"JetBrains Mono",ui-monospace,monospace}
-.card[data-font="mono-terminal"] .cardbody,.card[data-font="mono-terminal"] .cardbody p,.card[data-font="mono-terminal"] .cardbody li,.card[data-font="mono-terminal"] .cardbody table,.card[data-font="mono-terminal"] .cardbody th,.card[data-font="mono-terminal"] .cardbody td{font-family:"IBM Plex Mono",Consolas,monospace}
-.card[data-font="mono-typewriter"] .cardbody,.card[data-font="mono-typewriter"] .cardbody p,.card[data-font="mono-typewriter"] .cardbody li,.card[data-font="mono-typewriter"] .cardbody table,.card[data-font="mono-typewriter"] .cardbody th,.card[data-font="mono-typewriter"] .cardbody td{font-family:"Space Mono","Courier New",monospace}
-.card[data-font^="mono-"] .cardbody,.card[data-font^="mono-"] .cardbody :is(p,li,table,th,td){font-variant-ligatures:none}
+.card[data-font="mono-code"] .cardbody,.card[data-font="mono-code"] .cardbody p,.card[data-font="mono-code"] .cardbody li,.card[data-font="mono-code"] .cardbody table,.card[data-font="mono-code"] .cardbody th,.card[data-font="mono-code"] .cardbody td{font-family:"JetBrains Mono","Cascadia Code","Fira Code",Consolas,ui-monospace,monospace;font-feature-settings:"liga" 1;letter-spacing:-.025em}
+.card[data-font="mono-terminal"] .cardbody,.card[data-font="mono-terminal"] .cardbody p,.card[data-font="mono-terminal"] .cardbody li,.card[data-font="mono-terminal"] .cardbody table,.card[data-font="mono-terminal"] .cardbody th,.card[data-font="mono-terminal"] .cardbody td{font-family:"IBM Plex Mono","Cascadia Mono","Lucida Console",Consolas,monospace;font-feature-settings:"liga" 0;letter-spacing:.012em}
+.card[data-font="mono-typewriter"] .cardbody,.card[data-font="mono-typewriter"] .cardbody p,.card[data-font="mono-typewriter"] .cardbody li,.card[data-font="mono-typewriter"] .cardbody table,.card[data-font="mono-typewriter"] .cardbody th,.card[data-font="mono-typewriter"] .cardbody td{font-family:"Courier Prime","Courier New",Courier,monospace;letter-spacing:.035em}
 .card[data-font="mono-fira"] .cardbody,.card[data-font="mono-fira"] .cardbody :is(p,li,table,th,td){font-family:"Fira Code",ui-monospace,monospace}
 .card[data-font="mono-inconsolata"] .cardbody,.card[data-font="mono-inconsolata"] .cardbody :is(p,li,table,th,td){font-family:"Inconsolata",ui-monospace,monospace}
 .card[data-font="mono-roboto"] .cardbody,.card[data-font="mono-roboto"] .cardbody :is(p,li,table,th,td){font-family:"Roboto Mono",ui-monospace,monospace}
@@ -605,30 +604,42 @@ body.fullscreen.controls .toolbar{transform:translateY(-50%)}
 .card[data-map-color="default"] .cardactions button:hover{background:#292c34;color:#fff}
 body.dark .card[data-map-color="default"]{
  --paper:#17181d;--ink:#e7eaf1;--map-surface:#17181d;
- color:#d9dce5;background:#17181d;border-color:#202127
+ color:#d9dce5;background:linear-gradient(135deg,#17181d 0%,#242633 100%);border-color:#303542
 }
-body.dark .card:not(.map-card)[data-map-color="default"]{background:#17181d;border-color:#202127}
-body.dark .card[data-map-color="default"] .cardbar{background:#121317;border-bottom-color:#1b1d23}
-body.dark .card:not(.map-card)[data-map-color="default"] .cardbar{background:#121317;border-bottom-color:#1b1d23}
+body.dark .card:not(.map-card)[data-map-color="default"]{background:linear-gradient(135deg,#17181d 0%,#242633 100%);border-color:#303542}
+body.dark .card[data-map-color="default"] .cardbar{background:linear-gradient(100deg,#20212c,#17181d);border-bottom-color:#303542}
+body.dark .card:not(.map-card)[data-map-color="default"] .cardbar{background:linear-gradient(100deg,#20212c,#17181d);border-bottom-color:#303542}
 body.dark .card[data-map-color="default"] .map-title{color:#62b2ed}
 body.dark .card[data-map-color="default"] .cardactions select,
 body.dark .card[data-map-color="default"] .cardactions button{color:#c4c9d4}
-body.dark .card:not(.map-card)[data-map-color="purple"]{background:#211b2b;border-color:#403450}
-body.dark .card:not(.map-card)[data-map-color="warm"]{background:#292117;border-color:#55422b}
-body.dark .card:not(.map-card)[data-map-color="ocean"]{background:#142529;border-color:#285054}
-body.dark .card:not(.map-card)[data-map-color="forest"]{background:#18251d;border-color:#34503a}
-body.dark .card:not(.map-card)[data-map-color="sunset"]{background:#2b1d22;border-color:#553541}
-body.dark .card:not(.map-card)[data-map-color="slate"]{background:#20252c;border-color:#3a4552}
-body.dark .map-card[data-map-color="purple"]{background:#211b2b;border-color:#403450}
-body.dark .map-card[data-map-color="warm"]{background:#292117;border-color:#55422b}
-body.dark .map-card[data-map-color="ocean"]{background:#142529;border-color:#285054}
-body.dark .map-card[data-map-color="forest"]{background:#18251d;border-color:#34503a}
-body.dark .map-card[data-map-color="sunset"]{background:#2b1d22;border-color:#553541}
-body.dark .map-card[data-map-color="slate"]{background:#20252c;border-color:#3a4552}
-body.dark .map-card[data-map-color="default"] .map-pane{background:#17181d;color:#e7eaf1}
-body.dark .map-card[data-map-color="purple"] .map-pane{background:#211b2b;color:#e7eaf1}
-body.dark .map-card[data-map-color="warm"] .map-pane{background:#292117;color:#f0e6d8}
-body.dark .map-card[data-map-color="ocean"] .map-pane{background:#142529;color:#dcebee}
-body.dark .map-card[data-map-color="forest"] .map-pane{background:#18251d;color:#e1ebdf}
-body.dark .map-card[data-map-color="sunset"] .map-pane{background:#2b1d22;color:#f0e1e4}
-body.dark .map-card[data-map-color="slate"] .map-pane{background:#20252c;color:#e2e7ed}
+body.dark .card:not(.map-card)[data-map-color="purple"],
+body.dark .map-card[data-map-color="purple"]{background:linear-gradient(135deg,#1b1724,#30203b);border-color:#463354}
+body.dark .card:not(.map-card)[data-map-color="warm"],
+body.dark .map-card[data-map-color="warm"]{background:linear-gradient(135deg,#21191b,#422629);border-color:#59363a}
+body.dark .card:not(.map-card)[data-map-color="ocean"],
+body.dark .map-card[data-map-color="ocean"]{background:linear-gradient(135deg,#102126,#1c3940);border-color:#31535b}
+body.dark .card:not(.map-card)[data-map-color="forest"],
+body.dark .map-card[data-map-color="forest"]{background:linear-gradient(135deg,#16231d,#2a3b2f);border-color:#3c5b45}
+body.dark .card:not(.map-card)[data-map-color="sunset"],
+body.dark .map-card[data-map-color="sunset"]{background:linear-gradient(135deg,#27191f,#462732);border-color:#633c4b}
+body.dark .card:not(.map-card)[data-map-color="slate"],
+body.dark .map-card[data-map-color="slate"]{background:linear-gradient(135deg,#1c222b,#303a49);border-color:#465465}
+body.dark .card:not(.map-card)[data-map-color="purple"] .cardbar,
+body.dark .map-card[data-map-color="purple"] .cardbar{background:linear-gradient(100deg,#38244a,#221a2b)}
+body.dark .card:not(.map-card)[data-map-color="warm"] .cardbar,
+body.dark .map-card[data-map-color="warm"] .cardbar{background:linear-gradient(100deg,#4a282a,#2c1e23)}
+body.dark .card:not(.map-card)[data-map-color="ocean"] .cardbar,
+body.dark .map-card[data-map-color="ocean"] .cardbar{background:linear-gradient(100deg,#1b4449,#162d33)}
+body.dark .card:not(.map-card)[data-map-color="forest"] .cardbar,
+body.dark .map-card[data-map-color="forest"] .cardbar{background:linear-gradient(100deg,#274436,#1b3025)}
+body.dark .card:not(.map-card)[data-map-color="sunset"] .cardbar,
+body.dark .map-card[data-map-color="sunset"] .cardbar{background:linear-gradient(100deg,#522936,#2f2029)}
+body.dark .card:not(.map-card)[data-map-color="slate"] .cardbar,
+body.dark .map-card[data-map-color="slate"] .cardbar{background:linear-gradient(100deg,#354254,#232a35)}
+body.dark .map-card[data-map-color="default"] .map-pane{background:linear-gradient(135deg,#17181d,#242633);color:#e7eaf1}
+body.dark .map-card[data-map-color="purple"] .map-pane{background:linear-gradient(135deg,#1b1724,#30203b);color:#e7eaf1}
+body.dark .map-card[data-map-color="warm"] .map-pane{background:linear-gradient(135deg,#21191b,#422629);color:#f0e6e8}
+body.dark .map-card[data-map-color="ocean"] .map-pane{background:linear-gradient(135deg,#102126,#1c3940);color:#dcebee}
+body.dark .map-card[data-map-color="forest"] .map-pane{background:linear-gradient(135deg,#16231d,#2a3b2f);color:#e1ebdf}
+body.dark .map-card[data-map-color="sunset"] .map-pane{background:linear-gradient(135deg,#27191f,#462732);color:#f0e1e4}
+body.dark .map-card[data-map-color="slate"] .map-pane{background:linear-gradient(135deg,#1c222b,#303a49);color:#e2e7ed}
