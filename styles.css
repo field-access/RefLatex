@@ -26,24 +26,57 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
  z-index:3;
 }
 .map-card{
- width:720px;min-width:420px;height:500px;min-height:280px;
+ width:960px;max-width:1600px;min-width:420px;height:640px;min-height:320px;
  background:var(--paper);overflow:hidden;
 }
 .map-card .cardbar{height:32px;background:linear-gradient(90deg,#eeebff,#f8f6ff);border-bottom-color:#ded9f6}
 .map-card .cardbody{height:calc(100% - 32px);padding:0;overflow:hidden}
-.map-pane{min-width:0;height:100%;overflow:hidden;background:var(--paper)}
+.map-pane{min-width:0;height:100%;overflow:hidden;background:var(--map-surface,#fbfaff);transition:background .2s ease}
 .map-pane svg{display:block;width:100%;height:100%;font-family:Inter,ui-sans-serif,system-ui,sans-serif}
+.map-card .markmap-link{stroke-linecap:round;opacity:.86}
+.map-card .markmap-node circle{stroke:var(--paper);stroke-width:2px;filter:drop-shadow(0 1px 2px #0002)}
+.map-card .markmap-node text{font-size:14px;font-weight:600;fill:var(--ink)}
+.map-card .markmap-node foreignObject>div,
+.map-card .markmap-node .markmap-foreign{font-size:14px;font-weight:600;line-height:1.4;color:var(--ink)}
+.map-card[data-map-font="editorial"] .map-pane svg,
+.map-card[data-map-font="editorial"] .markmap-node foreignObject>div{font-family:Georgia,Cambria,"Times New Roman",serif}
+.map-card[data-map-font="geometric"] .map-pane svg,
+.map-card[data-map-font="geometric"] .markmap-node foreignObject>div{font-family:"Avenir Next",Montserrat,"Century Gothic",sans-serif}
+.map-card[data-map-font="humanist"] .map-pane svg,
+.map-card[data-map-font="humanist"] .markmap-node foreignObject>div{font-family:"Trebuchet MS",Arial,sans-serif}
+.map-card[data-map-font="mono"] .map-pane svg,
+.map-card[data-map-font="mono"] .markmap-node foreignObject>div{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.map-card[data-map-font="rounded"] .map-pane svg,
+.map-card[data-map-font="rounded"] .markmap-node foreignObject>div{font-family:"Arial Rounded MT Bold","Trebuchet MS",sans-serif}
+.map-card[data-map-font="handwritten"] .map-pane svg,
+.map-card[data-map-font="handwritten"] .markmap-node foreignObject>div{font-family:"Segoe Print","Comic Sans MS",cursive}
 .map-card .map-loading{display:grid;place-items:center;height:100%;color:var(--muted);font-size:12px}
 .map-card .map-error{padding:24px;color:#a34a42;font:12px/1.5 ui-monospace,monospace}
 .map-card .map-title{position:absolute;left:12px;top:8px;font-size:11px;font-weight:700;color:#524b8b;pointer-events:none}
 .map-card .cardactions{top:3px}
 .map-card .cardactions button{font-size:14px}
 .map-card .cardactions select{background:#f7f5ff}
-.map-card[data-map-color="purple"] .cardbar{background:linear-gradient(90deg,#e7e2ff,#f6f3ff)}
+.map-card .cardactions select[data-map-color]{max-width:88px}
+.map-card .cardactions select[data-map-font]{max-width:86px}
+.map-card[data-map-color="default"]{--map-surface:#fbfaff}
+.map-card[data-map-color="default"] .cardbar{background:linear-gradient(90deg,#eeebff,#f8f6ff)}
+.map-card[data-map-color="purple"]{--map-surface:#fcf9ff}
+.map-card[data-map-color="purple"] .cardbar{background:linear-gradient(90deg,#e9dfff,#f7f1ff)}
+.map-card[data-map-color="warm"]{--map-surface:#fffaf3}
 .map-card[data-map-color="warm"] .cardbar{background:linear-gradient(90deg,#fff0d9,#fffaf2)}
 .map-card[data-map-color="warm"] .map-title{color:#93632e}
-.map-card[data-map-color="warm"] .markmap-node circle{fill:#d8944c}
-.map-card[data-map-color="purple"] .markmap-node circle{fill:#7167c5}
+.map-card[data-map-color="ocean"]{--map-surface:#f1fbfa}
+.map-card[data-map-color="ocean"] .cardbar{background:linear-gradient(90deg,#d9f3f0,#f0fbf9)}
+.map-card[data-map-color="ocean"] .map-title{color:#176b72}
+.map-card[data-map-color="forest"]{--map-surface:#f4faf2}
+.map-card[data-map-color="forest"] .cardbar{background:linear-gradient(90deg,#e1f0dc,#f4f9ef)}
+.map-card[data-map-color="forest"] .map-title{color:#396c48}
+.map-card[data-map-color="sunset"]{--map-surface:#fff8f4}
+.map-card[data-map-color="sunset"] .cardbar{background:linear-gradient(90deg,#ffe2df,#fff4df)}
+.map-card[data-map-color="sunset"] .map-title{color:#a74861}
+.map-card[data-map-color="slate"]{--map-surface:#f5f7f8}
+.map-card[data-map-color="slate"] .cardbar{background:linear-gradient(90deg,#e2e8ee,#f5f7f9)}
+.map-card[data-map-color="slate"] .map-title{color:#475569}
 .card.selected{
  outline:2px solid var(--accent);
  outline-offset:4px;
@@ -99,6 +132,10 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
  position:absolute;top:30px;bottom:25px;width:12px;z-index:5;cursor:ew-resize
 }
 .resize.left{left:-6px}.resize.right{right:-6px}
+.map-card .resize.left{left:0}.map-card .resize.right{right:0}
+.resize.bottom{left:32px;right:32px;top:auto;bottom:0;width:auto;height:12px;cursor:ns-resize}
+.resize.bottom:after{width:44px;height:3px}
+.card:not(.map-card) .resize.bottom{display:none}
 .resize:after{
  content:"";position:absolute;left:50%;top:50%;width:3px;height:34px;
  transform:translate(-50%,-50%);border-radius:3px;background:transparent
@@ -293,6 +330,12 @@ body.dark button.tool:hover,body.dark .zoom button:hover{background:#37352f}
 body.dark #source{background:#1f1e1b;color:#e9e6df}
 body.dark .map-card .cardbar{background:linear-gradient(90deg,#302c4a,#292735);border-bottom-color:#494168}
 body.dark .map-card .map-title{color:#c3bcff}
+body.dark .map-card[data-map-color="purple"] .cardbar{background:linear-gradient(90deg,#34284a,#292433)}
+body.dark .map-card[data-map-color="warm"] .cardbar{background:linear-gradient(90deg,#493a29,#302a20)}
+body.dark .map-card[data-map-color="ocean"] .cardbar{background:linear-gradient(90deg,#1d4243,#202b2b)}
+body.dark .map-card[data-map-color="forest"] .cardbar{background:linear-gradient(90deg,#294132,#232b25)}
+body.dark .map-card[data-map-color="sunset"] .cardbar{background:linear-gradient(90deg,#472d38,#302726)}
+body.dark .map-card[data-map-color="slate"] .cardbar{background:linear-gradient(90deg,#303946,#272c32)}
 body.dark .map-card .map-pane{
  background:#1d1c1a;
  color:#e9e6df;

@@ -14,7 +14,8 @@ const state={
  hand:true,spacePan:false,controlsVisible:true,pan:null,drag:null,rightPan:null,resize:null,editId:null,editorMode:"note",
  undo:[],redo:[],historyLock:false,raf:0,saveTimer:0,hideTimer:0,
 };
-const MAP_COLORS=["default","purple","warm"];
+const MAP_COLORS=["default","purple","warm","ocean","forest","sunset","slate"];
+const MAP_FONTS=["modern","editorial","geometric","humanist","mono","rounded","handwritten"];
 
 function showControls(){
   document.body.classList.remove("controls-hidden");
@@ -353,15 +354,33 @@ function render(md){
   return box.innerHTML;
 }
 function markmapOptions(n){
- const colors=n.mapColor==="purple"
-  ? ["#7167c5","#8d84d4","#aaa2e2","#c5c0ee"]
-  : n.mapColor==="warm"
-   ? ["#d8944c","#e3aa70","#efc18f","#f5d7b4"]
-   : ["#5b57b7","#7c78c8","#9b98d8","#bbb9e8"];
- return {
-  color:node=>colors[(node.state?.depth||0)%colors.length],
-  duration:350,maxWidth:280,spacingVertical:12,spacingHorizontal:70
+ const palettes={
+  default:["#5b57b7","#7c78c8","#9b98d8","#bbb9e8","#d5d3f2"],
+  purple:["#6846b5","#825fca","#a07fdb","#bca4e8","#d9c9f3"],
+  warm:["#b86b32","#d18a45","#dfa76a","#ecc697","#f3dec0"],
+  ocean:["#087e8b","#159a9c","#38b2ac","#73c8bd","#a8ddd2"],
+  forest:["#39734f","#4e9360","#73aa70","#9bc48a","#c1d9ac"],
+  sunset:["#bf4d68","#dc6b66","#eb8e68","#f1b070","#f5d08b"],
+  slate:["#475569","#5c6b7d","#788697","#9ba7b2","#c1c8ce"]
  };
+ const colors=palettes[n.mapColor]||palettes.default;
+ const depth=node=>node.state?.depth||0;
+ return {
+  color:node=>colors[depth(node)%colors.length],
+  lineWidth:node=>depth(node)===1?3:1.7,
+  duration:350,maxWidth:300,spacingVertical:15,spacingHorizontal:82
+ };
+}
+function prepareMarkmapMarkdown(markdown){
+ const code=[];
+ let source=String(markdown).replace(/(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]*`)/g,match=>{
+  const id=code.length;code.push(match);return `@@REFLATEX_MARKMAP_CODE_${id}@@`;
+ });
+ source=normalizeEscapedLatex(source)
+  .replace(/\\\[([\s\S]*?)\\\]/g,(_,math)=>`$$\n${math}\n$$`)
+  .replace(/\\\(([\s\S]*?)\\\)/g,(_,math)=>`$${math}$`);
+ code.forEach((value,id)=>{source=source.replace(`@@REFLATEX_MARKMAP_CODE_${id}@@`,value)});
+ return source;
 }
 async function renderMap(n){
  const body=n.el?.querySelector(".cardbody");
@@ -372,7 +391,7 @@ async function renderMap(n){
  }
  try{
   const transformer=new window.markmap.Transformer();
-  const {root}=transformer.transform(n.md);
+  const {root}=transformer.transform(prepareMarkmapMarkdown(n.md));
   body.innerHTML='<div class="map-pane"></div>';
   const pane=body.querySelector(".map-pane");
   const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
@@ -392,6 +411,18 @@ function setCardType(n,type,record=true){
  if(record)history();
  n.type=type;
  n.el.classList.toggle("map-card",type==="map");
+ if(type==="map"){
+  n.mapColor=MAP_COLORS.includes(n.mapColor)?n.mapColor:"default";
+  n.mapFont=MAP_FONTS.includes(n.mapFont)?n.mapFont:"modern";
+  n.mapWidth=Math.max(420,Math.min(1600,n.mapWidth||Math.max(960,n.width||n.el.offsetWidth)));
+  n.mapHeight=Math.max(320,Math.min(1200,n.mapHeight||640));
+  n.el.style.width=n.mapWidth+"px";
+  n.el.style.height=n.mapHeight+"px";
+  n.el.dataset.mapFont=n.mapFont;
+ }else{
+  n.el.style.width=(n.width||n.el.offsetWidth)+"px";
+  n.el.style.height="";
+ }
  n.el.dataset.mapColor=n.mapColor||"default";
  const title=n.el.querySelector(".map-title");
  if(title)title.textContent=type==="map"?"Mind map":"";
@@ -481,7 +512,7 @@ function zoom(f,cx=innerWidth/2,cy=innerHeight/2){
  zoomPrecise(f,cx,cy);
  clearTimeout(state.saveTimer);state.saveTimer=setTimeout(save,180);
 }
-function snapshot(){return JSON.stringify({x:state.x,y:state.y,scale:state.scale,nextId:state.nextId,notes:state.notes.map(n=>({id:n.id,md:n.md,x:n.x,y:n.y,w:n.width||n.el.offsetWidth,font:n.font||"serif",size:n.size||"100",type:n.type||"note",mapColor:n.mapColor||"default"}))})}
+function snapshot(){return JSON.stringify({x:state.x,y:state.y,scale:state.scale,nextId:state.nextId,notes:state.notes.map(n=>({id:n.id,md:n.md,x:n.x,y:n.y,w:n.type==="map"?(n.mapWidth||n.width||n.el.offsetWidth):(n.width||n.el.offsetWidth),h:n.mapHeight,mapWidth:n.mapWidth,mapHeight:n.mapHeight,font:n.font||"serif",size:n.size||"100",type:n.type||"note",mapColor:n.mapColor||"default",mapFont:n.mapFont||"modern"}))})}
 function history(){
  if(state.historyLock)return;
  const s=snapshot();
@@ -491,8 +522,8 @@ function restore(s){
  const d=JSON.parse(s);state.historyLock=true;
  state.notes.forEach(n=>n.el.remove());state.notes=[];state.selected=null;
  (d.notes||[]).forEach(n=>n.type==="map"
-  ? makeMap(n.md,n.x,n.y,n.w,false,n.id,n.mapColor)
-  : makeNote(n.md,n.x,n.y,n.w,false,n.id,n.font,n.size));
+  ? makeMap(n.md,n.x,n.y,n.w,n.h,false,n.id,n.mapColor,n.mapFont)
+  : makeNote(n.md,n.x,n.y,n.w,false,n.id,n.font,n.size,n.mapColor,n.mapFont,n.mapWidth,n.mapHeight));
  state.x=Number.isFinite(d.x)?d.x:innerWidth/2;
  state.y=Number.isFinite(d.y)?d.y:innerHeight/2;
  state.scale=clampScale(Number.isFinite(d.scale)?d.scale:1);
@@ -560,10 +591,14 @@ function canvasPayload(){
    type:n.type||"note",
    x:n.x,
    y:n.y,
-   width:n.width||n.el.offsetWidth,
+   width:n.type==="map"?(n.mapWidth||n.width||n.el.offsetWidth):(n.width||n.el.offsetWidth),
+   height:n.type==="map"?(n.mapHeight||n.el.offsetHeight):undefined,
+   mapWidth:n.mapWidth,
+   mapHeight:n.mapHeight,
    font:n.font||"serif",
    size:n.size||"100",
-   mapColor:n.mapColor||"default"
+   mapColor:n.mapColor||"default",
+   mapFont:n.mapFont||"modern"
   }))
  };
 }
@@ -582,7 +617,7 @@ function downloadCanvas(){
  setTimeout(()=>URL.revokeObjectURL(url),1000);
 
  $("#hint").textContent="Canvas saved";
- setTimeout(()=>$("#hint").textContent="✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · M new map · E edit · Shift+M open map · Esc close",1800);
+ setTimeout(()=>$("#hint").textContent="✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · M new map · K Markmap · Shift+K Markdown · Shift+M new window · Esc close",1800);
 }
 
 function openCanvasFile(file){
@@ -605,10 +640,11 @@ function openCanvasFile(file){
 
    data.notes.forEach(n=>{
     if(typeof n.markdown!=="string")return;
-    const args=[n.markdown,Number.isFinite(n.x)?n.x:0,Number.isFinite(n.y)?n.y:0,Number.isFinite(n.width)?n.width:600,false,Number.isFinite(n.id)?n.id:null];
+    const x=Number.isFinite(n.x)?n.x:0,y=Number.isFinite(n.y)?n.y:0;
+    const width=Number.isFinite(n.width)?n.width:600,id=Number.isFinite(n.id)?n.id:null;
     n.type==="map"
-      ? makeMap(...args, n.mapColor)
-      : makeNote(...args,typeof n.font==="string"?n.font:"serif",n.size);
+      ? makeMap(n.markdown,x,y,width,Number.isFinite(n.height)?n.height:640,false,id,n.mapColor,n.mapFont)
+      : makeNote(n.markdown,x,y,width,false,id,typeof n.font==="string"?n.font:"serif",n.size,n.mapColor,n.mapFont,n.mapWidth,n.mapHeight);
    });
 
    state.nextId=Number.isFinite(data.nextId)
@@ -635,7 +671,7 @@ function openCanvasFile(file){
    save();
 
    $("#hint").textContent=`Opened ${file.name}`;
-   setTimeout(()=>$("#hint").textContent="✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · M new map · E edit · Shift+M open map · Esc close",2200);
+   setTimeout(()=>$("#hint").textContent="✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · M new map · K Markmap · Shift+K Markdown · Shift+M new window · Esc close",2200);
 
   }catch(err){
    state.historyLock=false;
@@ -647,18 +683,21 @@ function openCanvasFile(file){
  reader.readAsText(file);
 }
 
-function makeNote(md,x,y,w=600,record=true,id=null,font="serif",size="100"){
+function makeNote(md,x,y,w=600,record=true,id=null,font="serif",size="100",mapColor="default",mapFont="modern",mapWidth=null,mapHeight=null){
  if(record)history();
  const width=Math.max(300,Math.min(1200,w||600));
- const n={id:id??state.nextId++,md,x,y,font,size,width,type:"note",el:null};
+ const n={id:id??state.nextId++,md,x,y,font,size,width,type:"note",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:MAP_FONTS.includes(mapFont)?mapFont:"modern",mapWidth:Number.isFinite(mapWidth)?Math.max(420,Math.min(1600,mapWidth)):null,mapHeight:Number.isFinite(mapHeight)?Math.max(320,Math.min(1200,mapHeight)):null,el:null};
  state.nextId=Math.max(state.nextId,n.id+1);
  const el=document.createElement("article");
  el.className="card";el.style.left=x+"px";el.style.top=y+"px";el.style.width=width+"px";
- el.innerHTML=`<div class="cardbar"><div class="map-title"></div></div><div class="cardactions"><select data-view aria-label="Card view" title="Card view"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-font aria-label="Card font" title="Card font (V / Shift+V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option><option value="slab">Slab</option><option value="humanist">Humanist</option><option value="rounded">Rounded</option><option value="editorial">Editorial</option><option value="hand">Handwritten</option><option value="hand-soft">Hand Soft</option><option value="hand-bold">Hand Bold</option><option value="hand-marker">Hand Marker</option><option value="hand-script">Hand Script</option></select><select data-size aria-label="Card font size" title="Card font size"><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option><option value="180">180%</option></select><button data-map-edit class="map-only" title="Edit map">✎</button><button data-map-open class="map-only" title="Open map in new tab">↗</button><button data-edit>✎</button><button data-delete>×</button></div>
- <div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div>
+ el.innerHTML=`<div class="cardbar"><div class="map-title"></div></div><div class="cardactions"><select data-view aria-label="Card view" title="Card view"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-map-color class="map-only" aria-label="Map color scheme" title="Map color scheme"><option value="default">Violet</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select><select data-map-font class="map-only" aria-label="Map font" title="Map font"><option value="modern">Modern</option><option value="editorial">Editorial</option><option value="geometric">Geometric</option><option value="humanist">Humanist</option><option value="mono">Mono</option><option value="rounded">Rounded</option><option value="handwritten">Handwritten</option></select><select data-font aria-label="Card font" title="Card font (V / Shift+V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option><option value="slab">Slab</option><option value="humanist">Humanist</option><option value="rounded">Rounded</option><option value="editorial">Editorial</option><option value="hand">Handwritten</option><option value="hand-soft">Hand Soft</option><option value="hand-bold">Hand Bold</option><option value="hand-marker">Hand Marker</option><option value="hand-script">Hand Script</option></select><select data-size aria-label="Card font size" title="Card font size"><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option><option value="180">180%</option></select><button data-map-edit class="map-only" title="Edit map">✎</button><button data-map-open class="map-only" title="Open map in new tab">↗</button><button data-edit>✎</button><button data-delete>×</button></div>
+ <div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div><div class="resize bottom" data-side="bottom" title="Resize map height"></div>
  <div class="cardbody">${render(md)}</div>`;
  el.dataset.font=font;
  el.dataset.mapColor=n.mapColor||"default";
+ el.dataset.mapFont=n.mapFont||"modern";
+ el.querySelector("[data-map-color]").value=n.mapColor||"default";
+ el.querySelector("[data-map-font]").value=n.mapFont||"modern";
  el.querySelector("[data-view]").value="note";
  el.querySelector("[data-font]").value=font;
  el.dataset.fontSize=["70","80","90","100","110","125","140","160","180"].includes(String(size))?String(size):"100";
@@ -680,6 +719,12 @@ function makeNote(md,x,y,w=600,record=true,id=null,font="serif",size="100"){
  el.querySelector("[data-map-edit]").onclick=()=>editNote(n);
  el.querySelector("[data-map-open]").onclick=()=>openMapTab(n);
  el.querySelector("[data-view]").onchange=e=>setCardType(n,e.target.value);
+ el.querySelector("[data-map-color]").onchange=e=>{
+  history();n.mapColor=e.target.value;el.dataset.mapColor=n.mapColor;renderMap(n);save();
+ };
+ el.querySelector("[data-map-font]").onchange=e=>{
+  history();n.mapFont=e.target.value;el.dataset.mapFont=n.mapFont;save();
+ };
  el.querySelector("[data-font]").onchange=e=>{
   history();n.font=e.target.value;el.dataset.font=n.font;widenCardForTables(el);save();
  };
@@ -695,19 +740,23 @@ function makeNote(md,x,y,w=600,record=true,id=null,font="serif",size="100"){
  empty();
  return n;
 }
-function makeMap(md,x,y,w=720,record=true,id=null,mapColor="default"){
+function makeMap(md,x,y,w=960,h=640,record=true,id=null,mapColor="default",mapFont="modern"){
  if(record)history();
- const width=Math.max(420,Math.min(1200,w||720));
- const n={id:id??state.nextId++,md,x,y,width,type:"map",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",el:null,mapInstance:null};
+ const width=Math.max(420,Math.min(1600,w||960));
+ const height=Math.max(320,Math.min(1200,h||640));
+ const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type:"map",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:MAP_FONTS.includes(mapFont)?mapFont:"modern",font:"sans",size:"100",el:null,mapInstance:null};
  state.nextId=Math.max(state.nextId,n.id+1);
  const el=document.createElement("article");
- el.className="card map-card";el.style.left=x+"px";el.style.top=y+"px";el.style.width=width+"px";
+ el.className="card map-card";el.style.left=x+"px";el.style.top=y+"px";el.style.width=width+"px";el.style.height=height+"px";
  el.dataset.mapColor=n.mapColor;
- el.innerHTML=`<div class="cardbar"><div class="map-title">Mind map</div></div><div class="cardactions"><select data-view aria-label="Card view" title="Card view"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-font aria-label="Card font" title="Card font"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option></select><select data-size aria-label="Card font size" title="Card font size"><option value="100">100%</option><option value="125">125%</option><option value="140">140%</option></select><button data-map-edit title="Edit map">✎</button><button data-map-open title="Open map in new tab">↗</button><button data-edit>✎</button><button data-delete title="Delete map">×</button></div><div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div><div class="cardbody"><div class="map-loading">Rendering mind map…</div></div>`;
+ el.dataset.mapFont=n.mapFont;
+ el.innerHTML=`<div class="cardbar"><div class="map-title">Mind map</div></div><div class="cardactions"><select data-view aria-label="Card view" title="Card view"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-map-color class="map-only" aria-label="Map color scheme" title="Map color scheme"><option value="default">Violet</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select><select data-map-font class="map-only" aria-label="Map font" title="Map font"><option value="modern">Modern</option><option value="editorial">Editorial</option><option value="geometric">Geometric</option><option value="humanist">Humanist</option><option value="mono">Mono</option><option value="rounded">Rounded</option><option value="handwritten">Handwritten</option></select><select data-font aria-label="Card font" title="Card font"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option></select><select data-size aria-label="Card font size" title="Card font size"><option value="100">100%</option><option value="125">125%</option><option value="140">140%</option></select><button data-map-edit title="Edit map">✎</button><button data-map-open title="Open map in new tab">↗</button><button data-edit>✎</button><button data-delete title="Delete map">×</button></div><div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div><div class="resize bottom" data-side="bottom" title="Resize map height"></div><div class="cardbody"><div class="map-loading">Rendering mind map…</div></div>`;
  n.el=el;world.appendChild(el);state.notes.push(n);
  el.querySelector("[data-view]").value="map";
- el.querySelector("[data-font]").value=n.font||"serif";
- el.querySelector("[data-size]").value=n.size||"100";
+ el.querySelector("[data-map-color]").value=n.mapColor;
+ el.querySelector("[data-map-font]").value=n.mapFont;
+ el.querySelector("[data-font]").value=n.font;
+ el.querySelector("[data-size]").value=n.size;
  el.addEventListener("mousedown",e=>{
   if(e.button!==0||e.target.closest(".cardactions,.resize,a,button"))return;
   select(n);
@@ -719,6 +768,12 @@ function makeMap(md,x,y,w=720,record=true,id=null,mapColor="default"){
  el.querySelector("[data-edit]").onclick=()=>editNote(n);
  el.querySelector("[data-delete]").onclick=()=>deleteNote(n);
  el.querySelector("[data-view]").onchange=e=>setCardType(n,e.target.value);
+ el.querySelector("[data-map-color]").onchange=e=>{
+  history();n.mapColor=e.target.value;el.dataset.mapColor=n.mapColor;renderMap(n);save();
+ };
+ el.querySelector("[data-map-font]").onchange=e=>{
+  history();n.mapFont=e.target.value;el.dataset.mapFont=n.mapFont;save();
+ };
  el.querySelector("[data-font]").onchange=e=>{history();n.font=e.target.value;el.dataset.font=n.font;save()};
  el.querySelector("[data-size]").onchange=e=>{history();n.size=e.target.value;el.dataset.fontSize=n.size;save()};
  el.querySelectorAll(".resize").forEach(r=>r.onmousedown=e=>{if(e.button===0)startResize(e,n,r.dataset.side)});
@@ -737,10 +792,17 @@ window.addEventListener("mousemove",e=>{
  }
  if(state.resize){
   const r=state.resize,dx=(e.clientX-r.sx)/state.scale;
-  const w=Math.max(300,Math.min(1200,r.w+(r.side==="right"?dx:-dx)));
-  r.n.el.style.width=w+"px";
-  r.n.width=w;
-  if(r.side==="left"){r.n.x=r.x+r.w-w;r.n.el.style.left=r.n.x+"px"}
+  if(r.side==="bottom"){
+   const h=Math.max(320,Math.min(1200,r.h+(e.clientY-r.sy)/state.scale));
+   r.n.el.style.height=h+"px";
+   r.n.mapHeight=h;
+  }else{
+   const w=Math.max(300,Math.min(1600,r.w+(r.side==="right"?dx:-dx)));
+   r.n.el.style.width=w+"px";
+   if(r.n.type==="map")r.n.mapWidth=w;
+   else r.n.width=w;
+   if(r.side==="left"){r.n.x=r.x+r.w-w;r.n.el.style.left=r.n.x+"px"}
+  }
  }
  if(state.pan){
   state.x=state.pan.x+e.clientX-state.pan.sx;state.y=state.pan.y+e.clientY-state.pan.sy;sync();apply();
@@ -748,13 +810,14 @@ window.addEventListener("mousemove",e=>{
 });
 window.addEventListener("mouseup",()=>{
  if(state.drag||state.resize||state.pan){flushSave()}
+ if(state.resize?.n.type==="map")state.resize.n.mapInstance?.fit();
  state.drag=null;state.resize=null;state.pan=null;
  canvas.style.cursor=state.hand?"grab":"default";
 });
 function startResize(e,n,side){
  e.preventDefault();e.stopPropagation();select(n);history();
- state.resize={n,side,sx:e.clientX,w:n.el.offsetWidth,x:n.x};
- canvas.style.cursor="ew-resize";
+ state.resize={n,side,sx:e.clientX,sy:e.clientY,w:n.el.offsetWidth,h:n.el.offsetHeight,x:n.x};
+ canvas.style.cursor=side==="bottom"?"ns-resize":"ew-resize";
 }
 function startPan(e){
  if(e.button!==1 && e.button!==2 && !(e.button===0&&state.spacePan))return;
@@ -821,6 +884,7 @@ function scheduleWheelFrame(){
 }
 
 canvas.addEventListener("wheel",e=>{
+ if(e.target.closest?.(".map-pane"))return;
  e.preventDefault();
 
  const d=wheelUnitDelta(e);
@@ -893,6 +957,7 @@ function openEditor(mode="note",n=null){
  state.editorMode=mode;
  source.value=n?.md||"";
  $("#mapColor").value=n?.mapColor||"default";
+ $("#mapFont").value=n?.mapFont||"modern";
  $("#applyCard").textContent=n?"Update card":"Place card";
  $("#applyMap").textContent=n?"Update map":"Place map";
  editor.dataset.mode=mode;
@@ -908,31 +973,31 @@ function closeEditor(){
  state.editorMode="note";
  editor.dataset.mode="note";
 }
-function selectedMap(){return state.selected?.type==="map"?state.selected:null}
 function applyEditor(type=state.editorMode){
  const md=source.value.trim();if(!md)return;
  if(state.editId!==null){
   const n=state.notes.find(x=>x.id===state.editId);if(!n)return;
-  history();n.md=md;  n.mapColor=$("#mapColor").value;
+  history();n.md=md;n.mapColor=$("#mapColor").value;n.mapFont=$("#mapFont").value;
   if(n.type!==type)setCardType(n,type,false);
   else if(type==="map")renderMap(n);
   else n.el.querySelector(".cardbody").innerHTML=render(md);
   n.el.dataset.mapColor=n.mapColor;
+  n.el.dataset.mapFont=n.mapFont;
   if(type!=="map")widenCardForTables(n.el);
   select(n);
  }else{
   const p=worldPoint(innerWidth/2,innerHeight/2);
   const n=type==="map"
-   ? makeMap(md,p.x-360,p.y-250,720,true,null,$("#mapColor").value)
+   ? makeMap(md,p.x-480,p.y-320,960,640,true,null,$("#mapColor").value,$("#mapFont").value)
    : makeNote(md,p.x-300,p.y-150,600,true);
   select(n)
  }
  closeEditor();save()
 }
 function openMapTab(n){
-  const payload=JSON.stringify(n.md).replace(/</g,"\\u003c");
+  const payload=JSON.stringify(prepareMarkmapMarkdown(n.md)).replace(/</g,"\\u003c");
   const title=escapeHtml((n.md.match(/^#\s+(.+)$/m)||[])[1]||"RefLatex mind map");
-  const html=`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><style>html,body{height:100%;margin:0;background:#f7f5f0;color:#272622;font:14px system-ui}svg{width:100%;height:100%}</style></head><body><svg id="map"></svg><script src="https://cdn.jsdelivr.net/npm/d3@7"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18.12"><\/script><script>const md=${payload};const root=new markmap.Transformer().transform(md).root;markmap.Markmap.create("#map",{duration:350},root);<\/script></body></html>`;
+  const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css"><style>html,body{height:100%;margin:0;background:#f7f5f0;color:#272622;font:14px system-ui}svg{width:100%;height:100%}</style></head><body><svg id="map"></svg><script src="https://cdn.jsdelivr.net/npm/d3@7"><\/script><script src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18.12"><\/script><script>const md=${payload};const root=new markmap.Transformer().transform(md).root;const depth=node=>node.state?.depth||0;markmap.Markmap.create("#map",{duration:350,maxWidth:300,spacingHorizontal:82,spacingVertical:15,color:node=>["#5b57b7","#7c78c8","#9b98d8","#bbb9e8"][depth(node)%4],lineWidth:node=>depth(node)===1?3:1.7},root);<\/script></body></html>`;
   const tab=window.open();if(!tab){alert("Allow pop-ups to open this mind map.");return}
   tab.document.write(html);tab.document.close();
 }
@@ -958,8 +1023,8 @@ function duplicate(){
  if(!state.selected)return;
  const n=state.selected;
  const c=n.type==="map"
-  ? makeMap(n.md,n.x+45,n.y+45,n.el.offsetWidth,true,null,n.mapColor)
-  : makeNote(n.md,n.x+45,n.y+45,n.el.offsetWidth,true,null,n.font,n.size);
+  ? makeMap(n.md,n.x+45,n.y+45,n.mapWidth||n.el.offsetWidth,n.mapHeight||n.el.offsetHeight,true,null,n.mapColor,n.mapFont)
+  : makeNote(n.md,n.x+45,n.y+45,n.el.offsetWidth,true,null,n.font,n.size,n.mapColor,n.mapFont,n.mapWidth,n.mapHeight);
  select(c);save()
 }
 function fit(widthOnly=false){
@@ -1152,7 +1217,8 @@ function focusSelected(){
   };
   const availableWidth=Math.max(240,innerWidth-100);
   const availableHeight=Math.max(240,innerHeight-120);
-  const targetScale=clampScale(Math.min(1.25,availableWidth/r.w,availableHeight/r.h));
+  const currentScale=state.targetScale||state.scale||1;
+  const targetScale=clampScale(Math.min(currentScale,availableWidth/r.w,availableHeight/r.h));
   const cx=r.x+r.w/2;
   const cy=r.y+r.h/2;
 
@@ -1235,9 +1301,15 @@ window.addEventListener("keydown",e=>{
   */
  const key=e.key.toLowerCase();
  if(!mod&&!e.altKey&&e.shiftKey){
-   if(key==="m"&&selectedMap()){
+   if(key==="k"&&state.selected){
      e.preventDefault();
-     openMapTab(selectedMap());
+     setCardType(state.selected,"note");
+     focusSelected();
+     return;
+   }
+   if(key==="m"&&state.selected){
+     e.preventDefault();
+     openMapTab(state.selected);
      return;
    }
  }
@@ -1246,7 +1318,11 @@ window.addEventListener("keydown",e=>{
      h:()=>$("#hand").click(),
      n:()=>$("#new").click(),
      m:()=>openEditor("map"),
-     k:()=>state.selected&&setCardType(state.selected,"map"),
+     k:()=>{
+       if(!state.selected)return;
+       setCardType(state.selected,"map");
+       focusSelected();
+     },
      e:()=>state.selected&&editNote(state.selected),
      f:()=>$("#fit").click(),
      c:()=>$("#center").click(),
@@ -1413,8 +1489,8 @@ function load(){
    (d.notes||[]).forEach(n=>{
     if(typeof n.md!=="string")return;
     n.type==="map"
-      ? makeMap(n.md,n.x||0,n.y||0,n.w||720,false,n.id,n.mapColor)
-      : makeNote(n.md,n.x||0,n.y||0,n.w||600,false,n.id,typeof n.font==="string"?n.font:"serif",n.size);
+      ? makeMap(n.md,n.x||0,n.y||0,n.w||960,n.h||640,false,n.id,n.mapColor,n.mapFont)
+      : makeNote(n.md,n.x||0,n.y||0,n.w||600,false,n.id,typeof n.font==="string"?n.font:"serif",n.size,n.mapColor,n.mapFont,n.mapWidth,n.mapHeight);
    })
   }
  }catch{}

@@ -49,7 +49,7 @@
  <button id="plus" title="Zoom in (+ or ])">＋</button><button class="tool" id="reset" title="Reset zoom (0)">100%</button>
 </div>
 
-<div class="hint" id="hint">✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · B toggle buttons · M new map · K selected card as Markmap · E edit · Shift+M open map · Esc close</div>
+<div class="hint" id="hint">✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · B toggle buttons · M new map · K Markmap · Shift+K Markdown · Shift+M new window · Esc close</div>
 <div class="edge" id="edge">☰</div>
 
 <div class="editor" id="editor">
@@ -62,7 +62,8 @@ For $T(n)=2T(n/2)+n$,
 
 $$T(n)=O(n\log n)$$"></textarea>
  <div class="map-options" id="mapOptions">
-  <label>Color <select id="mapColor"><option value="default">Default</option><option value="purple">Purple</option><option value="warm">Warm</option></select></label>
+  <label>Palette <select id="mapColor"><option value="default">Violet</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select></label>
+  <label>Font <select id="mapFont"><option value="modern">Modern</option><option value="editorial">Editorial</option><option value="geometric">Geometric</option><option value="humanist">Humanist</option><option value="mono">Mono</option><option value="rounded">Rounded</option><option value="handwritten">Handwritten</option></select></label>
  </div>
  <div class="editorfoot"><button class="cancel" id="cancel">Cancel</button><button class="apply" id="applyCard">Place card</button><button class="apply map-apply" id="applyMap">Place map</button></div>
 </div>
