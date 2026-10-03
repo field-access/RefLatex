@@ -638,7 +638,7 @@ function downloadCanvas(){
  setTimeout(()=>URL.revokeObjectURL(url),1000);
 
  $("#hint").textContent="Canvas saved";
- setTimeout(()=>$("#hint").textContent="✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · −/+ zoom · [/] selected card width · N new card · K cycle Markdown/Markmap · M Markmap window · Shift+C change card theme · Esc close",1800);
+ setTimeout(()=>$("#hint").textContent="✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · −/= zoom · [/] selected card width · N new card · K cycle Markdown/Markmap · M Markmap window · Shift+C change card theme · Esc close",1800);
 }
 
 function openCanvasFile(file){
@@ -692,7 +692,7 @@ function openCanvasFile(file){
    save();
 
    $("#hint").textContent=`Opened ${file.name}`;
-   setTimeout(()=>$("#hint").textContent="✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · −/+ zoom · [/] selected card width · N new card · K cycle Markdown/Markmap · M Markmap window · Shift+C change card theme · Esc close",2200);
+   setTimeout(()=>$("#hint").textContent="✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · −/= zoom · [/] selected card width · N new card · K cycle Markdown/Markmap · M Markmap window · Shift+C change card theme · Esc close",2200);
 
   }catch(err){
    state.historyLock=false;
@@ -1388,7 +1388,7 @@ window.addEventListener("keydown",e=>{
      b:()=>toggleToolbar(),
      t:()=>$("#theme").click(),
      "-":()=>$("#minus").click(),
-     "+":()=>$("#plus").click(),
+     "=":()=>$("#plus").click(),
      "[":()=>resizeSelectedWidth(-1),
      "]":()=>resizeSelectedWidth(1),
      "0":()=>$("#reset").click()
