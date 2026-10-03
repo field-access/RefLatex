@@ -15,66 +15,49 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
  background-image:none;
 }
 #canvas[data-background="stars"]{
- background-color:#0d0f14;
+ background-color:#090d15;
  background-image:
-  radial-gradient(1px 1px at 14px 27px,#dce7ff77 98%,transparent),
-  radial-gradient(1px 1px at 68px 9px,#ffffff55 98%,transparent),
-  radial-gradient(1.4px 1.4px at 42px 79px,#d9e8ff88 98%,transparent),
-  radial-gradient(1px 1px at 112px 34px,#ffffff66 98%,transparent),
-  radial-gradient(1px 1px at 27px 99px,#c6d8ff66 98%,transparent),
-  radial-gradient(1.2px 1.2px at 103px 70px,#ffffff66 98%,transparent),
-  radial-gradient(1px 1px at 17px 142px,#dce7ff77 98%,transparent),
-  radial-gradient(1px 1px at 205px 166px,#ffffff55 98%,transparent),
-  radial-gradient(1.5px 1.5px at 149px 39px,#ffffff77 98%,transparent),
-  radial-gradient(1px 1px at 299px 127px,#dce7ff66 98%,transparent),
-  radial-gradient(1px 1px at 43px 213px,#ffffff55 98%,transparent),
-  radial-gradient(1.2px 1.2px at 367px 112px,#dce7ff77 98%,transparent),
-  radial-gradient(1px 1px at 183px 238px,#ffffff77 98%,transparent),
-  radial-gradient(1px 1px at 253px 147px,#dce7ff77 98%,transparent),
-  radial-gradient(1px 1px at 31px 221px,#ffffff55 98%,transparent),
-  radial-gradient(1px 1px at 287px 38px,#dce7ff66 98%,transparent),
-  radial-gradient(1px 1px at 325px 196px,#ffffff55 98%,transparent),
-  radial-gradient(1.2px 1.2px at 500px 400px,#dce7ff77 98%,transparent);
- background-size:83px 71px,107px 89px,131px 109px,157px 131px,181px 149px,211px 173px,239px 197px,271px 223px,307px 251px,337px 271px,389px 313px,443px 359px,503px 401px,557px 443px,613px 487px,673px 541px,733px 593px,797px 647px;
+  radial-gradient(1px 1px at 17px 23px,#dce7ffb8 98%,transparent),
+  radial-gradient(1px 1px at 71px 64px,#ffffff80 98%,transparent),
+  radial-gradient(1.4px 1.4px at 126px 119px,#d9e8ffb0 98%,transparent),
+  radial-gradient(1px 1px at 39px 151px,#c6d8ff88 98%,transparent),
+  radial-gradient(1.2px 1.2px at 202px 77px,#ffffff99 98%,transparent),
+  radial-gradient(1px 1px at 84px 224px,#dce7ff99 98%,transparent),
+  radial-gradient(ellipse at 52% -18%,#24345455,transparent 68%);
+ background-size:193px 181px,257px 223px,331px 293px,419px 367px,557px 487px,691px 601px,100% 100%;
 }
 #canvas[data-background="sun"]{
+ background-color:#ebe6dc;
  background-image:
-  radial-gradient(circle at 76% 20%,#f2c879aa 0 7%,#f2c87933 7.2% 14%,transparent 28%),
-  linear-gradient(180deg,#d9d6cf,#c8c4bb);
+  radial-gradient(circle at 78% 18%,#f0c875b8 0 5.5%,#f0c87548 5.8% 10%,transparent 25%),
+  linear-gradient(180deg,#eee9df 0%,#e4ded2 58%,#d7d1c7 100%);
 }
 #canvas[data-background="planets"]{
- background-color:#0b1020;
+ background-color:#080d17;
  background-image:
-  radial-gradient(ellipse 250px 74px at 76% 49%,transparent 49%,#ead3b477 50%,#a987a488 52%,transparent 54%),
-  radial-gradient(circle 100px at calc(76% - 48px) calc(47% - 56px),#fff1cf33 0%,transparent 100%),
-  radial-gradient(circle 130px at 76% 47%,#f1d7ad 0%,#c99082 42%,#806984 74%,#354668 98%,#293953 100%),
-  radial-gradient(ellipse 260px 78px at 76% 49%,transparent 48%,#cfb18e55 49%,#94789077 51%,transparent 54%),
-  radial-gradient(1px 1px at 14px 27px,#dce7ff77 98%,transparent),
-  radial-gradient(1px 1px at 68px 9px,#ffffff55 98%,transparent),
-  radial-gradient(1.3px 1.3px at 42px 79px,#d9e8ff88 98%,transparent),
-  radial-gradient(1px 1px at 112px 34px,#ffffff66 98%,transparent),
-  radial-gradient(1px 1px at 27px 99px,#c6d8ff66 98%,transparent),
-  radial-gradient(1.2px 1.2px at 103px 70px,#ffffff66 98%,transparent),
-  radial-gradient(1px 1px at 17px 142px,#dce7ff77 98%,transparent),
-  radial-gradient(1px 1px at 205px 166px,#ffffff55 98%,transparent),
-  radial-gradient(1.5px 1.5px at 149px 39px,#ffffff77 98%,transparent),
-  radial-gradient(1px 1px at 299px 127px,#dce7ff66 98%,transparent),
-  radial-gradient(1px 1px at 43px 213px,#ffffff55 98%,transparent),
-  radial-gradient(1.2px 1.2px at 367px 112px,#dce7ff77 98%,transparent);
- background-size:100% 100%,100% 100%,100% 100%,100% 100%,83px 71px,107px 89px,131px 109px,157px 131px,181px 149px,211px 173px,239px 197px,271px 223px,307px 251px,337px 271px,389px 313px,443px 359px;
+  radial-gradient(ellipse 340px 104px at 77% 51%,transparent 47%,#e8d2b6aa 48% 49%,transparent 50%),
+  radial-gradient(circle 175px at 77% 47%,#f6dfbb 0%,#d39a8c 36%,#8e7b91 66%,#46536d 88%,#28364e 100%),
+  radial-gradient(circle 205px at 77% 47%,#e7ad7440 0%,transparent 100%),
+  radial-gradient(1px 1px at 17px 23px,#dce7ffb8 98%,transparent),
+  radial-gradient(1px 1px at 71px 64px,#ffffff80 98%,transparent),
+  radial-gradient(1.4px 1.4px at 126px 119px,#d9e8ffb0 98%,transparent),
+  radial-gradient(1px 1px at 39px 151px,#c6d8ff88 98%,transparent),
+  radial-gradient(1.2px 1.2px at 202px 77px,#ffffff99 98%,transparent),
+  radial-gradient(ellipse at 52% -18%,#24345455,transparent 68%);
+ background-size:100% 100%,100% 100%,100% 100%,193px 181px,257px 223px,331px 293px,419px 367px,557px 487px,100% 100%;
 }
 #world{position:absolute;left:0;top:0;width:1px;height:1px;transform-origin:0 0;will-change:transform}
 .card{
  position:absolute;width:500px;min-width:300px;max-width:1200px;
- background:var(--paper);border:1px solid #cbc7be;border-radius:6px;
+ background:var(--paper);border:1px solid #cbc7be;border-radius:34px;
  z-index:3;
 }
 .map-card{
  width:960px;max-width:1600px;min-width:420px;height:640px;min-height:320px;
  background:var(--paper);overflow:hidden;
 }
-.map-card .cardbar{height:56px;background:linear-gradient(90deg,#eeebff,#f8f6ff);border-bottom-color:#ded9f6}
-.map-card .cardbody{height:calc(100% - 56px);padding:0;overflow:hidden}
+.map-card .cardbar{height:40px;background:linear-gradient(90deg,#eeebff,#f8f6ff);border-bottom-color:#ded9f6}
+.map-card .cardbody{height:calc(100% - 40px);padding:0;overflow:hidden}
 .map-pane{min-width:0;height:100%;overflow:hidden;background:var(--map-surface,#fbfaff);transition:background .2s ease}
 .map-pane svg{display:block;width:100%;height:100%;font-family:var(--map-font-family,"Inter",ui-sans-serif,system-ui,sans-serif)}
 .map-card .markmap-link{stroke-linecap:round;opacity:.86}
@@ -84,31 +67,26 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
 .map-card .markmap-node .markmap-foreign{font-family:var(--map-font-family,"Inter",ui-sans-serif,system-ui,sans-serif);font-size:14px;font-weight:400!important;line-height:1.4;color:var(--ink)}
 .map-card .map-loading{display:grid;place-items:center;height:100%;color:var(--muted);font-size:12px}
 .map-card .map-error{padding:24px;color:#a34a42;font:12px/1.5 ui-monospace,monospace}
-.map-card .map-title{position:absolute;left:22px;top:14px;font-size:16px;font-weight:650;color:#524b8b;pointer-events:none}
+.map-card .map-title{pointer-events:none}
 .map-card .cardactions{top:3px}
 .map-card .cardactions button{font-size:14px}
 .map-card .cardactions select{background:#f7f5ff}
 .map-card .cardactions select[data-map-color]{max-width:88px}
-.map-card .cardactions select[data-map-font]{max-width:86px}
+.map-card .cardactions select[data-map-font]{max-width:124px}
 .map-card[data-map-color="default"]{--map-surface:#fbfaff}
 .map-card[data-map-color="default"] .cardbar{background:linear-gradient(90deg,#eeebff,#f8f6ff)}
 .map-card[data-map-color="purple"]{--map-surface:#fcf9ff}
 .map-card[data-map-color="purple"] .cardbar{background:linear-gradient(90deg,#e9dfff,#f7f1ff)}
 .map-card[data-map-color="warm"]{--map-surface:#fffaf3}
 .map-card[data-map-color="warm"] .cardbar{background:linear-gradient(90deg,#fff0d9,#fffaf2)}
-.map-card[data-map-color="warm"] .map-title{color:#93632e}
 .map-card[data-map-color="ocean"]{--map-surface:#f1fbfa}
 .map-card[data-map-color="ocean"] .cardbar{background:linear-gradient(90deg,#d9f3f0,#f0fbf9)}
-.map-card[data-map-color="ocean"] .map-title{color:#176b72}
 .map-card[data-map-color="forest"]{--map-surface:#f4faf2}
 .map-card[data-map-color="forest"] .cardbar{background:linear-gradient(90deg,#e1f0dc,#f4f9ef)}
-.map-card[data-map-color="forest"] .map-title{color:#396c48}
 .map-card[data-map-color="sunset"]{--map-surface:#fff8f4}
 .map-card[data-map-color="sunset"] .cardbar{background:linear-gradient(90deg,#ffe2df,#fff4df)}
-.map-card[data-map-color="sunset"] .map-title{color:#a74861}
 .map-card[data-map-color="slate"]{--map-surface:#f5f7f8}
 .map-card[data-map-color="slate"] .cardbar{background:linear-gradient(90deg,#e2e8ee,#f5f7f9)}
-.map-card[data-map-color="slate"] .map-title{color:#475569}
 .card:not(.map-card)[data-map-color="default"]{background:#fbfaff;border-color:#ddd9f0}
 .card:not(.map-card)[data-map-color="default"] .cardbar{background:linear-gradient(90deg,#eeebff,#f8f6ff);border-bottom-color:#ded9f6}
 .card:not(.map-card)[data-map-color="purple"]{background:#fcf9ff;border-color:#e2d7f4}
@@ -127,12 +105,13 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
  outline:2px solid var(--accent);
  outline-offset:4px;
 }
-body.dark #canvas[data-background="stars"]{background-color:#0d0f14}
-body.dark #canvas[data-background="light"]{background-color:#d9d6cf}
-body.dark #canvas[data-background="planets"]{background-color:#0b1020}
 .cardbar{
- height:56px;cursor:grab;position:relative;border-bottom:1px solid transparent;
+ height:40px;cursor:grab;position:relative;border-bottom:1px solid transparent;border-radius:34px 34px 0 0;
 }
+.card:not(.has-title) .cardbar{height:8px;background:transparent!important;border-bottom-color:transparent!important}
+.map-card:not(.has-title) .cardbody{height:calc(100% - 8px)}
+.card.has-title:not(.map-card) .cardbody{padding-top:18px}
+.card:not(.has-title):not(.map-card) .cardbody{padding-top:18px}
 .cardbar:hover{border-bottom-color:#e0ddd6}
 .cardbody{
  padding:28px 42px 38px;
@@ -141,7 +120,7 @@ body.dark #canvas[data-background="planets"]{background-color:#0b1020}
  --card-font-scale:1;
 }
 .cardbody h1,.cardbody h2,.cardbody h3,.cardbody h4,.cardbody h5{
- font-family:Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:-.025em;line-height:1.2;
+ font-family:inherit;letter-spacing:-.025em;line-height:1.2;
 }
 .cardbody h1{font-size:calc(31px * var(--card-font-scale));margin:0 0 18px}
 .cardbody h2{font-size:calc(24px * var(--card-font-scale));margin:30px 0 12px}
@@ -387,7 +366,6 @@ body.dark .background-menu button:hover,body.dark .background-menu button.active
 body.dark button.tool:hover,body.dark .zoom button:hover{background:#37352f}
 body.dark #source{background:#1f1e1b;color:#e9e6df}
 body.dark .map-card .cardbar{background:linear-gradient(90deg,#302c4a,#292735);border-bottom-color:#494168}
-body.dark .map-card .map-title{color:#c3bcff}
 body.dark .map-card[data-map-color="purple"] .cardbar{background:linear-gradient(90deg,#34284a,#292433)}
 body.dark .map-card[data-map-color="warm"] .cardbar{background:linear-gradient(90deg,#493a29,#302a20)}
 body.dark .map-card[data-map-color="ocean"] .cardbar{background:linear-gradient(90deg,#1d4243,#202b2b)}
@@ -555,11 +533,11 @@ body.fullscreen.controls .toolbar{transform:translateY(-50%)}
 .card[data-font="mono-source"] .cardbody,.card[data-font="mono-source"] .cardbody :is(p,li,table,th,td){font-family:"Source Code Pro",ui-monospace,monospace}
 .card[data-font="mono-ubuntu"] .cardbody,.card[data-font="mono-ubuntu"] .cardbody :is(p,li,table,th,td){font-family:"Ubuntu Mono",ui-monospace,monospace}
 .card[data-font="slab"] .cardbody,.card[data-font="slab"] .cardbody p,.card[data-font="slab"] .cardbody li,.card[data-font="slab"] .cardbody table,.card[data-font="slab"] .cardbody th,.card[data-font="slab"] .cardbody td{font-family:Rockwell,"Roboto Slab",Georgia,serif}
-.card[data-font="humanist"] .cardbody,.card[data-font="humanist"] .cardbody p,.card[data-font="humanist"] .cardbody li,.card[data-font="humanist"] .cardbody table,.card[data-font="humanist"] .cardbody th,.card[data-font="humanist"] .cardbody td{font-family:"Trebuchet MS",ui-sans-serif,sans-serif}
-.card[data-font="rounded"] .cardbody,.card[data-font="rounded"] .cardbody p,.card[data-font="rounded"] .cardbody li,.card[data-font="rounded"] .cardbody table,.card[data-font="rounded"] .cardbody th,.card[data-font="rounded"] .cardbody td{font-family:"Arial Rounded MT Bold","Trebuchet MS",ui-sans-serif,sans-serif}
+.card[data-font="humanist"] .cardbody,.card[data-font="humanist"] .cardbody p,.card[data-font="humanist"] .cardbody li,.card[data-font="humanist"] .cardbody table,.card[data-font="humanist"] .cardbody th,.card[data-font="humanist"] .cardbody td{font-family:"Nunito Sans","Trebuchet MS",ui-sans-serif,sans-serif}
+.card[data-font="rounded"] .cardbody,.card[data-font="rounded"] .cardbody p,.card[data-font="rounded"] .cardbody li,.card[data-font="rounded"] .cardbody table,.card[data-font="rounded"] .cardbody th,.card[data-font="rounded"] .cardbody td{font-family:"Nunito","Arial Rounded MT Bold","Trebuchet MS",ui-sans-serif,sans-serif}
 .card[data-font="editorial"] .cardbody,.card[data-font="editorial"] .cardbody p,.card[data-font="editorial"] .cardbody li,.card[data-font="editorial"] .cardbody table,.card[data-font="editorial"] .cardbody th,.card[data-font="editorial"] .cardbody td{font-family:Cambria,Georgia,"Times New Roman",serif}
-.card[data-font="hand"] .cardbody,.card[data-font="hand"] .cardbody p,.card[data-font="hand"] .cardbody li,.card[data-font="hand"] .cardbody table,.card[data-font="hand"] .cardbody th,.card[data-font="hand"] .cardbody td{font-family:"Segoe Print","Comic Sans MS",cursive}
-.card[data-font="maiandra"] .cardbody,.card[data-font="maiandra"] .cardbody p,.card[data-font="maiandra"] .cardbody li,.card[data-font="maiandra"] .cardbody table,.card[data-font="maiandra"] .cardbody th,.card[data-font="maiandra"] .cardbody td{font-family:"Maiandra GD","Trebuchet MS",sans-serif}
+.card[data-font="hand"] .cardbody,.card[data-font="hand"] .cardbody p,.card[data-font="hand"] .cardbody li,.card[data-font="hand"] .cardbody table,.card[data-font="hand"] .cardbody th,.card[data-font="hand"] .cardbody td{font-family:"Caveat","Segoe Print","Comic Sans MS",cursive}
+.card[data-font="maiandra"] .cardbody,.card[data-font="maiandra"] .cardbody p,.card[data-font="maiandra"] .cardbody li,.card[data-font="maiandra"] .cardbody table,.card[data-font="maiandra"] .cardbody th,.card[data-font="maiandra"] .cardbody td{font-family:"Maiandra GD","Nunito Sans","Trebuchet MS",sans-serif}
 .card[data-font="inter"] .cardbody,.card[data-font="inter"] .cardbody p,.card[data-font="inter"] .cardbody li,.card[data-font="inter"] .cardbody table,.card[data-font="inter"] .cardbody th,.card[data-font="inter"] .cardbody td{font-family:"Inter",ui-sans-serif,system-ui,sans-serif}
 .card[data-font="dm-sans"] .cardbody,.card[data-font="dm-sans"] .cardbody p,.card[data-font="dm-sans"] .cardbody li,.card[data-font="dm-sans"] .cardbody table,.card[data-font="dm-sans"] .cardbody th,.card[data-font="dm-sans"] .cardbody td{font-family:"DM Sans",ui-sans-serif,system-ui,sans-serif}
 .card[data-font="manrope"] .cardbody,.card[data-font="manrope"] .cardbody p,.card[data-font="manrope"] .cardbody li,.card[data-font="manrope"] .cardbody table,.card[data-font="manrope"] .cardbody th,.card[data-font="manrope"] .cardbody td{font-family:"Manrope",ui-sans-serif,system-ui,sans-serif}
@@ -581,15 +559,15 @@ body.fullscreen.controls .toolbar{transform:translateY(-50%)}
 .card[data-font-size="160"] .cardbody{--card-font-scale:1.6}
 .card[data-font-size="180"] .cardbody{--card-font-scale:1.8}
 .card.has-title .map-title{
- position:absolute;left:22px;top:14px;display:block;max-width:calc(100% - 360px);
- overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:#62b2ed;
- font:650 16px/22px Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:.01em;
+ position:absolute;left:18px;top:7px;display:block;max-width:calc(100% - 300px);
+ overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--ink);
+ font:500 13px/18px "DM Sans",Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:.01em;
  pointer-events:none;
 }
 .card:not(.has-title) .map-title{display:none}
 .card.has-title .map-title::after{
- content:"";position:absolute;left:0;bottom:-14px;width:82px;height:3px;
- border-radius:3px;background:#62b2ed
+ content:"";position:absolute;left:0;bottom:-8px;width:34px;height:2px;
+ border-radius:2px;background:currentColor;opacity:.48
 }
 .card[data-map-color="default"]{
  --paper:#17181d;--ink:#e7eaf1;--map-surface:#17181d;
@@ -619,7 +597,6 @@ body.dark .card[data-map-color="default"]{
 body.dark .card:not(.map-card)[data-map-color="default"]{background:linear-gradient(135deg,#17181d 0%,#242633 100%);border-color:#303542}
 body.dark .card[data-map-color="default"] .cardbar{background:linear-gradient(100deg,#20212c,#17181d);border-bottom-color:#303542}
 body.dark .card:not(.map-card)[data-map-color="default"] .cardbar{background:linear-gradient(100deg,#20212c,#17181d);border-bottom-color:#303542}
-body.dark .card[data-map-color="default"] .map-title{color:#62b2ed}
 body.dark .card[data-map-color="default"] .cardactions select,
 body.dark .card[data-map-color="default"] .cardactions button{color:#c4c9d4}
 body.dark .card:not(.map-card)[data-map-color="purple"],
@@ -653,3 +630,41 @@ body.dark .map-card[data-map-color="ocean"] .map-pane{background:linear-gradient
 body.dark .map-card[data-map-color="forest"] .map-pane{background:linear-gradient(135deg,#16231d,#2a3b2f);color:#e1ebdf}
 body.dark .map-card[data-map-color="sunset"] .map-pane{background:linear-gradient(135deg,#27191f,#462732);color:#f0e1e4}
 body.dark .map-card[data-map-color="slate"] .map-pane{background:linear-gradient(135deg,#1c222b,#303a49);color:#e2e7ed}
+
+/* Canvas scenes use their own restrained dark palettes when dark mode is on. */
+body.dark #canvas[data-background="light"]{
+ background-color:#191b20;
+ background-image:radial-gradient(ellipse at 50% 0%,#2b303c55,transparent 68%);
+}
+body.dark #canvas[data-background="sun"]{
+ background-color:#111722;
+ background-image:
+  radial-gradient(circle at 78% 18%,#f3ca7b77 0 5.5%,#e8ae5340 5.8% 11%,transparent 27%),
+  linear-gradient(180deg,#111722 0%,#171c25 62%,#1d2027 100%);
+}
+body.dark #canvas[data-background="stars"]{
+ background-color:#090d15;
+ background-image:
+  radial-gradient(1px 1px at 17px 23px,#dce7ffb8 98%,transparent),
+  radial-gradient(1px 1px at 71px 64px,#ffffff80 98%,transparent),
+  radial-gradient(1.4px 1.4px at 126px 119px,#d9e8ffb0 98%,transparent),
+  radial-gradient(1px 1px at 39px 151px,#c6d8ff88 98%,transparent),
+  radial-gradient(1.2px 1.2px at 202px 77px,#ffffff99 98%,transparent),
+  radial-gradient(1px 1px at 84px 224px,#dce7ff99 98%,transparent),
+  radial-gradient(ellipse at 52% -18%,#24345455,transparent 68%);
+ background-size:193px 181px,257px 223px,331px 293px,419px 367px,557px 487px,691px 601px,100% 100%;
+}
+body.dark #canvas[data-background="planets"]{
+ background-color:#080d17;
+ background-image:
+  radial-gradient(ellipse 340px 104px at 77% 51%,transparent 47%,#e8d2b6aa 48% 49%,transparent 50%),
+  radial-gradient(circle 175px at 77% 47%,#f6dfbb 0%,#d39a8c 36%,#8e7b91 66%,#46536d 88%,#28364e 100%),
+  radial-gradient(circle 205px at 77% 47%,#e7ad7440 0%,transparent 100%),
+  radial-gradient(1px 1px at 17px 23px,#dce7ffb8 98%,transparent),
+  radial-gradient(1px 1px at 71px 64px,#ffffff80 98%,transparent),
+  radial-gradient(1.4px 1.4px at 126px 119px,#d9e8ffb0 98%,transparent),
+  radial-gradient(1px 1px at 39px 151px,#c6d8ff88 98%,transparent),
+  radial-gradient(1.2px 1.2px at 202px 77px,#ffffff99 98%,transparent),
+  radial-gradient(ellipse at 52% -18%,#24345455,transparent 68%);
+ background-size:100% 100%,100% 100%,100% 100%,193px 181px,257px 223px,331px 293px,419px 367px,557px 487px,100% 100%;
+}

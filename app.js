@@ -51,8 +51,8 @@ function mapFontStack(font){
   mono:'ui-monospace,SFMono-Regular,Consolas,monospace',
   "mono-code":'"JetBrains Mono","Cascadia Code","Fira Code",Consolas,ui-monospace,monospace',"mono-terminal":'"IBM Plex Mono","Cascadia Mono","Lucida Console",Consolas,monospace',"mono-typewriter":'"Courier Prime","Courier New",Courier,monospace',
   "mono-fira":'"Fira Code",ui-monospace,monospace',"mono-inconsolata":'Inconsolata,ui-monospace,monospace',"mono-roboto":'"Roboto Mono",ui-monospace,monospace',"mono-source":'"Source Code Pro",ui-monospace,monospace',"mono-ubuntu":'"Ubuntu Mono",ui-monospace,monospace',
-  sans:'ui-sans-serif,system-ui,sans-serif',serif:'Georgia,"Times New Roman",serif',slab:'Rockwell,"Roboto Slab",Georgia,serif',humanist:'"Trebuchet MS",ui-sans-serif,sans-serif',rounded:'"Arial Rounded MT Bold","Trebuchet MS",sans-serif',editorial:'Cambria,Georgia,"Times New Roman",serif',hand:'"Segoe Print","Comic Sans MS",cursive',
-  maiandra:'"Maiandra GD","Trebuchet MS",sans-serif',inter:'"Inter",ui-sans-serif,system-ui,sans-serif',"dm-sans":'"DM Sans",ui-sans-serif,system-ui,sans-serif',manrope:'"Manrope",ui-sans-serif,system-ui,sans-serif',"space-grotesk":'"Space Grotesk",ui-sans-serif,system-ui,sans-serif',playfair:'"Playfair Display",Georgia,serif',lora:'"Lora",Georgia,serif',merriweather:'"Merriweather",Georgia,serif',caveat:'"Caveat","Segoe Print",cursive',
+  sans:'ui-sans-serif,system-ui,sans-serif',serif:'Georgia,"Times New Roman",serif',slab:'Rockwell,"Roboto Slab",Georgia,serif',humanist:'"Nunito Sans","Trebuchet MS",ui-sans-serif,sans-serif',rounded:'"Nunito","Arial Rounded MT Bold","Trebuchet MS",sans-serif',editorial:'Cambria,Georgia,"Times New Roman",serif',hand:'"Caveat","Segoe Print","Comic Sans MS",cursive',
+  maiandra:'"Maiandra GD","Nunito Sans","Trebuchet MS",sans-serif',inter:'"Inter",ui-sans-serif,system-ui,sans-serif',"dm-sans":'"DM Sans",ui-sans-serif,system-ui,sans-serif',manrope:'"Manrope",ui-sans-serif,system-ui,sans-serif',"space-grotesk":'"Space Grotesk",ui-sans-serif,system-ui,sans-serif',playfair:'"Playfair Display",Georgia,serif',lora:'"Lora",Georgia,serif',merriweather:'"Merriweather",Georgia,serif',caveat:'"Caveat","Segoe Print",cursive',
   "hand-soft":'"Comic Sans MS","Segoe Print",cursive',"hand-bold":'"Bradley Hand","Segoe Print",cursive',"hand-marker":'"Marker Felt","Comic Sans MS",cursive',"hand-script":'"Segoe Print","Bradley Hand",cursive'
  };
  return stacks[normalizeMapFont(font)]||stacks.inter;
@@ -1079,10 +1079,11 @@ function openMapTab(n){
   const payload=JSON.stringify(prepareMarkmapMarkdown(n.md)).replace(/</g,"\\u003c");
   const title=escapeHtml((n.md.match(/^#\s+(.+)$/m)||[])[1]||"RefLatex mind map");
   const fontStack=mapFontStack(n.mapFont);
+  const fontStylesheet="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Courier+Prime:wght@400;700&family=DM+Sans:wght@400;500;600;700&family=Fira+Code:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Inconsolata:wght@400;500;600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Lora:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Merriweather:wght@400;700&family=Nunito:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&family=Roboto+Slab:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;600&family=Source+Code+Pro:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Ubuntu+Mono:wght@400;700&display=swap";
   const rainbow=["#e76f51","#f4a261","#e9c46a","#6b9b67","#299c97","#4e7bc5","#a16bb3","#d5668a"];
   const colors=n.mapColor==="default"?rainbow:(MAP_PALETTES[n.mapColor]||rainbow);
   const colorPayload=JSON.stringify(colors);
-  const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css"><style>html,body{height:100%;margin:0;background:#fff5e8;color:#382f27;font:14px ${fontStack}}svg{width:100%;height:100%;font-family:${fontStack};font-weight:400}.markmap-node text{font-weight:400!important}.markmap-node foreignObject>div,.markmap-foreign{font-family:${fontStack};font-weight:400!important}</style></head><body><svg id="map"></svg><script src="https://cdn.jsdelivr.net/npm/d3@7"><\/script><script src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18.12"><\/script><script>const md=${payload};const colors=${colorPayload};const root=new markmap.Transformer().transform(md).root;const depth=node=>node.state?.depth||0;markmap.Markmap.create("#map",{duration:350,maxWidth:300,spacingHorizontal:82,spacingVertical:15,color:node=>colors[depth(node)%colors.length],lineWidth:node=>depth(node)===1?3:1.7},root);<\/script></body></html>`;
+  const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="${fontStylesheet}"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css"><style>html,body{height:100%;margin:0;background:#fff5e8;color:#382f27;font:14px ${fontStack}}svg{width:100%;height:100%;font-family:${fontStack};font-weight:400}.markmap-node text{font-weight:400!important}.markmap-node foreignObject>div,.markmap-foreign{font-family:${fontStack};font-weight:400!important}</style></head><body><svg id="map"></svg><script src="https://cdn.jsdelivr.net/npm/d3@7"><\/script><script src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18.12"><\/script><script>const md=${payload};const colors=${colorPayload};const root=new markmap.Transformer().transform(md).root;const depth=node=>node.state?.depth||0;markmap.Markmap.create("#map",{duration:350,maxWidth:300,spacingHorizontal:82,spacingVertical:15,color:node=>colors[depth(node)%colors.length],lineWidth:node=>depth(node)===1?3:1.7},root);<\/script></body></html>`;
   const tab=window.open();if(!tab){alert("Allow pop-ups to open this mind map.");return}
   tab.document.write(html);tab.document.close();
 }
@@ -1195,7 +1196,7 @@ function setBackground(name){
  const background=name==="dots"?"stars":backgrounds.includes(name)?name:"stars";
  canvas.dataset.background=background;
  localStorage.setItem("reflatex-background",background);
- $("#background").title=`Background: ${backgroundLabels[background]} (B · S toggles Sun/Stars)`;
+ $("#background").title=`Background: ${backgroundLabels[background]} (S cycles backgrounds)`;
  document.querySelectorAll("[data-background-choice]").forEach(button=>{
   button.classList.toggle("active",button.dataset.backgroundChoice===background);
  });
@@ -1462,7 +1463,7 @@ window.addEventListener("keydown",e=>{
      a:()=>$("#arrange").click(),
      b:()=>toggleToolbar(),
      t:()=>$("#theme").click(),
-     s:()=>toggleSunStarBackground(),
+     s:()=>cycleBackground(),
      "-":()=>$("#minus").click(),
      "=":()=>$("#plus").click(),
      "[":()=>resizeSelectedWidth(-1),
