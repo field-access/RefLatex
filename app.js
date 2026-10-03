@@ -1482,7 +1482,7 @@ window.addEventListener("keydown",e=>{
  }
  if(e.key==="ArrowUp"||e.key==="ArrowDown"){
    e.preventDefault();
-   const distance=innerHeight*.72;
+   const distance=innerHeight*.36;
    if(e.key==="ArrowUp")state.targetY+=distance;
    else state.targetY-=distance;
    animate();
