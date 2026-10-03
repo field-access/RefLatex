@@ -449,6 +449,7 @@ async function renderMap(n){
 }
 function setCardType(n,type,record=true){
  if(n.type===type)return;
+ const wasMap=n.type==="map";
  if(record)history();
  n.type=type;
  n.el.classList.toggle("map-card",type==="map");
@@ -476,7 +477,8 @@ function setCardType(n,type,record=true){
   body.innerHTML=renderCardMarkdown(n.md);
   widenCardForTables(n.el);
  }
- save();
+ if(wasMap&&type==="note")arrange(false);
+ else save();
 }
 function apply(){
  if(!Number.isFinite(state.x)||!Number.isFinite(state.y)||!Number.isFinite(state.scale)){
@@ -1086,9 +1088,9 @@ function fit(widthOnly=false){
  const cx=b.minX+w/2,cy=b.minY+h/2;
  moveTo(innerWidth/2-cx*s,widthOnly?state.targetY:innerHeight/2-cy*s,s)
 }
-function arrange(){
+function arrange(record=true){
  if(!state.notes.length)return;
- history();
+ if(record)history();
 
  // Preserve each card's width, including widths expanded for tables.
  const columns=10;
@@ -1282,7 +1284,8 @@ function focusSelected(){
   const availableWidth=Math.max(240,innerWidth-180);
   const availableHeight=Math.max(240,innerHeight-titleOffset-40);
   const widthScale=availableWidth/r.w;
-  const targetScale=clampScale(n.type==="map"?Math.min(widthScale,availableHeight/r.h):widthScale);
+  const fitScale=n.type==="map"?Math.min(widthScale,availableHeight/r.h):widthScale;
+  const targetScale=clampScale(Math.min(1.2,fitScale));
   const cx=r.x+r.w/2;
 
   moveTo(
