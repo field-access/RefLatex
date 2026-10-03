@@ -10,22 +10,32 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
  background-color:var(--canvas);
  cursor:default;
 }
-#canvas[data-background="dots"]{
+#canvas[data-background="light"]{
+ background-color:#d9d6cf;
+ background-image:none;
+}
+#canvas[data-background="stars"]{
  background-color:#0d0f14;
  background-image:
   radial-gradient(1px 1px at 14px 27px,#dce7ff77 98%,transparent),
-  radial-gradient(1px 1px at 88px 71px,#ffffff55 98%,transparent),
-  radial-gradient(1.4px 1.4px at 42px 119px,#d9e8ff88 98%,transparent),
-  radial-gradient(1px 1px at 151px 34px,#ffffff66 98%,transparent),
-  radial-gradient(1px 1px at 205px 92px,#c6d8ff66 98%,transparent),
-  radial-gradient(1.2px 1.2px at 113px 169px,#ffffff66 98%,transparent),
+  radial-gradient(1px 1px at 68px 9px,#ffffff55 98%,transparent),
+  radial-gradient(1.4px 1.4px at 42px 79px,#d9e8ff88 98%,transparent),
+  radial-gradient(1px 1px at 112px 34px,#ffffff66 98%,transparent),
+  radial-gradient(1px 1px at 27px 99px,#c6d8ff66 98%,transparent),
+  radial-gradient(1.2px 1.2px at 103px 70px,#ffffff66 98%,transparent),
+  radial-gradient(1px 1px at 17px 142px,#dce7ff77 98%,transparent),
+  radial-gradient(1px 1px at 205px 166px,#ffffff55 98%,transparent),
+  radial-gradient(1.5px 1.5px at 149px 39px,#ffffff77 98%,transparent),
+  radial-gradient(1px 1px at 299px 127px,#dce7ff66 98%,transparent),
+  radial-gradient(1px 1px at 43px 213px,#ffffff55 98%,transparent),
+  radial-gradient(1.2px 1.2px at 367px 112px,#dce7ff77 98%,transparent),
+  radial-gradient(1px 1px at 183px 238px,#ffffff77 98%,transparent),
   radial-gradient(1px 1px at 253px 147px,#dce7ff77 98%,transparent),
   radial-gradient(1px 1px at 31px 221px,#ffffff55 98%,transparent),
-  radial-gradient(1.5px 1.5px at 183px 238px,#ffffff77 98%,transparent),
   radial-gradient(1px 1px at 287px 38px,#dce7ff66 98%,transparent),
   radial-gradient(1px 1px at 325px 196px,#ffffff55 98%,transparent),
-  radial-gradient(1.2px 1.2px at 367px 112px,#dce7ff77 98%,transparent);
- background-size:173px 151px,229px 197px,281px 223px,337px 271px,389px 313px,443px 359px,503px 401px,557px 443px,613px 487px,673px 541px,733px 593px,797px 647px;
+  radial-gradient(1.2px 1.2px at 500px 400px,#dce7ff77 98%,transparent);
+ background-size:83px 71px,107px 89px,131px 109px,157px 131px,181px 149px,211px 173px,239px 197px,271px 223px,307px 251px,337px 271px,389px 313px,443px 359px,503px 401px,557px 443px,613px 487px,673px 541px,733px 593px,797px 647px;
 }
 #canvas[data-background="sun"]{
  background-image:
@@ -108,6 +118,8 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
  outline:2px solid var(--accent);
  outline-offset:4px;
 }
+body.dark #canvas[data-background="stars"]{background-color:#0d0f14}
+body.dark #canvas[data-background="light"]{background-color:#d9d6cf}
 .cardbar{
  height:56px;cursor:grab;position:relative;border-bottom:1px solid transparent;
 }
@@ -524,9 +536,15 @@ body.fullscreen.controls .toolbar{transform:translateY(-50%)}
 .card[data-font="serif"] .cardbody,.card[data-font="serif"] .cardbody p,.card[data-font="serif"] .cardbody li,.card[data-font="serif"] .cardbody table,.card[data-font="serif"] .cardbody th,.card[data-font="serif"] .cardbody td{font-family:Georgia,"Times New Roman",serif}
 .card[data-font] .cardbody h1,.card[data-font] .cardbody h2,.card[data-font] .cardbody h3,.card[data-font] .cardbody h4,.card[data-font] .cardbody h5,.card[data-font] .cardbody h6{font-family:inherit}
 .card[data-font="mono"] .cardbody,.card[data-font="mono"] .cardbody p,.card[data-font="mono"] .cardbody li,.card[data-font="mono"] .cardbody table,.card[data-font="mono"] .cardbody th,.card[data-font="mono"] .cardbody td{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
-.card[data-font="mono-code"] .cardbody,.card[data-font="mono-code"] .cardbody p,.card[data-font="mono-code"] .cardbody li,.card[data-font="mono-code"] .cardbody table,.card[data-font="mono-code"] .cardbody th,.card[data-font="mono-code"] .cardbody td{font-family:"JetBrains Mono","Fira Code","Cascadia Code",ui-monospace,monospace}
-.card[data-font="mono-terminal"] .cardbody,.card[data-font="mono-terminal"] .cardbody p,.card[data-font="mono-terminal"] .cardbody li,.card[data-font="mono-terminal"] .cardbody table,.card[data-font="mono-terminal"] .cardbody th,.card[data-font="mono-terminal"] .cardbody td{font-family:"Cascadia Mono",Consolas,"Liberation Mono",monospace}
-.card[data-font="mono-typewriter"] .cardbody,.card[data-font="mono-typewriter"] .cardbody p,.card[data-font="mono-typewriter"] .cardbody li,.card[data-font="mono-typewriter"] .cardbody table,.card[data-font="mono-typewriter"] .cardbody th,.card[data-font="mono-typewriter"] .cardbody td{font-family:"Courier New",Courier,monospace}
+.card[data-font="mono-code"] .cardbody,.card[data-font="mono-code"] .cardbody p,.card[data-font="mono-code"] .cardbody li,.card[data-font="mono-code"] .cardbody table,.card[data-font="mono-code"] .cardbody th,.card[data-font="mono-code"] .cardbody td{font-family:"JetBrains Mono",ui-monospace,monospace}
+.card[data-font="mono-terminal"] .cardbody,.card[data-font="mono-terminal"] .cardbody p,.card[data-font="mono-terminal"] .cardbody li,.card[data-font="mono-terminal"] .cardbody table,.card[data-font="mono-terminal"] .cardbody th,.card[data-font="mono-terminal"] .cardbody td{font-family:"IBM Plex Mono",Consolas,monospace}
+.card[data-font="mono-typewriter"] .cardbody,.card[data-font="mono-typewriter"] .cardbody p,.card[data-font="mono-typewriter"] .cardbody li,.card[data-font="mono-typewriter"] .cardbody table,.card[data-font="mono-typewriter"] .cardbody th,.card[data-font="mono-typewriter"] .cardbody td{font-family:"Space Mono","Courier New",monospace}
+.card[data-font^="mono-"] .cardbody,.card[data-font^="mono-"] .cardbody :is(p,li,table,th,td){font-variant-ligatures:none}
+.card[data-font="mono-fira"] .cardbody,.card[data-font="mono-fira"] .cardbody :is(p,li,table,th,td){font-family:"Fira Code",ui-monospace,monospace}
+.card[data-font="mono-inconsolata"] .cardbody,.card[data-font="mono-inconsolata"] .cardbody :is(p,li,table,th,td){font-family:"Inconsolata",ui-monospace,monospace}
+.card[data-font="mono-roboto"] .cardbody,.card[data-font="mono-roboto"] .cardbody :is(p,li,table,th,td){font-family:"Roboto Mono",ui-monospace,monospace}
+.card[data-font="mono-source"] .cardbody,.card[data-font="mono-source"] .cardbody :is(p,li,table,th,td){font-family:"Source Code Pro",ui-monospace,monospace}
+.card[data-font="mono-ubuntu"] .cardbody,.card[data-font="mono-ubuntu"] .cardbody :is(p,li,table,th,td){font-family:"Ubuntu Mono",ui-monospace,monospace}
 .card[data-font="slab"] .cardbody,.card[data-font="slab"] .cardbody p,.card[data-font="slab"] .cardbody li,.card[data-font="slab"] .cardbody table,.card[data-font="slab"] .cardbody th,.card[data-font="slab"] .cardbody td{font-family:Rockwell,"Roboto Slab",Georgia,serif}
 .card[data-font="humanist"] .cardbody,.card[data-font="humanist"] .cardbody p,.card[data-font="humanist"] .cardbody li,.card[data-font="humanist"] .cardbody table,.card[data-font="humanist"] .cardbody th,.card[data-font="humanist"] .cardbody td{font-family:"Trebuchet MS",ui-sans-serif,sans-serif}
 .card[data-font="rounded"] .cardbody,.card[data-font="rounded"] .cardbody p,.card[data-font="rounded"] .cardbody li,.card[data-font="rounded"] .cardbody table,.card[data-font="rounded"] .cardbody th,.card[data-font="rounded"] .cardbody td{font-family:"Arial Rounded MT Bold","Trebuchet MS",ui-sans-serif,sans-serif}
@@ -595,3 +613,22 @@ body.dark .card:not(.map-card)[data-map-color="default"] .cardbar{background:#12
 body.dark .card[data-map-color="default"] .map-title{color:#62b2ed}
 body.dark .card[data-map-color="default"] .cardactions select,
 body.dark .card[data-map-color="default"] .cardactions button{color:#c4c9d4}
+body.dark .card:not(.map-card)[data-map-color="purple"]{background:#211b2b;border-color:#403450}
+body.dark .card:not(.map-card)[data-map-color="warm"]{background:#292117;border-color:#55422b}
+body.dark .card:not(.map-card)[data-map-color="ocean"]{background:#142529;border-color:#285054}
+body.dark .card:not(.map-card)[data-map-color="forest"]{background:#18251d;border-color:#34503a}
+body.dark .card:not(.map-card)[data-map-color="sunset"]{background:#2b1d22;border-color:#553541}
+body.dark .card:not(.map-card)[data-map-color="slate"]{background:#20252c;border-color:#3a4552}
+body.dark .map-card[data-map-color="purple"]{background:#211b2b;border-color:#403450}
+body.dark .map-card[data-map-color="warm"]{background:#292117;border-color:#55422b}
+body.dark .map-card[data-map-color="ocean"]{background:#142529;border-color:#285054}
+body.dark .map-card[data-map-color="forest"]{background:#18251d;border-color:#34503a}
+body.dark .map-card[data-map-color="sunset"]{background:#2b1d22;border-color:#553541}
+body.dark .map-card[data-map-color="slate"]{background:#20252c;border-color:#3a4552}
+body.dark .map-card[data-map-color="default"] .map-pane{background:#17181d;color:#e7eaf1}
+body.dark .map-card[data-map-color="purple"] .map-pane{background:#211b2b;color:#e7eaf1}
+body.dark .map-card[data-map-color="warm"] .map-pane{background:#292117;color:#f0e6d8}
+body.dark .map-card[data-map-color="ocean"] .map-pane{background:#142529;color:#dcebee}
+body.dark .map-card[data-map-color="forest"] .map-pane{background:#18251d;color:#e1ebdf}
+body.dark .map-card[data-map-color="sunset"] .map-pane{background:#2b1d22;color:#f0e1e4}
+body.dark .map-card[data-map-color="slate"] .map-pane{background:#20252c;color:#e2e7ed}

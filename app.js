@@ -26,7 +26,8 @@ const MAP_PALETTES={
  slate:["#475569","#5c6b7d","#788697","#9ba7b2","#c1c8ce"]
 };
 const CARD_FONTS=[
- ["mono","Mono"],["mono-code","Mono Code"],["mono-terminal","Mono Terminal"],["mono-typewriter","Mono Typewriter"],
+ ["mono","Mono"],["mono-code","JetBrains Mono"],["mono-terminal","IBM Plex Mono"],["mono-typewriter","Space Mono"],
+ ["mono-fira","Fira Code"],["mono-inconsolata","Inconsolata"],["mono-roboto","Roboto Mono"],["mono-source","Source Code Pro"],["mono-ubuntu","Ubuntu Mono"],
  ["sans","Sans"],["serif","Serif"],["slab","Slab"],["humanist","Humanist"],["rounded","Rounded"],["editorial","Editorial"],["hand","Handwritten"],
  ["maiandra","Maiandra GD"],["inter","Inter"],["dm-sans","DM Sans"],["manrope","Manrope"],["space-grotesk","Space Grotesk"],
  ["playfair","Playfair Display"],["lora","Lora"],["merriweather","Merriweather"],["caveat","Caveat"]
@@ -1150,13 +1151,14 @@ function arrange(record=true){
   save();
  });
 }
-const backgrounds=["dots","sun"];
+const backgrounds=["light","sun","stars"];
 const backgroundLabels={
- dots:"Stars",
+ light:"Light",
+ stars:"Stars",
  sun:"Sun"
 };
 function setBackground(name){
- const background=backgrounds.includes(name)?name:"dots";
+ const background=name==="dots"?"stars":backgrounds.includes(name)?name:"stars";
  canvas.dataset.background=background;
  localStorage.setItem("reflatex-background",background);
  $("#background").title=`Background: ${backgroundLabels[background]} (B)`;
@@ -1165,7 +1167,7 @@ function setBackground(name){
  });
 }
 function cycleBackground(){
- const current=backgrounds.indexOf(canvas.dataset.background||"dots");
+ const current=backgrounds.indexOf(canvas.dataset.background||"stars");
  setBackground(backgrounds[(current+1)%backgrounds.length]);
  showControls();
 }
@@ -1578,7 +1580,7 @@ function load(){
  }catch{}
  const dark=localStorage.getItem("reflatex-theme")==="dark";
  if(dark){document.body.classList.add("dark");$("#theme").textContent="☀"}
- setBackground(localStorage.getItem("reflatex-background")||"dots");
+ setBackground(localStorage.getItem("reflatex-background")||"stars");
  toggleToolbar(localStorage.getItem("reflatex-toolbar-hidden")!=="1");
  state.hand=true;$("#hand").classList.add("active");canvas.style.cursor="grab";
  sync();apply();empty()
