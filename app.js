@@ -27,7 +27,9 @@ const MAP_PALETTES={
 };
 const CARD_FONTS=[
  ["mono","Mono"],["mono-code","Mono Code"],["mono-terminal","Mono Terminal"],["mono-typewriter","Mono Typewriter"],
- ["sans","Sans"],["serif","Serif"],["slab","Slab"],["humanist","Humanist"],["rounded","Rounded"],["editorial","Editorial"],["hand","Handwritten"]
+ ["sans","Sans"],["serif","Serif"],["slab","Slab"],["humanist","Humanist"],["rounded","Rounded"],["editorial","Editorial"],["hand","Handwritten"],
+ ["maiandra","Maiandra GD"],["inter","Inter"],["dm-sans","DM Sans"],["manrope","Manrope"],["space-grotesk","Space Grotesk"],
+ ["playfair","Playfair Display"],["lora","Lora"],["merriweather","Merriweather"],["caveat","Caveat"]
 ];
 const LEGACY_HAND_FONTS={"hand-soft":"Hand Soft","hand-bold":"Hand Bold","hand-marker":"Hand Marker","hand-script":"Hand Script"};
 
@@ -1255,16 +1257,16 @@ function focusSelected(){
     w:n.el.offsetWidth,
     h:n.el.offsetHeight
   };
-  const availableWidth=Math.max(240,innerWidth-100);
-  const availableHeight=Math.max(240,innerHeight-120);
+  const titleOffset=88;
+  const availableWidth=Math.max(240,innerWidth-180);
+  const availableHeight=Math.max(240,innerHeight-titleOffset-40);
   const widthScale=availableWidth/r.w;
   const targetScale=clampScale(n.type==="map"?Math.min(widthScale,availableHeight/r.h):widthScale);
   const cx=r.x+r.w/2;
-  const cy=r.y+r.h/2;
 
   moveTo(
     innerWidth/2-cx*targetScale,
-    innerHeight/2-cy*targetScale,
+    titleOffset-r.y*targetScale,
     targetScale
   );
 }
