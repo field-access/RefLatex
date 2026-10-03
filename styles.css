@@ -31,12 +31,7 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
 }
 .map-card .cardbar{height:32px;background:linear-gradient(90deg,#eeebff,#f8f6ff);border-bottom-color:#ded9f6}
 .map-card .cardbody{height:calc(100% - 32px);padding:0;overflow:hidden}
-.map-split{display:grid;grid-template-columns:minmax(190px,.82fr) minmax(280px,1.18fr);height:100%}
-.map-source-preview{padding:24px 26px;overflow:auto;border-right:1px solid #dedbd4;background:color-mix(in srgb,var(--paper) 92%,var(--canvas))}
-.map-source-preview .cardbody{height:auto;padding:0;overflow:visible}
 .map-pane{min-width:0;height:100%;overflow:hidden;background:var(--paper)}
-.map-card[data-map-display="map"] .map-source-preview{display:none}
-.map-card[data-map-display="map"] .map-split{grid-template-columns:1fr}
 .map-pane svg{display:block;width:100%;height:100%;font-family:Inter,ui-sans-serif,system-ui,sans-serif}
 .map-card .map-loading{display:grid;place-items:center;height:100%;color:var(--muted);font-size:12px}
 .map-card .map-error{padding:24px;color:#a34a42;font:12px/1.5 ui-monospace,monospace}
@@ -298,10 +293,6 @@ body.dark button.tool:hover,body.dark .zoom button:hover{background:#37352f}
 body.dark #source{background:#1f1e1b;color:#e9e6df}
 body.dark .map-card .cardbar{background:linear-gradient(90deg,#302c4a,#292735);border-bottom-color:#494168}
 body.dark .map-card .map-title{color:#c3bcff}
-body.dark .map-card .map-source-preview{
- background:color-mix(in srgb,var(--paper) 88%,var(--canvas));
- border-right-color:#494640;
-}
 body.dark .map-card .map-pane{
  background:#1d1c1a;
  color:#e9e6df;
@@ -355,8 +346,6 @@ body.fullscreen.controls .toolbar{transform:translateY(-50%)}
  .hint{display:none}.card{max-width:calc(100vw - 30px)}
  .cardbody{padding:22px 25px 30px}.cardbody p,.cardbody li{font-size:calc(17px * var(--card-font-scale))}
  .map-card{min-width:320px;width:calc(100vw - 30px);height:420px}
- .map-split{grid-template-columns:1fr}
- .map-source-preview{display:none}
 }
 
 /* Crisp, readable math */
