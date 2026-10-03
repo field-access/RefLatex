@@ -781,6 +781,9 @@ const n={id:id??state.nextId++,md,x,y,font,size,width,type:"note",mapColor:MAP_C
  n.el=el;applyMapFont(n);populateMapFontSelect(el,n.mapFont);updateCardHeading(n);world.appendChild(el);state.notes.push(n);
  widenCardForTables(el);
 
+ el.addEventListener("pointerdown",e=>{
+  if(e.button===0&&!e.target.closest(".resize"))select(n);
+ });
  el.addEventListener("mousedown",e=>{
   if(e.button!==0||e.target.closest(".cardactions,.resize,a,button"))return;
   select(n);
@@ -836,6 +839,9 @@ const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type
  populateMapFontSelect(el,n.mapFont);
  populateCardFontSelect(el,n.font);
  el.querySelector("[data-size]").value=n.size;
+ el.addEventListener("pointerdown",e=>{
+  if(e.button===0&&!e.target.closest(".resize"))select(n);
+ });
  el.addEventListener("mousedown",e=>{
   if(e.button!==0||e.target.closest(".cardactions,.resize,a,button"))return;
   select(n);
