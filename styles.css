@@ -77,16 +77,24 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
 .map-card[data-map-color="slate"]{--map-surface:#f5f7f8}
 .map-card[data-map-color="slate"] .cardbar{background:linear-gradient(90deg,#e2e8ee,#f5f7f9)}
 .map-card[data-map-color="slate"] .map-title{color:#475569}
+.card:not(.map-card)[data-map-color="default"]{background:#fbfaff;border-color:#ddd9f0}
+.card:not(.map-card)[data-map-color="default"] .cardbar{background:linear-gradient(90deg,#eeebff,#f8f6ff);border-bottom-color:#ded9f6}
+.card:not(.map-card)[data-map-color="purple"]{background:#fcf9ff;border-color:#e2d7f4}
+.card:not(.map-card)[data-map-color="purple"] .cardbar{background:linear-gradient(90deg,#e9dfff,#f7f1ff);border-bottom-color:#dfd0f1}
+.card:not(.map-card)[data-map-color="warm"]{background:#fffaf3;border-color:#ead9c3}
+.card:not(.map-card)[data-map-color="warm"] .cardbar{background:linear-gradient(90deg,#fff0d9,#fffaf2);border-bottom-color:#edd9bb}
+.card:not(.map-card)[data-map-color="ocean"]{background:#f1fbfa;border-color:#c8e5e1}
+.card:not(.map-card)[data-map-color="ocean"] .cardbar{background:linear-gradient(90deg,#d9f3f0,#f0fbf9);border-bottom-color:#c9e8e2}
+.card:not(.map-card)[data-map-color="forest"]{background:#f4faf2;border-color:#d6e6d0}
+.card:not(.map-card)[data-map-color="forest"] .cardbar{background:linear-gradient(90deg,#e1f0dc,#f4f9ef);border-bottom-color:#d5e6cc}
+.card:not(.map-card)[data-map-color="sunset"]{background:#fff8f4;border-color:#f0d7d3}
+.card:not(.map-card)[data-map-color="sunset"] .cardbar{background:linear-gradient(90deg,#ffe2df,#fff4df);border-bottom-color:#f2d1c9}
+.card:not(.map-card)[data-map-color="slate"]{background:#f5f7f8;border-color:#d6dce2}
+.card:not(.map-card)[data-map-color="slate"] .cardbar{background:linear-gradient(90deg,#e2e8ee,#f5f7f9);border-bottom-color:#d6dce2}
 .card.selected{
  outline:2px solid var(--accent);
  outline-offset:4px;
 }
-.card[data-group-color="blue"]{box-shadow:inset 4px 0 #4d82d4}
-.card[data-group-color="teal"]{box-shadow:inset 4px 0 #239b91}
-.card[data-group-color="amber"]{box-shadow:inset 4px 0 #d69827}
-.card[data-group-color="rose"]{box-shadow:inset 4px 0 #d45e7b}
-.card[data-group-color="violet"]{box-shadow:inset 4px 0 #8664c7}
-.card[data-group-color="green"]{box-shadow:inset 4px 0 #53945b}
 .cardbar{
  height:26px;cursor:grab;position:relative;border-bottom:1px solid transparent;
 }
@@ -155,7 +163,7 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
  padding:0 3px;font:10px system-ui;cursor:pointer;max-width:82px
 }
 .cardactions select[data-view]{max-width:92px}
-.cardactions select[data-group-color]{max-width:76px}
+.cardactions select[data-map-color]{max-width:88px}
 .cardactions .map-only{display:none}
 .map-card .cardactions .map-only{display:block}
 .map-card .cardactions [data-font],
@@ -324,6 +332,14 @@ body.dark{
 body.dark #canvas{background-color:#171716}
 
 body.dark .card{border-color:#4a4740}
+body.dark .card:not(.map-card)[data-map-color]{background:var(--paper);border-color:#4a4740}
+body.dark .card:not(.map-card)[data-map-color="default"] .cardbar{background:linear-gradient(90deg,#302c4a,#292735);border-bottom-color:#494168}
+body.dark .card:not(.map-card)[data-map-color="purple"] .cardbar{background:linear-gradient(90deg,#34284a,#292433);border-bottom-color:#493956}
+body.dark .card:not(.map-card)[data-map-color="warm"] .cardbar{background:linear-gradient(90deg,#493a29,#302a20);border-bottom-color:#574632}
+body.dark .card:not(.map-card)[data-map-color="ocean"] .cardbar{background:linear-gradient(90deg,#1d4243,#202b2b);border-bottom-color:#305451}
+body.dark .card:not(.map-card)[data-map-color="forest"] .cardbar{background:linear-gradient(90deg,#294132,#232b25);border-bottom-color:#384f3d}
+body.dark .card:not(.map-card)[data-map-color="sunset"] .cardbar{background:linear-gradient(90deg,#472d38,#302726);border-bottom-color:#563542}
+body.dark .card:not(.map-card)[data-map-color="slate"] .cardbar{background:linear-gradient(90deg,#303946,#272c32);border-bottom-color:#414a57}
 body.dark .cardbody code{background:#36342f}
 body.dark .cardbody th{background:#302e2a}
 body.dark .cardbody th,body.dark .cardbody td{border-color:#4b4841}
