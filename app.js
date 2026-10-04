@@ -16,7 +16,7 @@ const state={
  undo:[],redo:[],historyLock:false,raf:0,saveTimer:0,hideTimer:0,
 };
 const MAP_COLORS=["default","purple","warm","ocean","forest","sunset","slate"];
-const LEGACY_MAP_FONTS={modern:"inter",editorial:"lora",geometric:"space-grotesk",humanist:"maiandra",mono:"mono",rounded:"rounded",handwritten:"caveat"};
+const LEGACY_MAP_FONTS={modern:"inter",editorial:"lora",geometric:"space-grotesk",humanist:"maiandra",mono:"mono",rounded:"rounded",handwritten:"hand-caveat"};
 const MAP_PALETTES={
  default:["#5b57b7","#7c78c8","#9b98d8","#bbb9e8","#d5d3f2"],
  purple:["#6846b5","#825fca","#a07fdb","#bca4e8","#d9c9f3"],
@@ -29,15 +29,24 @@ const MAP_PALETTES={
 const CARD_FONTS=[
  ["mono","Mono"],["mono-code","JetBrains Mono"],["mono-terminal","IBM Plex Mono"],["mono-typewriter","Space Mono"],
  ["mono-fira","Fira Code"],["mono-inconsolata","Inconsolata"],["mono-roboto","Roboto Mono"],["mono-source","Source Code Pro"],["mono-ubuntu","Ubuntu Mono"],
- ["sans","Sans"],["serif","Serif"],["slab","Slab"],["humanist","Humanist"],["rounded","Rounded"],["editorial","Editorial"],["hand","Handwritten"],
+ ["sans","Sans"],["serif","Serif"],["slab","Slab"],["humanist","Humanist"],["rounded","Rounded"],["editorial","Editorial"],
  ["maiandra","Maiandra GD"],["inter","Inter"],["dm-sans","DM Sans"],["manrope","Manrope"],["space-grotesk","Space Grotesk"],
- ["playfair","Playfair Display"],["lora","Lora"],["merriweather","Merriweather"],["caveat","Caveat"]
+ ["playfair","Playfair Display"],["lora","Lora"],["merriweather","Merriweather"],
+ ["hand-caveat","Caveat"],["hand-kalam","Kalam"],["hand-patrick","Patrick Hand"]
 ];
 const MAP_FONTS=CARD_FONTS.map(([value])=>value);
-const LEGACY_HAND_FONTS={"hand-soft":"Hand Soft","hand-bold":"Hand Bold","hand-marker":"Hand Marker","hand-script":"Hand Script"};
+const LEGACY_CARD_FONTS={
+ hand:"hand-caveat",caveat:"hand-caveat","hand-script":"hand-caveat",
+ "hand-soft":"hand-patrick","hand-bold":"hand-kalam","hand-marker":"hand-kalam"
+};
+
+function normalizeCardFont(font){
+ const value=LEGACY_CARD_FONTS[font]||font;
+ return CARD_FONTS.some(([key])=>key===value)?value:"mono";
+}
 
 function normalizeMapFont(font){
- const value=LEGACY_MAP_FONTS[font]||font;
+ const value=LEGACY_MAP_FONTS[font]||LEGACY_CARD_FONTS[font]||font;
  return MAP_FONTS.includes(value)?value:"inter";
 }
 function populateMapFontSelect(el,font){
@@ -51,9 +60,8 @@ function mapFontStack(font){
   mono:'ui-monospace,SFMono-Regular,Consolas,monospace',
   "mono-code":'"JetBrains Mono","Cascadia Code","Fira Code",Consolas,ui-monospace,monospace',"mono-terminal":'"IBM Plex Mono","Cascadia Mono","Lucida Console",Consolas,monospace',"mono-typewriter":'"Courier Prime","Courier New",Courier,monospace',
   "mono-fira":'"Fira Code",ui-monospace,monospace',"mono-inconsolata":'Inconsolata,ui-monospace,monospace',"mono-roboto":'"Roboto Mono",ui-monospace,monospace',"mono-source":'"Source Code Pro",ui-monospace,monospace',"mono-ubuntu":'"Ubuntu Mono",ui-monospace,monospace',
-  sans:'ui-sans-serif,system-ui,sans-serif',serif:'Georgia,"Times New Roman",serif',slab:'Rockwell,"Roboto Slab",Georgia,serif',humanist:'"Nunito Sans","Trebuchet MS",ui-sans-serif,sans-serif',rounded:'"Nunito","Arial Rounded MT Bold","Trebuchet MS",sans-serif',editorial:'Cambria,Georgia,"Times New Roman",serif',hand:'"Caveat","Segoe Print","Comic Sans MS",cursive',
+  sans:'ui-sans-serif,system-ui,sans-serif',serif:'Georgia,"Times New Roman",serif',slab:'Rockwell,"Roboto Slab",Georgia,serif',humanist:'"Nunito Sans","Trebuchet MS",ui-sans-serif,sans-serif',rounded:'"Nunito","Arial Rounded MT Bold","Trebuchet MS",sans-serif',editorial:'Cambria,Georgia,"Times New Roman",serif',"hand-caveat":'"Caveat",cursive',"hand-kalam":'"Kalam",cursive',"hand-patrick":'"Patrick Hand",cursive',
   maiandra:'"Maiandra GD","Nunito Sans","Trebuchet MS",sans-serif',inter:'"Inter",ui-sans-serif,system-ui,sans-serif',"dm-sans":'"DM Sans",ui-sans-serif,system-ui,sans-serif',manrope:'"Manrope",ui-sans-serif,system-ui,sans-serif',"space-grotesk":'"Space Grotesk",ui-sans-serif,system-ui,sans-serif',playfair:'"Playfair Display",Georgia,serif',lora:'"Lora",Georgia,serif',merriweather:'"Merriweather",Georgia,serif',caveat:'"Caveat","Segoe Print",cursive',
-  "hand-soft":'"Comic Sans MS","Segoe Print",cursive',"hand-bold":'"Bradley Hand","Segoe Print",cursive',"hand-marker":'"Marker Felt","Comic Sans MS",cursive',"hand-script":'"Segoe Print","Bradley Hand",cursive'
  };
  return stacks[normalizeMapFont(font)]||stacks.inter;
 }
@@ -65,8 +73,7 @@ function applyMapFont(n,font=n.mapFont){
 function populateCardFontSelect(el,font){
  const selectEl=el.querySelector("[data-font]");
  selectEl.replaceChildren(...CARD_FONTS.map(([value,label])=>new Option(label,value)));
- if(LEGACY_HAND_FONTS[font])selectEl.add(new Option(`${LEGACY_HAND_FONTS[font]} (saved)`,font));
- selectEl.value=font;
+ selectEl.value=normalizeCardFont(font);
 }
 const editorMapFont=$("#mapFont");
 editorMapFont.replaceChildren(...CARD_FONTS.map(([value,label])=>new Option(label,value)));
@@ -763,14 +770,14 @@ function openCanvasFile(file){
 function makeNote(md,x,y,w=600,record=true,id=null,font="mono",size="100",mapColor="default",mapFont="modern",mapWidth=null,mapHeight=null){
  if(record)history();
  const width=Math.max(300,Math.min(1200,w||600));
-const n={id:id??state.nextId++,md,x,y,font,size,width,type:"note",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:normalizeMapFont(mapFont),mapWidth:Number.isFinite(mapWidth)?Math.max(420,Math.min(1600,mapWidth)):null,mapHeight:Number.isFinite(mapHeight)?Math.max(320,Math.min(1200,mapHeight)):null,el:null};
+const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size,width,type:"note",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:normalizeMapFont(mapFont),mapWidth:Number.isFinite(mapWidth)?Math.max(420,Math.min(1600,mapWidth)):null,mapHeight:Number.isFinite(mapHeight)?Math.max(320,Math.min(1200,mapHeight)):null,el:null};
  state.nextId=Math.max(state.nextId,n.id+1);
  const el=document.createElement("article");
  el.className="card";el.style.left=x+"px";el.style.top=y+"px";el.style.width=width+"px";
  el.innerHTML=`<div class="cardbar"><div class="map-title"></div></div><div class="cardactions"><select data-view aria-label="Card view" title="Card view"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-map-color aria-label="Card color theme" title="Card color theme"><option value="default">Midnight</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select><select data-map-font class="map-only" aria-label="Map font" title="Map font (V / Shift+V)"><option value="modern">Modern</option><option value="editorial">Editorial</option><option value="geometric">Geometric</option><option value="humanist">Humanist</option><option value="mono">Mono</option><option value="rounded">Rounded</option><option value="handwritten">Handwritten</option></select><select data-font aria-label="Card font" title="Card font (V / Shift+V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option><option value="slab">Slab</option><option value="humanist">Humanist</option><option value="rounded">Rounded</option><option value="editorial">Editorial</option><option value="hand">Handwritten</option><option value="hand-soft">Hand Soft</option><option value="hand-bold">Hand Bold</option><option value="hand-marker">Hand Marker</option><option value="hand-script">Hand Script</option></select><select data-size aria-label="Card font size" title="Card font size"><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option><option value="180">180%</option></select><button data-map-open class="map-only" title="Open Markmap in new window (M)">↗</button><button data-edit title="Edit card">✎</button><button data-delete>×</button></div>
  <div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div><div class="resize bottom" data-side="bottom" title="Resize map height"></div>
  <div class="cardbody">${renderCardMarkdown(md)}</div>`;
- el.dataset.font=font;
+ el.dataset.font=n.font;
  el.dataset.mapColor=n.mapColor||"default";
  applyMapFont(n);
  el.querySelector("[data-map-color]").value=n.mapColor||"default";
@@ -806,7 +813,7 @@ const n={id:id??state.nextId++,md,x,y,font,size,width,type:"note",mapColor:MAP_C
   history();applyMapFont(n,e.target.value);save();
  };
  el.querySelector("[data-font]").onchange=e=>{
-  history();n.font=e.target.value;el.dataset.font=n.font;widenCardForTables(el);save();
+  history();n.font=normalizeCardFont(e.target.value);el.dataset.font=n.font;widenCardForTables(el);save();
  };
  el.querySelector("[data-font]").onfocus=()=>select(n);
  el.querySelector("[data-size]").onchange=e=>{
@@ -859,7 +866,7 @@ const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type
  el.querySelector("[data-map-font]").onchange=e=>{
   history();applyMapFont(n,e.target.value);save();
  };
- el.querySelector("[data-font]").onchange=e=>{history();n.font=e.target.value;el.dataset.font=n.font;save()};
+ el.querySelector("[data-font]").onchange=e=>{history();n.font=normalizeCardFont(e.target.value);el.dataset.font=n.font;save()};
  el.querySelector("[data-size]").onchange=e=>{history();n.size=e.target.value;el.dataset.fontSize=n.size;save()};
  el.querySelectorAll(".resize").forEach(r=>r.onmousedown=e=>{if(e.button===0)startResize(e,n,r.dataset.side)});
  renderMap(n);empty();return n;
@@ -1096,7 +1103,7 @@ function openMapTab(n){
   const rainbow=["#e76f51","#f4a261","#e9c46a","#6b9b67","#299c97","#4e7bc5","#a16bb3","#d5668a"];
   const colors=theme==="default"?rainbow:(MAP_PALETTES[theme]||rainbow);
   const colorPayload=JSON.stringify(colors);
-  const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="${fontStylesheet}"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css"><style>html,body{height:100%;margin:0;background:${surface};color:${textColor};font:14px ${fontStack}}svg{width:100%;height:100%;font-family:${fontStack};font-weight:400}.markmap-node text{font-weight:400!important;fill:${textColor}!important}.markmap-node foreignObject,.markmap-node foreignObject>div,.markmap-foreign{font-family:${fontStack};font-weight:400!important;color:${textColor}!important}</style></head><body><svg id="map"></svg><script src="https://cdn.jsdelivr.net/npm/d3@7"><\/script><script src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18.12"><\/script><script>const md=${payload};const colors=${colorPayload};const root=new markmap.Transformer().transform(md).root;const depth=node=>node.state?.depth||0;markmap.Markmap.create("#map",{duration:350,maxWidth:300,spacingHorizontal:82,spacingVertical:15,color:node=>colors[depth(node)%colors.length],lineWidth:node=>depth(node)===1?3:1.7},root);<\/script></body></html>`;
+  const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="${fontStylesheet}"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&family=Patrick+Hand&display=swap"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css"><style>html,body{height:100%;margin:0;background:${surface};color:${textColor};font:14px ${fontStack}}svg{width:100%;height:100%;font-family:${fontStack};font-weight:400}.markmap-node text{font-weight:400!important;fill:${textColor}!important}.markmap-node foreignObject,.markmap-node foreignObject>div,.markmap-foreign{font-family:${fontStack};font-weight:400!important;color:${textColor}!important}</style></head><body><svg id="map"></svg><script src="https://cdn.jsdelivr.net/npm/d3@7"><\/script><script src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18.12"><\/script><script>const md=${payload};const colors=${colorPayload};const root=new markmap.Transformer().transform(md).root;const depth=node=>node.state?.depth||0;markmap.Markmap.create("#map",{duration:350,maxWidth:300,spacingHorizontal:82,spacingVertical:15,color:node=>colors[depth(node)%colors.length],lineWidth:node=>depth(node)===1?3:1.7},root);<\/script></body></html>`;
   const tab=window.open();if(!tab){alert("Allow pop-ups to open this mind map.");return}
   tab.document.write(html);tab.document.close();
 }
