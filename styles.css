@@ -62,9 +62,9 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
 .map-pane svg{display:block;width:100%;height:100%;font-family:var(--map-font-family,"Inter",ui-sans-serif,system-ui,sans-serif)}
 .map-card .markmap-link{stroke-linecap:round;opacity:.86}
 .map-card .markmap-node circle{stroke:var(--paper);stroke-width:2px;filter:drop-shadow(0 1px 2px #0002)}
-.map-card .markmap-node text{font-size:14px;font-weight:400!important;fill:var(--ink)}
+.map-card .markmap-node text{font-size:calc(14px * var(--card-font-scale,1))!important;font-weight:400!important;fill:var(--ink)}
 .map-card .markmap-node foreignObject>div,
-.map-card .markmap-node .markmap-foreign{font-family:var(--map-font-family,"Inter",ui-sans-serif,system-ui,sans-serif);font-size:14px;font-weight:400!important;line-height:1.4;color:var(--ink)}
+.map-card .markmap-node .markmap-foreign{font-family:var(--map-font-family,"Inter",ui-sans-serif,system-ui,sans-serif);font-size:calc(14px * var(--card-font-scale,1))!important;font-weight:400!important;line-height:1.4;color:var(--ink)}
 .map-card .map-loading{display:grid;place-items:center;height:100%;color:var(--muted);font-size:12px}
 .map-card .map-error{padding:24px;color:#a34a42;font:12px/1.5 ui-monospace,monospace}
 .map-card .map-title{pointer-events:none}
@@ -189,8 +189,7 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
 .cardactions select[data-map-color]{max-width:88px}
 .cardactions .map-only{display:none}
 .map-card .cardactions .map-only{display:block}
-.map-card .cardactions [data-font],
-.map-card .cardactions [data-size]{display:none}
+.map-card .cardactions [data-font]{display:none}
 .cardactions select:hover{background:#eeece6;color:#333}
 .cardactions button{
  border:0;background:transparent;width:26px;height:25px;border-radius:5px;color:#777;
