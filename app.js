@@ -110,10 +110,10 @@ function escapeHtml(s){
 function showRuntimeError(message){
  const emptyMessage=$("#empty");
  if(emptyMessage){
-  emptyMessage.innerHTML=`<div><b>TopicCanvas could not start</b><span>${escapeHtml(message)}</span></div>`;
+  emptyMessage.innerHTML=`<div><b>ConceptCards could not start</b><span>${escapeHtml(message)}</span></div>`;
   emptyMessage.style.display="grid";
  }
- console.error("TopicCanvas:",message);
+ console.error("ConceptCards:",message);
 }
 function normalizeEscapedLatex(s){
   let text=String(s);
@@ -401,7 +401,7 @@ function render(md){
         `<div class="ref-math-block">${mathSource}</div>`
       );
     }else{
-      const escaped=escapeHtml(item.code);
+      const escaped=item.code.split("\n").map((line,index)=>`<span class="code-line" data-line="${index+1}">${escapeHtml(line)}</span>`).join("");
       const lang=item.language
         ? ` class="language-${escapeHtml(item.language)}"`:"";
       const codeHtml=`<pre><code${lang}>${escaped}</code></pre>`;
@@ -743,7 +743,7 @@ function openCanvasFile(file){
    const data=JSON.parse(reader.result);
 
    if(!data || !Array.isArray(data.notes)){
-    throw new Error("Invalid RefLatex canvas file");
+    throw new Error("Invalid ConceptCards canvas file");
    }
 
    state.historyLock=true;
@@ -1121,7 +1121,7 @@ function applyEditor(type=state.editorMode){
 }
 function openMapTab(n){
   const payload=JSON.stringify(prepareMarkmapMarkdown(n.md)).replace(/</g,"\\u003c");
-  const title=escapeHtml((n.md.match(/^#\s+(.+)$/m)||[])[1]||"RefLatex mind map");
+  const title=escapeHtml((n.md.match(/^#\s+(.+)$/m)||[])[1]||"ConceptCards mind map");
   const fontStack=mapFontStack(n.mapFont);
   const darkMode=document.body.classList.contains("dark");
   const theme=MAP_COLORS.includes(n.mapColor)?n.mapColor:"default";
