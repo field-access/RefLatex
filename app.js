@@ -16,7 +16,7 @@ const state={
  undo:[],redo:[],historyLock:false,raf:0,saveTimer:0,hideTimer:0,
 };
 const MAP_COLORS=["default","purple","warm","ocean","forest","sunset","slate"];
-const LEGACY_MAP_FONTS={modern:"inter",editorial:"lora",geometric:"space-grotesk",humanist:"maiandra",mono:"mono",rounded:"rounded",handwritten:"hand-caveat"};
+const LEGACY_MAP_FONTS={modern:"dm-sans",editorial:"lora",geometric:"space-grotesk",humanist:"nunito-sans",mono:"mono",rounded:"rounded",handwritten:"hand-caveat"};
 const MAP_PALETTES={
  default:["#5b57b7","#7c78c8","#9b98d8","#bbb9e8","#d5d3f2"],
  purple:["#6846b5","#825fca","#a07fdb","#bca4e8","#d9c9f3"],
@@ -27,17 +27,19 @@ const MAP_PALETTES={
  slate:["#475569","#5c6b7d","#788697","#9ba7b2","#c1c8ce"]
 };
 const CARD_FONTS=[
- ["mono","Mono"],["mono-code","JetBrains Mono"],["mono-terminal","IBM Plex Mono"],["mono-typewriter","Space Mono"],
- ["mono-fira","Fira Code"],["mono-inconsolata","Inconsolata"],["mono-roboto","Roboto Mono"],["mono-source","Source Code Pro"],["mono-ubuntu","Ubuntu Mono"],
- ["sans","Sans"],["serif","Serif"],["slab","Slab"],["humanist","Humanist"],["rounded","Rounded"],["editorial","Editorial"],
- ["maiandra","Maiandra GD"],["inter","Inter"],["dm-sans","DM Sans"],["manrope","Manrope"],["space-grotesk","Space Grotesk"],
- ["playfair","Playfair Display"],["lora","Lora"],["merriweather","Merriweather"],
+ ["mono","Mono"],["mono-code","JetBrains Mono"],["mono-typewriter","Space Mono"],["mono-fira","Fira Code"],["mono-courier","Courier Prime"],
+ ["sans","Sans"],["slab","Roboto Slab"],["rounded","Rounded"],["editorial","Editorial"],
+ ["nunito-sans","Nunito Sans"],["dm-sans","DM Sans"],["manrope","Manrope"],["space-grotesk","Space Grotesk"],
+ ["outfit","Outfit"],["rubik","Rubik"],["archivo","Archivo"],
+ ["playfair","Playfair Display"],["lora","Lora"],["merriweather","Merriweather"],["alegreya","Alegreya"],
  ["hand-caveat","Caveat"],["hand-kalam","Kalam"],["hand-patrick","Patrick Hand"]
 ];
 const MAP_FONTS=CARD_FONTS.map(([value])=>value);
 const LEGACY_CARD_FONTS={
  hand:"hand-caveat",caveat:"hand-caveat","hand-script":"hand-caveat",
- "hand-soft":"hand-patrick","hand-bold":"hand-kalam","hand-marker":"hand-kalam"
+ "hand-soft":"hand-patrick","hand-bold":"hand-kalam","hand-marker":"hand-kalam",
+ "mono-terminal":"mono-typewriter","mono-inconsolata":"mono-fira","mono-roboto":"mono-code","mono-source":"mono-code","mono-ubuntu":"mono-typewriter",
+ serif:"lora",humanist:"nunito-sans",maiandra:"nunito-sans",inter:"dm-sans"
 };
 
 function normalizeCardFont(font){
@@ -47,7 +49,7 @@ function normalizeCardFont(font){
 
 function normalizeMapFont(font){
  const value=LEGACY_MAP_FONTS[font]||LEGACY_CARD_FONTS[font]||font;
- return MAP_FONTS.includes(value)?value:"inter";
+ return MAP_FONTS.includes(value)?value:"dm-sans";
 }
 function populateMapFontSelect(el,font){
  const selectEl=el.querySelector("[data-map-font]");
@@ -58,12 +60,11 @@ function populateMapFontSelect(el,font){
 function mapFontStack(font){
  const stacks={
   mono:'ui-monospace,SFMono-Regular,Consolas,monospace',
-  "mono-code":'"JetBrains Mono","Cascadia Code","Fira Code",Consolas,ui-monospace,monospace',"mono-terminal":'"IBM Plex Mono","Cascadia Mono","Lucida Console",Consolas,monospace',"mono-typewriter":'"Courier Prime","Courier New",Courier,monospace',
-  "mono-fira":'"Fira Code",ui-monospace,monospace',"mono-inconsolata":'Inconsolata,ui-monospace,monospace',"mono-roboto":'"Roboto Mono",ui-monospace,monospace',"mono-source":'"Source Code Pro",ui-monospace,monospace',"mono-ubuntu":'"Ubuntu Mono",ui-monospace,monospace',
-  sans:'ui-sans-serif,system-ui,sans-serif',serif:'Georgia,"Times New Roman",serif',slab:'Rockwell,"Roboto Slab",Georgia,serif',humanist:'"Nunito Sans","Trebuchet MS",ui-sans-serif,sans-serif',rounded:'"Nunito","Arial Rounded MT Bold","Trebuchet MS",sans-serif',editorial:'Cambria,Georgia,"Times New Roman",serif',"hand-caveat":'"Caveat",cursive',"hand-kalam":'"Kalam",cursive',"hand-patrick":'"Patrick Hand",cursive',
-  maiandra:'"Maiandra GD","Nunito Sans","Trebuchet MS",sans-serif',inter:'"Inter",ui-sans-serif,system-ui,sans-serif',"dm-sans":'"DM Sans",ui-sans-serif,system-ui,sans-serif',manrope:'"Manrope",ui-sans-serif,system-ui,sans-serif',"space-grotesk":'"Space Grotesk",ui-sans-serif,system-ui,sans-serif',playfair:'"Playfair Display",Georgia,serif',lora:'"Lora",Georgia,serif',merriweather:'"Merriweather",Georgia,serif',caveat:'"Caveat","Segoe Print",cursive',
+  "mono-code":'"JetBrains Mono","Cascadia Code","Fira Code",Consolas,ui-monospace,monospace',"mono-typewriter":'"Space Mono","Courier New",Courier,monospace',"mono-fira":'"Fira Code",ui-monospace,monospace',"mono-courier":'"Courier Prime","Courier New",Courier,monospace',
+  sans:'ui-sans-serif,system-ui,sans-serif',slab:'"Roboto Slab",Georgia,serif',rounded:'"Nunito","Arial Rounded MT Bold","Trebuchet MS",sans-serif',editorial:'Cambria,Georgia,"Times New Roman",serif',"hand-caveat":'"Caveat",cursive',"hand-kalam":'"Kalam",cursive',"hand-patrick":'"Patrick Hand",cursive',
+  "nunito-sans":'"Nunito Sans","Trebuchet MS",ui-sans-serif,sans-serif',"dm-sans":'"DM Sans",ui-sans-serif,system-ui,sans-serif',manrope:'"Manrope",ui-sans-serif,system-ui,sans-serif',"space-grotesk":'"Space Grotesk",ui-sans-serif,system-ui,sans-serif',outfit:'"Outfit",ui-sans-serif,system-ui,sans-serif',rubik:'"Rubik",ui-sans-serif,system-ui,sans-serif',archivo:'"Archivo",ui-sans-serif,system-ui,sans-serif',playfair:'"Playfair Display",Georgia,serif',lora:'"Lora",Georgia,serif',merriweather:'"Merriweather",Georgia,serif',alegreya:'"Alegreya",Georgia,serif',caveat:'"Caveat","Segoe Print",cursive',
  };
- return stacks[normalizeMapFont(font)]||stacks.inter;
+ return stacks[normalizeMapFont(font)]||stacks["dm-sans"];
 }
 function applyMapFont(n,font=n.mapFont){
  n.mapFont=normalizeMapFont(font);
@@ -1130,7 +1131,7 @@ function openMapTab(n){
    :{default:"#fbfaff",purple:"#fcf9ff",warm:"#fffaf3",ocean:"#f1fbfa",forest:"#f4faf2",sunset:"#fff8f4",slate:"#f5f7f8"};
   const surface=surfaces[theme];
   const textColor=darkMode?"#e7eaf1":"#272622";
-  const fontStylesheet="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Courier+Prime:wght@400;700&family=DM+Sans:wght@400;500;600;700&family=Fira+Code:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Inconsolata:wght@400;500;600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Lora:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Merriweather:wght@400;700&family=Nunito:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&family=Roboto+Slab:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;600&family=Source+Code+Pro:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Ubuntu+Mono:wght@400;700&display=swap";
+  const fontStylesheet="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Courier+Prime:wght@400;700&family=DM+Sans:wght@400;500;600;700&family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Lora:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Merriweather:wght@400;700&family=Nunito:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&family=Roboto+Slab:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Alegreya:wght@400;500;600;700&family=Archivo:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Rubik:wght@400;500;600;700&display=swap";
   const rainbow=["#e76f51","#f4a261","#e9c46a","#6b9b67","#299c97","#4e7bc5","#a16bb3","#d5668a"];
   const colors=theme==="default"?rainbow:(MAP_PALETTES[theme]||rainbow);
   const colorPayload=JSON.stringify(colors);
