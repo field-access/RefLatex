@@ -645,6 +645,7 @@ function widenCardForTables(el){
 }
 
 function select(n){
+ if(state.selected===n&&(!n||n.el.classList.contains("selected")))return;
  if(state.selected!==n)state.spaceFocusStep=0;
  state.notes.forEach(x=>x.el.classList.remove("selected"));
  state.selected=n;if(n)n.el.classList.add("selected");
@@ -782,6 +783,7 @@ const n={id:id??state.nextId++,md,x,y,font,size,width,type:"note",mapColor:MAP_C
  widenCardForTables(el);
 
  el.addEventListener("pointerdown",e=>{
+  if(e.target.closest(".cardactions"))return;
   if(e.button===0&&!e.target.closest(".resize"))select(n);
  });
  el.addEventListener("mousedown",e=>{
@@ -798,9 +800,7 @@ const n={id:id??state.nextId++,md,x,y,font,size,width,type:"note",mapColor:MAP_C
  el.querySelector("[data-map-open]").onclick=()=>openMapTab(n);
  el.querySelector("[data-view]").onchange=e=>setCardType(n,e.target.value);
  el.querySelector("[data-map-color]").onchange=e=>{
-  history();n.mapColor=e.target.value;el.dataset.mapColor=n.mapColor;
-  if(n.type==="map")renderMap(n);
-  save();
+  setCardColorTheme(n,e.target.value);
  };
  el.querySelector("[data-map-font]").onchange=e=>{
   history();applyMapFont(n,e.target.value);save();
@@ -840,6 +840,7 @@ const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type
  populateCardFontSelect(el,n.font);
  el.querySelector("[data-size]").value=n.size;
  el.addEventListener("pointerdown",e=>{
+  if(e.target.closest(".cardactions"))return;
   if(e.button===0&&!e.target.closest(".resize"))select(n);
  });
  el.addEventListener("mousedown",e=>{
@@ -853,8 +854,7 @@ const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type
  el.querySelector("[data-delete]").onclick=()=>deleteNote(n);
  el.querySelector("[data-view]").onchange=e=>setCardType(n,e.target.value);
  el.querySelector("[data-map-color]").onchange=e=>{
-  history();n.mapColor=e.target.value;el.dataset.mapColor=n.mapColor;
-  renderMap(n);save();
+  setCardColorTheme(n,e.target.value);
  };
  el.querySelector("[data-map-font]").onchange=e=>{
   history();applyMapFont(n,e.target.value);save();
@@ -1390,10 +1390,18 @@ function cycleFont(direction=1){
 function cycleCardTheme(){
  const n=state.selected;if(!n)return;
  const current=Math.max(0,MAP_COLORS.indexOf(n.mapColor||"default"));
- history();
- n.mapColor=MAP_COLORS[(current+1)%MAP_COLORS.length];
- n.el.dataset.mapColor=n.mapColor;
- const selectEl=n.el.querySelector("[data-map-color]");if(selectEl)selectEl.value=n.mapColor;
+ setCardColorTheme(n,MAP_COLORS[(current+1)%MAP_COLORS.length]);
+}
+
+function setCardColorTheme(n,color,record=true){
+ if(!n?.el)return;
+ const next=MAP_COLORS.includes(color)?color:"default";
+ if(n.mapColor===next)return;
+ if(record)history();
+ n.mapColor=next;
+ n.el.dataset.mapColor=next;
+ const selectEl=n.el.querySelector("[data-map-color]");
+ if(selectEl)selectEl.value=next;
  if(n.type==="map")renderMap(n);
  save();
 }
