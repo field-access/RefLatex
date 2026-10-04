@@ -906,6 +906,7 @@ const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type
 function startDrag(e,n){
  e.preventDefault();e.stopPropagation();history();
  state.drag={n,sx:e.clientX,sy:e.clientY,x:n.x,y:n.y};
+ n.el.classList.add("dragging");
  canvas.style.cursor="grabbing";
 }
 window.addEventListener("mousemove",e=>{
@@ -935,6 +936,7 @@ window.addEventListener("mousemove",e=>{
 window.addEventListener("mouseup",()=>{
  if(state.drag||state.resize||state.pan){flushSave()}
  if(state.resize?.n.type==="map")state.resize.n.mapInstance?.fit();
+ state.drag?.n.el.classList.remove("dragging");
  state.drag=null;state.resize=null;state.pan=null;
  canvas.style.cursor=state.hand?"grab":"default";
 });
