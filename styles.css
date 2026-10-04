@@ -129,8 +129,17 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
  font:calc(18px * var(--card-font-scale))/1.78 Georgia,"Times New Roman",serif;
 }
 .cardbody p{margin:0 0 17px}
-.cardbody ul,.cardbody ol{padding-left:28px}
-.cardbody li{margin:5px 0}
+.cardbody ul,.cardbody ol{margin:.7em 0 1em;padding-inline-start:2em;list-style-position:outside}
+.cardbody ul{list-style-type:disc}
+.cardbody ol{list-style-type:decimal}
+.cardbody ul ul{list-style-type:circle}
+.cardbody ul ul ul{list-style-type:square}
+.cardbody ol ol{list-style-type:lower-alpha}
+.cardbody ol ol ol{list-style-type:lower-roman}
+.cardbody li{display:list-item;margin:.35em 0;padding-inline-start:.15em}
+.cardbody li ul,.cardbody li ol{margin:.35em 0}
+.cardbody li:has(>input[type="checkbox"]){list-style:none}
+.cardbody li>input[type="checkbox"]{margin:0 .55em 0 -1.45em;vertical-align:middle;accent-color:var(--accent)}
 .cardbody strong{font-weight:700}
 .cardbody blockquote{
  margin:21px 0;padding:3px 0 3px 17px;border-left:3px solid #d0ccc4;color:#6e6a63

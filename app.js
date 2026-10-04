@@ -306,6 +306,25 @@ function render(md){
   const inlineCodes=[];
   const math=[];
 
+  function listContentIndentBefore(offset,source){
+    const indentWidth=value=>[...value].reduce((width,char)=>
+      char==="\t"?width+(4-width%4):width+1,0);
+    const stack=[];
+    for(const line of source.slice(0,offset).split("\n")){
+      if(!line.trim())continue;
+      const item=/^([ \t]*)(?:[-+*]|\d+[.)])([ \t]+)/.exec(line);
+      if(item){
+        const indent=indentWidth(item[1]);
+        while(stack.length&&stack.at(-1).indent>=indent)stack.pop();
+        stack.push({indent,content:indentWidth(item[0])});
+        continue;
+      }
+      const lineIndent=indentWidth(/^[ \t]*/.exec(line)[0]);
+      while(stack.length&&lineIndent<stack.at(-1).content)stack.pop();
+    }
+    return stack.at(-1)?.content||0;
+  }
+
   // Protect fenced code blocks first. Some AI responses accidentally fence
   // LaTeX equations; those are classified after extraction.
   text=text.replace(
@@ -321,7 +340,15 @@ function render(md){
   // Protect indented code blocks.
   text=text.replace(
     /(^|\n)((?:[ \t]{4}.*(?:\n|$))+)/g,
-    (whole,lead,block)=>{
+    (whole,lead,block,offset,source)=>{
+      const listIndent=listContentIndentBefore(offset,source);
+      const threshold=listIndent?listIndent+4:4;
+      const lines=block.split("\n").filter(line=>line.trim());
+      const minimumIndent=line=>{
+        const prefix=/^[ \t]*/.exec(line)[0];
+        return [...prefix].reduce((width,char)=>char==="\t"?width+(4-width%4):width+1,0);
+      };
+      if(listIndent&&lines.some(line=>minimumIndent(line)<threshold))return whole;
       const id=blockCodes.length;
       const code=block.replace(/^[ \t]{4}/gm,"").replace(/\n$/,"");
       blockCodes.push({code,language:"",math:looksLikeMathBlock(code)});
@@ -330,7 +357,9 @@ function render(md){
   );
 
   // Protect inline code.
-  text=text.replace(/`([^`\n]+)`/g,(whole,code)=>{
+  text=text.replace(/`([^`\n]+)`/g,(whole,code,offset,source)=>{
+    const lineStart=source.lastIndexOf("\n",offset-1)+1;
+    if(/^[ \t]{4,}$/.test(source.slice(lineStart,offset)))return whole;
     const id=inlineCodes.length;
     inlineCodes.push(code);
     return `@@REFLATEX_INLINE_${id}@@`;
