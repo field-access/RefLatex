@@ -730,7 +730,7 @@ function downloadCanvas(){
  setTimeout(()=>URL.revokeObjectURL(url),1000);
 
  $("#hint").textContent="Canvas saved";
- setTimeout(()=>$("#hint").textContent="✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · −/= zoom · [/] selected card width · N new card · K cycle Markdown/Markmap · M Markmap window · Shift+C change card theme · Esc close",1800);
+ setTimeout(()=>$("#hint").textContent="✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · −/= zoom · [/] selected card width · 1–9 text size · N new card · K cycle Markdown/Markmap · M Markmap window · Shift+C change card theme · Esc close",1800);
 }
 
 function openCanvasFile(file){
@@ -784,7 +784,7 @@ function openCanvasFile(file){
    save();
 
    $("#hint").textContent=`Opened ${file.name}`;
-   setTimeout(()=>$("#hint").textContent="✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · −/= zoom · [/] selected card width · N new card · K cycle Markdown/Markmap · M Markmap window · Shift+C change card theme · Esc close",2200);
+   setTimeout(()=>$("#hint").textContent="✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · −/= zoom · [/] selected card width · 1–9 text size · N new card · K cycle Markdown/Markmap · M Markmap window · Shift+C change card theme · Esc close",2200);
 
   }catch(err){
    state.historyLock=false;
@@ -1499,6 +1499,21 @@ window.addEventListener("keydown",e=>{
   * These mirror the visible buttons without interfering with card text input.
  */
  const key=e.key.toLowerCase();
+ if(/^[1-9]$/.test(key)&&!mod&&!e.altKey&&!e.shiftKey&&state.selected?.type==="note"){
+   const sizeSelect=state.selected.el.querySelector("[data-size]");
+   const active=document.activeElement;
+   const focusedControl=active?.matches?.("input,textarea,select,[contenteditable='true']");
+   const sizeIndex=Number(key)-1;
+   const option=sizeSelect?.options[sizeIndex];
+   if(option&&(!focusedControl||active===sizeSelect)){
+     e.preventDefault();
+     if(sizeSelect.value!==option.value){
+       sizeSelect.value=option.value;
+       sizeSelect.dispatchEvent(new Event("change",{bubbles:true}));
+     }
+     return;
+   }
+ }
  if(!mod&&!e.altKey&&e.shiftKey&&key==="c"){
    e.preventDefault();cycleCardTheme();return;
  }
