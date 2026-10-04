@@ -250,7 +250,7 @@ function normalizeBareMath(s){
       rx.lastIndex=pos;
     }
 
-    return out+body.slice(pos);
+    return prefix+out+body.slice(pos);
   }
 
   return s.split("\n").map(transformLine).join("\n");
