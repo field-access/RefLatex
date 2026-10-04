@@ -146,7 +146,7 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
 }
 .cardbody code{
  font:calc(16px * var(--card-font-scale))/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;
- background:#e7f3ed;border-radius:4px;padding:2px 5px;color:#164f3b
+ color:inherit
 }
 .cardbody pre{
  margin:19px 0;padding:16px;overflow:auto;border-radius:17px;
@@ -179,12 +179,12 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
  transform:translate(-50%,-50%);border-radius:3px;background:transparent
 }
 .cardactions{
- position:absolute;right:7px;top:4px;display:none;align-items:center;gap:3px;z-index:8
+ position:absolute;left:7px;right:7px;top:4px;display:none;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:3px;z-index:8;min-width:0
 }
 .card.selected .cardactions{display:flex}
 .cardactions select{
  border:0;border-radius:5px;background:transparent;color:#777;height:25px;
- padding:0 3px;font:10px system-ui;cursor:pointer;max-width:82px
+ padding:0 3px;font:10px system-ui;cursor:pointer;max-width:82px;min-width:0
 }
 .cardactions select[data-view]{max-width:92px}
 .cardactions select[data-map-color]{max-width:88px}
@@ -363,7 +363,6 @@ body.dark .card:not(.map-card)[data-map-color="ocean"] .cardbar{background:linea
 body.dark .card:not(.map-card)[data-map-color="forest"] .cardbar{background:linear-gradient(90deg,#294132,#232b25);border-bottom-color:#384f3d}
 body.dark .card:not(.map-card)[data-map-color="sunset"] .cardbar{background:linear-gradient(90deg,#472d38,#302726);border-bottom-color:#563542}
 body.dark .card:not(.map-card)[data-map-color="slate"] .cardbar{background:linear-gradient(90deg,#303946,#272c32);border-bottom-color:#414a57}
-body.dark .cardbody code{background:#36342f}
 body.dark .cardbody th{background:#302e2a}
 body.dark .cardbody th,body.dark .cardbody td{border-color:#4b4841}
 body.dark .cardbody blockquote{border-color:#5b574f;color:#aaa59d}
@@ -495,6 +494,8 @@ body.fullscreen.controls .toolbar{transform:translateY(-50%)}
 .cardbody code:not(pre code){
   white-space:pre-wrap;
   overflow-wrap:anywhere;
+  background:color-mix(in srgb,currentColor 12%,transparent);
+  color:inherit;border-radius:4px;padding:2px 5px;
 }
 .cardbody .katex-display{
   max-width:100%;
@@ -590,7 +591,6 @@ body.fullscreen.controls .toolbar{transform:translateY(-50%)}
 .card:not(.map-card)[data-map-color="default"] .cardbar{background:#121317;border-bottom-color:#1b1d23}
 .card[data-map-color="default"] .cardbody{color:#d9dce5}
 .card[data-map-color="default"] .cardbody blockquote{color:#a9afbd;border-color:#4d6079}
-.card[data-map-color="default"] .cardbody code:not(pre code){background:#292c34;color:#dfe7f4}
 .card[data-map-color="default"] .cardbody th{background:#22252c}
 .card[data-map-color="default"] .cardbody th,
 .card[data-map-color="default"] .cardbody td{border-color:#343842}
