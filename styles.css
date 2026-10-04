@@ -477,11 +477,6 @@ body.fullscreen.controls .toolbar{transform:translateY(-50%)}
   -webkit-font-smoothing:antialiased;
   isolation:isolate;
 }
-.cardbody pre::before{
-  content:"";position:absolute;inset:7px;border:1px solid rgba(24,206,139,.4);
-  border-radius:12px;box-shadow:inset 0 0 0 1px rgba(5,80,60,.22);
-  pointer-events:none;z-index:-1
-}
 .cardbody pre code{
   display:block;position:relative;
   white-space:pre;
