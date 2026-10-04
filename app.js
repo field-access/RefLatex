@@ -1541,8 +1541,7 @@ window.addEventListener("keydown",e=>{
      "-":()=>$("#minus").click(),
      "=":()=>$("#plus").click(),
      "[":()=>resizeSelectedWidth(-1),
-     "]":()=>resizeSelectedWidth(1),
-     "0":()=>$("#reset").click()
+     "]":()=>resizeSelectedWidth(1)
    };
    if(actions[key]){
      e.preventDefault();
