@@ -110,10 +110,10 @@ function escapeHtml(s){
 function showRuntimeError(message){
  const emptyMessage=$("#empty");
  if(emptyMessage){
-  emptyMessage.innerHTML=`<div><b>RefLatex could not start</b><span>${escapeHtml(message)}</span></div>`;
+  emptyMessage.innerHTML=`<div><b>TopicCanvas could not start</b><span>${escapeHtml(message)}</span></div>`;
   emptyMessage.style.display="grid";
  }
- console.error("RefLatex:",message);
+ console.error("TopicCanvas:",message);
 }
 function normalizeEscapedLatex(s){
   let text=String(s);
