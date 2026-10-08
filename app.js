@@ -11,7 +11,7 @@ const state={
  x:innerWidth/2,y:innerHeight/2,scale:1,
  targetX:innerWidth/2,targetY:innerHeight/2,targetScale:1,
  notes:[],selected:null,nextId:1,
- hand:true,spacePan:false,controlsVisible:true,pan:null,drag:null,pendingDrag:null,rightPan:null,resize:null,editId:null,editorMode:"note",
+ hand:true,spacePan:false,controlsVisible:true,pan:null,drag:null,rightPan:null,resize:null,editId:null,editorMode:"note",
  spaceFocusStep:0,
  undo:[],redo:[],historyLock:false,raf:0,saveTimer:0,hideTimer:0,
 };
@@ -830,7 +830,6 @@ const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size,width,ty
   if(e.button!==0||e.target.closest(".cardactions,.resize,a,button"))return;
   select(n);
   if(e.target.closest(".cardbar"))startDrag(e,n);
-  else if(n.type==="note")state.pendingDrag={n,sx:e.clientX,sy:e.clientY,x:n.x,y:n.y};
  });
  el.addEventListener("dblclick",e=>{
   if(e.target.closest(".cardactions,.resize"))return;
@@ -917,17 +916,6 @@ function startDrag(e,n){
 }
 let panApplyFrame=0;
 window.addEventListener("mousemove",e=>{
- if(state.pendingDrag){
-  const p=state.pendingDrag,dx=e.clientX-p.sx,dy=e.clientY-p.sy;
-  const selection=window.getSelection();
-  const selectingText=selection&&!selection.isCollapsed&&selection.toString().trim()&&
-   p.n.el.contains(selection.anchorNode)&&p.n.el.contains(selection.focusNode);
-  if(!(e.buttons&1)||selectingText)state.pendingDrag=null;
-  else if(dx*dx+dy*dy>36){
-   history();state.drag=p;state.pendingDrag=null;
-   p.n.el.classList.add("dragging");canvas.style.cursor="grabbing";
-  }
- }
  if(state.drag){
   const d=state.drag,dx=(e.clientX-d.sx)/state.scale,dy=(e.clientY-d.sy)/state.scale;
   d.n.x=d.x+dx;d.n.y=d.y+dy;
@@ -957,7 +945,7 @@ window.addEventListener("mouseup",()=>{
  if(state.resize?.n.type==="map")state.resize.n.mapInstance?.fit();
  if(panApplyFrame){cancelAnimationFrame(panApplyFrame);panApplyFrame=0;apply()}
  state.drag?.n.el.classList.remove("dragging");
- state.drag=null;state.pendingDrag=null;state.resize=null;state.pan=null;
+ state.drag=null;state.resize=null;state.pan=null;
  canvas.style.cursor=state.hand?"grab":"default";
 });
 function startResize(e,n,side){
