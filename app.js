@@ -11,7 +11,7 @@ const state={
  x:innerWidth/2,y:innerHeight/2,scale:1,
  targetX:innerWidth/2,targetY:innerHeight/2,targetScale:1,
  notes:[],selected:null,nextId:1,
- hand:true,spacePan:false,controlsVisible:true,pan:null,drag:null,rightPan:null,resize:null,editId:null,editorMode:"note",
+ hand:true,spacePan:false,controlsVisible:true,pan:null,rightPan:null,resize:null,editId:null,editorMode:"note",
  spaceFocusStep:0,
  undo:[],redo:[],historyLock:false,raf:0,saveTimer:0,hideTimer:0,
 };
@@ -810,7 +810,6 @@ const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size,width,ty
  el.innerHTML=`<div class="cardbar"><div class="map-title"></div></div><div class="cardactions"><select data-view aria-label="Card view" title="Card view"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-map-color aria-label="Card color theme" title="Card color theme"><option value="default">Midnight</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select><select data-map-font class="map-only" aria-label="Map font" title="Map font (V / Shift+V)"><option value="modern">Modern</option><option value="editorial">Editorial</option><option value="geometric">Geometric</option><option value="humanist">Humanist</option><option value="mono">Mono</option><option value="rounded">Rounded</option><option value="handwritten">Handwritten</option></select><select data-font aria-label="Card font" title="Card font (V / Shift+V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option><option value="slab">Slab</option><option value="humanist">Humanist</option><option value="rounded">Rounded</option><option value="editorial">Editorial</option><option value="hand">Handwritten</option><option value="hand-soft">Hand Soft</option><option value="hand-bold">Hand Bold</option><option value="hand-marker">Hand Marker</option><option value="hand-script">Hand Script</option></select><select data-size aria-label="Card font size" title="Card font size"><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option><option value="180">180%</option></select><button data-map-open class="map-only" title="Open Markmap in new window (M)">↗</button><button data-card-open title="Open card in new window (O)">▣</button><button data-edit title="Edit card">✎</button><button data-delete>×</button></div>
  <div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div><div class="resize bottom" data-side="bottom" title="Resize map height"></div>
  <div class="cardbody">${renderCardMarkdown(md)}</div>`;
- el.querySelector(".cardbar").title="Hold Alt and drag to move this card";
  el.dataset.font=n.font;
  el.dataset.mapColor=n.mapColor||"default";
  applyMapFont(n);
@@ -830,7 +829,6 @@ const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size,width,ty
  el.addEventListener("mousedown",e=>{
   if(e.button!==0||e.target.closest(".cardactions,.resize,a,button"))return;
   select(n);
-  if(e.altKey&&e.target.closest(".cardbar"))startDrag(e,n);
  });
  el.addEventListener("dblclick",e=>{
   if(e.target.closest(".cardactions,.resize"))return;
@@ -875,7 +873,6 @@ const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type
  applyMapFont(n);
  el.dataset.font=n.font;
  el.innerHTML=`<div class="cardbar"><div class="map-title"></div></div><div class="cardactions"><select data-view aria-label="Card view" title="Card view"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-map-color aria-label="Card color theme" title="Card color theme"><option value="default">Midnight</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select><select data-map-font class="map-only" aria-label="Map font" title="Map font (V / Shift+V)"><option value="modern">Modern</option><option value="editorial">Editorial</option><option value="geometric">Geometric</option><option value="humanist">Humanist</option><option value="mono">Mono</option><option value="rounded">Rounded</option><option value="handwritten">Handwritten</option></select><select data-font aria-label="Card font" title="Card font"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option></select><select data-size aria-label="Card font size" title="Card font size (1–9)"><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option><option value="180">180%</option></select><button data-map-open title="Open Markmap in new window (M)">↗</button><button data-card-open title="Open card in new window (O)">▣</button><button data-edit title="Edit card">✎</button><button data-delete title="Delete map">×</button></div><div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div><div class="resize bottom" data-side="bottom" title="Resize map height"></div><div class="cardbody"><div class="map-loading">Rendering mind map…</div></div>`;
- el.querySelector(".cardbar").title="Hold Alt and drag to move this card";
  n.el=el;applyMapFont(n);populateMapFontSelect(el,n.mapFont);updateCardHeading(n);world.appendChild(el);state.notes.push(n);
  el.querySelector("[data-view]").value="map";
  el.querySelector("[data-map-color]").value=n.mapColor;
@@ -891,7 +888,6 @@ const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type
  el.addEventListener("mousedown",e=>{
   if(e.button!==0||e.target.closest(".cardactions,.resize,a,button"))return;
   select(n);
-  if(e.altKey&&e.target.closest(".cardbar"))startDrag(e,n);
  });
  el.addEventListener("dblclick",e=>{if(!e.target.closest(".cardactions,.resize")){e.preventDefault();e.stopPropagation();editNote(n)}});
  el.querySelector("[data-map-open]").onclick=()=>openMapTab(n);
@@ -910,19 +906,8 @@ const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type
  el.querySelectorAll(".resize").forEach(r=>r.onmousedown=e=>{if(e.button===0)startResize(e,n,r.dataset.side)});
  renderMap(n);empty();return n;
 }
-function startDrag(e,n){
- e.preventDefault();e.stopPropagation();history();
- state.drag={n,sx:e.clientX,sy:e.clientY,x:n.x,y:n.y};
- n.el.classList.add("dragging");
- canvas.style.cursor="grabbing";
-}
 let panApplyFrame=0;
 window.addEventListener("mousemove",e=>{
- if(state.drag){
-  const d=state.drag,dx=(e.clientX-d.sx)/state.scale,dy=(e.clientY-d.sy)/state.scale;
-  d.n.x=d.x+dx;d.n.y=d.y+dy;
-  d.n.el.style.left=d.n.x+"px";d.n.el.style.top=d.n.y+"px";
- }
  if(state.resize){
   const r=state.resize,dx=(e.clientX-r.sx)/state.scale;
   if(r.side==="bottom"){
@@ -943,11 +928,10 @@ window.addEventListener("mousemove",e=>{
  }
 });
 window.addEventListener("mouseup",()=>{
- if(state.drag||state.resize||state.pan){flushSave()}
+ if(state.resize||state.pan){flushSave()}
  if(state.resize?.n.type==="map")state.resize.n.mapInstance?.fit();
  if(panApplyFrame){cancelAnimationFrame(panApplyFrame);panApplyFrame=0;apply()}
- state.drag?.n.el.classList.remove("dragging");
- state.drag=null;state.resize=null;state.pan=null;
+ state.resize=null;state.pan=null;
  canvas.style.cursor=state.hand?"grab":"default";
 });
 function startResize(e,n,side){
