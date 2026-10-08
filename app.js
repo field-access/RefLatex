@@ -11,7 +11,7 @@ const state={
  x:innerWidth/2,y:innerHeight/2,scale:1,
  targetX:innerWidth/2,targetY:innerHeight/2,targetScale:1,
  notes:[],selected:null,nextId:1,
- hand:true,spacePan:false,controlsVisible:true,pan:null,rightPan:null,resize:null,editId:null,editorMode:"note",
+ hand:true,controlsVisible:true,pan:null,rightPan:null,resize:null,editId:null,editorMode:"note",
  spaceFocusStep:0,
  undo:[],redo:[],historyLock:false,raf:0,saveTimer:0,hideTimer:0,
 };
@@ -940,7 +940,7 @@ function startResize(e,n,side){
  canvas.style.cursor=side==="bottom"?"ns-resize":"ew-resize";
 }
 function startPan(e){
- if(e.button!==1 && e.button!==2 && !(e.button===0&&state.spacePan))return;
+ if(e.button!==1&&e.button!==2)return;
  e.preventDefault();
  e.stopPropagation();
  state.pan={sx:e.clientX,sy:e.clientY,x:state.x,y:state.y};
@@ -1484,17 +1484,13 @@ window.addEventListener("keydown",e=>{
  /*
   * SPACE
   * - selected card -> focus it
-  * - no selection -> temporary hand/pan mode
+  * - canvas panning is available with middle or right mouse button
   */
  if(e.code==="Space"&&!editing){
    e.preventDefault();
    if(e.repeat)return;
    if(state.selected){
      focusSelected(state.spaceFocusStep===0?"fit":"readable");
-     state.spacePan=false;
-   }else{
-     state.spacePan=true;
-     canvas.style.cursor="grab";
    }
    return;
  }
@@ -1732,12 +1728,6 @@ window.addEventListener("resize",()=>{
  resizeFrame=requestAnimationFrame(()=>{resizeFrame=0;apply()});
 });
 window.addEventListener("pagehide",flushSave);
-window.addEventListener("keyup",e=>{
- if(e.code==="Space"){
-  state.spacePan=false;
-  canvas.style.cursor=state.hand?"grab":"default";
- }
-});
 try{
  load();
 }catch(err){
