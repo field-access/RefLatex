@@ -46,7 +46,8 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
   radial-gradient(ellipse at 52% -18%,#24345455,transparent 68%);
  background-size:100% 100%,100% 100%,100% 100%,193px 181px,257px 223px,331px 293px,419px 367px,557px 487px,100% 100%;
 }
-#world{position:absolute;left:0;top:0;width:1px;height:1px;transform-origin:0 0;will-change:transform}
+#world{position:absolute;left:0;top:0;width:1px;height:1px;transform-origin:0 0}
+body.camera-moving #world{will-change:transform}
 .card{
  position:absolute;width:500px;min-width:300px;max-width:1200px;
  background:var(--paper);border:1px solid #cbc7be;border-radius:34px;
@@ -459,7 +460,7 @@ body.fullscreen.controls .toolbar{transform:translateY(-50%)}
 
 .toolbar,.zoom,.editor,.context{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 .card,.cardbody,#world{filter:none!important;-webkit-filter:none!important}
-.cardbody{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+.cardbody{-webkit-font-smoothing:auto;text-rendering:auto}
 
 
 .cardbody .katex{font-size:1.03em}

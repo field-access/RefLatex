@@ -590,6 +590,7 @@ function zoomPrecise(f,cx=innerWidth/2,cy=innerHeight/2){
  state.x=state.targetX;
  state.y=state.targetY;
  state.scale=ns;
+ markCameraMoving();
  apply();
 }
 
@@ -608,17 +609,36 @@ function cardBounds(){
 }
 
 function sync(){state.targetX=state.x;state.targetY=state.y;state.targetScale=state.scale}
-function animate(){
+let motionHintTimer=0;
+function markCameraMoving(){
+ document.body.classList.add("camera-moving");
+ clearTimeout(motionHintTimer);
+ motionHintTimer=setTimeout(()=>{
+  motionHintTimer=0;
+  if(!state.raf)document.body.classList.remove("camera-moving");
+ },120);
+}
+function finishCameraMotion(){
  if(state.raf)return;
+ clearTimeout(motionHintTimer);motionHintTimer=0;
+ document.body.classList.remove("camera-moving");
+}
+function animate(){
+ document.body.classList.add("camera-moving");
+ clearTimeout(motionHintTimer);motionHintTimer=0;
+ if(state.raf)return;
+ let lastFrame=0;
  const tick=()=>{
-  // Keep camera response close to the input while retaining a small amount
-  // of smoothing for button/keyboard navigation.
-  state.x+=(state.targetX-state.x)*.42;
-  state.y+=(state.targetY-state.y)*.42;
-  state.scale+=(state.targetScale-state.scale)*.34;
+  const now=performance.now();
+  const elapsed=lastFrame?Math.min(50,now-lastFrame):1000/60;
+  lastFrame=now;
+  const response=1-Math.exp(-elapsed/32);
+  state.x+=(state.targetX-state.x)*response;
+  state.y+=(state.targetY-state.y)*response;
+  state.scale+=(state.targetScale-state.scale)*response;
   apply();
   if(Math.abs(state.x-state.targetX)<.08&&Math.abs(state.y-state.targetY)<.08&&Math.abs(state.scale-state.targetScale)<.0005){
-   state.x=state.targetX;state.y=state.targetY;state.scale=state.targetScale;apply();state.raf=0;return;
+   state.x=state.targetX;state.y=state.targetY;state.scale=state.targetScale;apply();state.raf=0;finishCameraMotion();return;
   }
   state.raf=requestAnimationFrame(tick);
  };
@@ -942,7 +962,7 @@ window.addEventListener("mouseup",()=>{
  state.resize=null;state.pan=null;
  canvas.style.cursor=state.hand?"grab":"default";
  if(resized){layoutCards();flushSave()}
- else if(panned)flushSave();
+ else if(panned){flushSave();finishCameraMotion()}
 });
 function startResize(e,n,side){
  e.preventDefault();e.stopPropagation();select(n);history();
@@ -954,6 +974,7 @@ function startPan(e){
  e.preventDefault();
  e.stopPropagation();
  state.pan={sx:e.clientX,sy:e.clientY,x:state.x,y:state.y};
+ document.body.classList.add("camera-moving");
  canvas.style.cursor="grabbing";
 }
 canvas.addEventListener("mousedown",startPan);
@@ -1008,6 +1029,7 @@ function scheduleWheelFrame(){
    state.x-=dx;
    state.y-=dy;
    sync();
+   markCameraMoving();
    apply();
   }
  });
@@ -1066,19 +1088,19 @@ canvas.addEventListener("pointermove",e=>{
  if(e.pointerType!=="touch"||!touches.has(e.pointerId))return;
  touches.set(e.pointerId,{x:e.clientX,y:e.clientY});
  if(touches.size===1&&gesture?.type==="pan"){
-  const p=[...touches.values()][0];state.x=gesture.ox+p.x-gesture.x;state.y=gesture.oy+p.y-gesture.y;sync();apply();
+  const p=[...touches.values()][0];state.x=gesture.ox+p.x-gesture.x;state.y=gesture.oy+p.y-gesture.y;sync();markCameraMoving();apply();
  }
  if(touches.size===2&&gesture?.type==="pinch"){
   const[a,b]=[...touches.values()],cx=(a.x+b.x)/2,cy=(a.y+b.y)/2,d=Math.hypot(a.x-b.x,a.y-b.y);
   const ns=Math.max(MIN_SCALE,Math.min(MAX_SCALE,gesture.s*d/gesture.d));
   const nx=cx-gesture.w.x*ns,ny=cy-gesture.w.y*ns;
   state.scale=ns;state.x=nx;state.y=ny;
-  sync();apply();
+  sync();markCameraMoving();apply();
  }
 });
 function touchEnd(e){
  if(e.pointerType!=="touch")return;touches.delete(e.pointerId);
- if(!touches.size){gesture=null;save()}
+ if(!touches.size){gesture=null;save();finishCameraMotion()}
 }
 canvas.addEventListener("pointerup",touchEnd);canvas.addEventListener("pointercancel",touchEnd);
 
