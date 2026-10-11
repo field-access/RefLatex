@@ -31,7 +31,6 @@ const ICONS={
  fullscreen:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg>',
  close:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>',
  minus:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg>',
- reset:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2.3 5.7M4 5v6h6"/></svg>',
  mapOpen:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2"/><circle cx="13" cy="6" r="2"/><circle cx="13" cy="18" r="2"/><path d="M8 11l3-4M8 13l3 4M15 6h5v5m0-5-6 6"/></svg>',
  cardOpen:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="14" height="16" rx="2"/><path d="M8 8h5M8 12h5M14 3h6v6m0-6-8 8"/></svg>',
  edit:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16.5-.8 4.3 4.3-.8L19 8.5 15.5 5 4 16.5Z"/><path d="m13.8 6.7 3.5 3.5M4 21h16"/></svg>',
@@ -1572,7 +1571,7 @@ $("#canvasFile").addEventListener("change",e=>{
 })
 $("#full").onclick=toggleFull
 $("#edge").onclick=()=>{toggleToolbar(true);revealControls()}
-$("#minus").onclick=()=>zoom(.72);$("#plus").onclick=()=>zoom(1.38);$("#reset").onclick=()=>moveTo(innerWidth/2,innerHeight/2,1)
+$("#minus").onclick=()=>zoom(.72);$("#plus").onclick=()=>zoom(1.38)
 $("#close").onclick=closeEditor;$("#cancel").onclick=closeEditor;$("#applyCard").onclick=()=>applyEditor("note");$("#applyMap").onclick=()=>applyEditor("map")
 $("#edit").onclick=()=>state.selected&&editNote(state.selected)
 $("#duplicate").onclick=duplicate
