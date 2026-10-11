@@ -17,6 +17,7 @@
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 <script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12"></script>
 <script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18.12"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/highlight.min.js"></script>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -35,9 +36,10 @@
   <button class="tool background-select" id="background" title="Background" aria-label="Background" aria-expanded="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 1.25 4.75L18 8l-4.75 1.25L12 14l-1.25-4.75L6 8l4.75-1.25L12 2Z"/><path d="m19 14 .75 2.25L22 17l-2.25.75L19 20l-.75-2.25L16 17l2.25-.75L19 14ZM5 14l.7 2.3L8 17l-2.3.7L5 20l-.7-2.3L2 17l2.3-.7L5 14Z"/></svg></button>
   <div class="background-menu" id="backgroundMenu" role="menu">
    <button type="button" data-background-choice="light" role="menuitem"><svg viewBox="0 0 32 22" aria-hidden="true"><rect width="32" height="22" fill="#d9d6cf"/><path d="M5 5h.1M16 5h.1M27 5h.1M5 16h.1M16 16h.1M27 16h.1" stroke="#77736b" stroke-width="2" stroke-linecap="round"/></svg><span>Light</span></button>
-   <button type="button" data-background-choice="sun" role="menuitem"><svg viewBox="0 0 32 22" aria-hidden="true"><image href="./assets/backgrounds/sun.png" width="32" height="22" preserveAspectRatio="xMidYMid slice"/></svg><span>Sun</span></button>
-   <button type="button" data-background-choice="stars" role="menuitem"><svg viewBox="0 0 32 22" aria-hidden="true"><image href="./assets/backgrounds/stars.png" width="32" height="22" preserveAspectRatio="xMidYMid slice"/></svg><span>Stars</span></button>
-   <button type="button" data-background-choice="planets" role="menuitem"><svg viewBox="0 0 32 22" aria-hidden="true"><image href="./assets/backgrounds/planets.png" width="32" height="22" preserveAspectRatio="xMidYMid slice"/></svg><span>Planets</span></button>
+   <button type="button" data-background-choice="sun" role="menuitem"><svg viewBox="0 0 32 22" aria-hidden="true"><image class="sun-preview" href="./assets/backgrounds/sun.webp" width="32" height="22" preserveAspectRatio="xMidYMid slice"/><image class="moon-preview" href="./assets/backgrounds/moon.webp" width="32" height="22" preserveAspectRatio="xMidYMid slice"/></svg><span>Sun</span></button>
+   <button type="button" data-background-choice="ocean" role="menuitem"><svg viewBox="0 0 32 22" aria-hidden="true"><image href="./assets/backgrounds/ocean.webp" width="32" height="22" preserveAspectRatio="xMidYMid slice"/></svg><span>Ocean</span></button>
+   <button type="button" data-background-choice="stars" role="menuitem"><svg viewBox="0 0 32 22" aria-hidden="true"><image href="./assets/backgrounds/stars.webp" width="32" height="22" preserveAspectRatio="xMidYMid slice"/></svg><span>Stars</span></button>
+   <button type="button" data-background-choice="planets" role="menuitem"><svg viewBox="0 0 32 22" aria-hidden="true"><image href="./assets/backgrounds/planets.webp" width="32" height="22" preserveAspectRatio="xMidYMid slice"/></svg><span>Planets</span></button>
   </div>
  </div>
  <span class="divider"></span>

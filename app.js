@@ -68,15 +68,15 @@ const CARD_FONT_GROUPS=[
  ]],
  ["Sans serif",[
   ["sans","System Sans"],["dm-sans","DM Sans"],["poppins","Poppins"],["montserrat","Montserrat"],["raleway","Raleway"],
-  ["josefin-sans","Josefin Sans"],["nunito","Nunito"],["quicksand","Quicksand"],["league-spartan","League Spartan"],["oswald","Oswald"]
+  ["josefin-sans","Josefin Sans"],["nunito","Nunito"],["quicksand","Quicksand"],["league-spartan","League Spartan"]
  ]],
  ["Serif",[
   ["slab","Roboto Slab"],["editorial-serif","Editorial Serif"],["playfair","Playfair Display"],["lora","Lora"],
   ["merriweather","Merriweather"],["alegreya","Alegreya"],["cormorant","Cormorant Garamond"],["fraunces","Fraunces"],
-  ["dm-serif-display","DM Serif Display"],["bodoni","Bodoni Moda"]
+  ["bodoni","Bodoni Moda"]
  ]],
  ["Display",[
-  ["anton","Anton"],["bebas-neue","Bebas Neue"],["shrikhand","Shrikhand"],["abril-fatface","Abril Fatface"],["cinzel","Cinzel"]
+  ["bebas-neue","Bebas Neue"],["cinzel","Cinzel"]
  ]],
  ["Handwritten",[
   ["hand-kalam","Kalam"],["hand-patrick","Patrick Hand"],["dancing-script","Dancing Script"],
@@ -90,7 +90,8 @@ const LEGACY_CARD_FONTS={
  "hand-soft":"hand-patrick","hand-bold":"hand-kalam","hand-marker":"hand-kalam",
  "mono-terminal":"mono-typewriter","mono-inconsolata":"mono-fira","mono-roboto":"mono-code","mono-source":"mono-code","mono-ubuntu":"mono-typewriter",
  serif:"lora",editorial:"editorial-serif",humanist:"nunito",maiandra:"josefin-sans",inter:"dm-sans",
- "nunito-sans":"nunito",manrope:"dm-sans","space-grotesk":"league-spartan",outfit:"poppins",rubik:"dm-sans",archivo:"montserrat",rounded:"quicksand"
+ "nunito-sans":"nunito",manrope:"dm-sans","space-grotesk":"league-spartan",outfit:"poppins",rubik:"dm-sans",archivo:"montserrat",rounded:"quicksand",
+ oswald:"league-spartan","dm-serif-display":"fraunces",anton:"bebas-neue",shrikhand:"bebas-neue","abril-fatface":"cinzel"
 };
 
 const GOOGLE_FONT_SPECS={
@@ -99,11 +100,11 @@ const GOOGLE_FONT_SPECS={
  "mono-dm":["DM+Mono","wght@400;500"],"mono-azeret":["Azeret+Mono","wght@400;500;600"],"mono-victor":["Victor+Mono","wght@400;500;600"],
  "dm-sans":["DM+Sans","wght@400;500;600;700"],poppins:["Poppins","wght@400;500;600;700"],montserrat:["Montserrat","wght@400;500;600;700"],
  raleway:["Raleway","wght@400;500;600;700"],"josefin-sans":["Josefin+Sans","wght@400;500;600;700"],nunito:["Nunito","wght@400;500;600;700"],
- quicksand:["Quicksand","wght@400;500;600;700"],"league-spartan":["League+Spartan","wght@400;500;600;700"],oswald:["Oswald","wght@400;500;600;700"],
+ quicksand:["Quicksand","wght@400;500;600;700"],"league-spartan":["League+Spartan","wght@400;500;600;700"],
  slab:["Roboto+Slab","wght@400;500;600;700"],playfair:["Playfair+Display","wght@400;500;600;700"],lora:["Lora","wght@400;500;600;700"],
  merriweather:["Merriweather","wght@400;700"],alegreya:["Alegreya","wght@400;500;600;700"],cormorant:["Cormorant+Garamond","wght@400;500;600;700"],
- fraunces:["Fraunces","wght@400;500;600;700"],"dm-serif-display":["DM+Serif+Display","wght@400"],bodoni:["Bodoni+Moda","wght@400;500;600;700"],
- anton:["Anton","wght@400"],"bebas-neue":["Bebas+Neue","wght@400"],shrikhand:["Shrikhand","wght@400"],"abril-fatface":["Abril+Fatface","wght@400"],cinzel:["Cinzel","wght@400;500;600;700"],
+ fraunces:["Fraunces","wght@400;500;600;700"],bodoni:["Bodoni+Moda","wght@400;500;600;700"],
+ "bebas-neue":["Bebas+Neue","wght@400"],cinzel:["Cinzel","wght@400;500;600;700"],
  "hand-kalam":["Kalam","wght@300;400;700"],"hand-patrick":["Patrick+Hand","wght@400"],"dancing-script":["Dancing+Script","wght@400;500;600;700"],
  sacramento:["Sacramento","wght@400"],satisfy:["Satisfy","wght@400"],"marck-script":["Marck+Script","wght@400"]
 };
@@ -140,6 +141,7 @@ function populateMapFontSelect(el,font){
  if(!selectEl)return;
  selectEl.replaceChildren(...createCardFontGroups());
  selectEl.value=normalizeMapFont(font);
+ syncCardSelect(selectEl);
  ensureFontLoaded(selectEl.value);
 }
 function mapFontStack(font){
@@ -149,11 +151,11 @@ function mapFontStack(font){
   "mono-dm":'"DM Mono",ui-monospace,monospace',"mono-azeret":'"Azeret Mono",ui-monospace,monospace',"mono-victor":'"Victor Mono",ui-monospace,monospace',
   sans:'ui-sans-serif,system-ui,sans-serif',"dm-sans":'"DM Sans",ui-sans-serif,system-ui,sans-serif',poppins:'"Poppins",ui-sans-serif,system-ui,sans-serif',
   montserrat:'"Montserrat",ui-sans-serif,system-ui,sans-serif',raleway:'"Raleway",ui-sans-serif,system-ui,sans-serif',"josefin-sans":'"Josefin Sans",ui-sans-serif,system-ui,sans-serif',
-  nunito:'"Nunito",ui-sans-serif,system-ui,sans-serif',quicksand:'"Quicksand",ui-sans-serif,system-ui,sans-serif',"league-spartan":'"League Spartan",ui-sans-serif,system-ui,sans-serif',oswald:'"Oswald",ui-sans-serif,system-ui,sans-serif',
+  nunito:'"Nunito",ui-sans-serif,system-ui,sans-serif',quicksand:'"Quicksand",ui-sans-serif,system-ui,sans-serif',"league-spartan":'"League Spartan",ui-sans-serif,system-ui,sans-serif',
   slab:'"Roboto Slab",Georgia,serif',"editorial-serif":'Cambria,Georgia,"Times New Roman",serif',playfair:'"Playfair Display",Georgia,serif',
   lora:'"Lora",Georgia,serif',merriweather:'"Merriweather",Georgia,serif',alegreya:'"Alegreya",Georgia,serif',
-  cormorant:'"Cormorant Garamond",Georgia,serif',fraunces:'"Fraunces",Georgia,serif',"dm-serif-display":'"DM Serif Display",Georgia,serif',bodoni:'"Bodoni Moda",Georgia,serif',
-  anton:'"Anton",Impact,sans-serif',"bebas-neue":'"Bebas Neue",Impact,sans-serif',shrikhand:'"Shrikhand",Georgia,serif',"abril-fatface":'"Abril Fatface",Georgia,serif',cinzel:'"Cinzel",Georgia,serif',
+  cormorant:'"Cormorant Garamond",Georgia,serif',fraunces:'"Fraunces",Georgia,serif',bodoni:'"Bodoni Moda",Georgia,serif',
+  "bebas-neue":'"Bebas Neue",Impact,sans-serif',cinzel:'"Cinzel",Georgia,serif',
   "hand-kalam":'"Kalam",cursive',"hand-patrick":'"Patrick Hand",cursive',"dancing-script":'"Dancing Script",cursive',
   sacramento:'"Sacramento",cursive',satisfy:'"Satisfy",cursive',"marck-script":'"Marck Script",cursive',
  };
@@ -169,6 +171,7 @@ function populateCardFontSelect(el,font){
  const selectEl=el.querySelector("[data-font]");
  selectEl.replaceChildren(...createCardFontGroups());
  selectEl.value=normalizeCardFont(font);
+ syncCardSelect(selectEl);
  ensureFontLoaded(selectEl.value);
 }
 function applyCardFont(n,font=n.font){
@@ -273,12 +276,11 @@ function openCardMenu(wrap){
   if(next){e.preventDefault();next.focus();next.scrollIntoView({block:"nearest"})}
  });
 }
-function enhanceCardSelects(card){
- card.querySelectorAll(".cardactions select").forEach(select=>{
+function enhanceCustomSelect(select){
   if(select.closest(".custom-select"))return;
   const wrap=document.createElement("div");
   wrap.className=`custom-select ${select.className}`;
-  wrap.dataset.control=select.dataset.view?"view":select.dataset.mapColor?"theme":select.dataset.mapFont?"map-font":select.dataset.font?"font":"size";
+  wrap.dataset.control=select.dataset.view?"view":(select.dataset.mapColor||select.id==="mapColor")?"theme":(select.dataset.mapFont||select.id==="mapFont")?"map-font":select.dataset.font?"font":"size";
   const trigger=document.createElement("button");
   trigger.type="button";trigger.className="custom-select-trigger";
   trigger.setAttribute("aria-haspopup","listbox");trigger.setAttribute("aria-expanded","false");
@@ -294,7 +296,9 @@ function enhanceCardSelects(card){
   select.addEventListener("change",()=>syncCardSelect(select));
   select.before(wrap);wrap.append(trigger,select);
   syncCardSelect(select);
- });
+}
+function enhanceCardSelects(card){
+ card.querySelectorAll(".cardactions select").forEach(enhanceCustomSelect);
 }
 document.addEventListener("click",e=>{
  if(activeCardMenu&&!activeCardMenu.menu.contains(e.target)&&!activeCardMenu.wrap.contains(e.target))closeCardMenu();
@@ -302,6 +306,7 @@ document.addEventListener("click",e=>{
 window.addEventListener("resize",()=>{if(activeCardMenu)placeCardMenu(activeCardMenu.menu,activeCardMenu.trigger)});
 const editorMapFont=$("#mapFont");
 editorMapFont.replaceChildren(...createCardFontGroups());
+editor.querySelectorAll(".map-options select").forEach(enhanceCustomSelect);
 
 function showControls(){
   document.body.classList.remove("controls-hidden");
@@ -331,6 +336,13 @@ function safeMarkdown(md){
  }catch{out=`<p>${escapeHtml(md)}</p>`}
  try{if(window.DOMPurify)out=DOMPurify.sanitize(out)}catch{}
  return out;
+}
+function publicImageUrl(value){
+ try{
+  const url=new URL(value);
+  return ["http:","https:"].includes(url.protocol)&&/\.(?:avif|bmp|gif|jpe?g|png|svg|webp)$/i.test(url.pathname)
+   ?url.href:"";
+ }catch{return ""}
 }
 function escapeHtml(s){
  return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -612,6 +624,16 @@ function render(md){
   // Bare AI equations.
   text=normalizeBareMath(text);
 
+  // Treat a standalone direct image URL as Markdown image syntax. This keeps
+  // ordinary links as links and avoids rewriting fenced or inline code, which
+  // has already been replaced with protected tokens above.
+  text=text.replace(/(^|\n)([ \t]*)(https?:\/\/[^\s<>]+)([ \t]*)(?=\n|$)/g,(whole,lead,before,rawUrl,after)=>{
+    const url=publicImageUrl(rawUrl.replace(/[.,!?;:]+$/,""));
+    if(!url)return whole;
+    const trailing=rawUrl.slice(rawUrl.replace(/[.,!?;:]+$/," ").trimEnd().length);
+    return `${lead}${before}![Public image](<${url}>)${trailing||after}`;
+  });
+
   let out=safeMarkdown(text);
 
   // Restore fenced blocks. Math-like blocks become actual KaTeX display
@@ -629,10 +651,11 @@ function render(md){
         `<div class="ref-math-block">${mathSource}</div>`
       );
     }else{
-      const escaped=item.code.split("\n").map((line,index)=>`<span class="code-line" data-line="${index+1}">${escapeHtml(line)}</span>`).join("");
+      const escaped=escapeHtml(item.code);
       const lang=item.language
         ? ` class="language-${escapeHtml(item.language)}"`:"";
-      const codeHtml=`<pre><code${lang}>${escaped}</code></pre>`;
+      const lineCount=item.code.split("\n").length;
+      const codeHtml=`<pre class="line-numbered" data-line-count="${lineCount}"><code${lang}>${escaped}</code></pre>`;
       out=out.replace(`<p>${token}</p>`,codeHtml);
       out=out.split(token).join(codeHtml);
     }
@@ -649,6 +672,27 @@ function render(md){
 
   const box=document.createElement("div");
   box.innerHTML=out;
+
+  box.querySelectorAll("pre.line-numbered").forEach(pre=>{
+    const code=pre.querySelector("code");
+    if(!code)return;
+    if(window.hljs){
+      const languageClass=[...code.classList].find(name=>name.startsWith("language-"));
+      const language=languageClass?.slice("language-".length);
+      if(language&&!hljs.getLanguage(language))code.classList.remove(languageClass);
+      try{hljs.highlightElement(code)}catch{}
+    }
+    const gutter=document.createElement("span");
+    gutter.className="code-gutter";
+    gutter.setAttribute("aria-hidden","true");
+    const lineCount=Math.max(1,Number(pre.dataset.lineCount)||1);
+    for(let line=1;line<=lineCount;line++){
+      const number=document.createElement("span");
+      number.textContent=String(line);
+      gutter.appendChild(number);
+    }
+    pre.insertBefore(gutter,code);
+  });
 
   try{
     if(window.renderMathInElement){
@@ -668,6 +712,13 @@ function render(md){
   }catch(err){
     console.warn("KaTeX rendering:",err);
   }
+
+  box.querySelectorAll("img").forEach(image=>{
+    image.loading="lazy";
+    image.decoding="async";
+    image.draggable=false;
+    image.classList.add("card-image");
+  });
 
   return box.innerHTML;
 }
@@ -1380,6 +1431,8 @@ function openEditor(mode="note",n=null){
  source.value=n?.md||"";
  $("#mapColor").value=n?.mapColor||randomCardTheme();
  $("#mapFont").value=normalizeMapFont(n?.mapFont);
+ syncCardSelect($("#mapColor"));
+ syncCardSelect($("#mapFont"));
  $("#applyCard").textContent=n?"Update card":"Place card";
  $("#applyMap").textContent=n?"Update map":"Place map";
  editor.dataset.mode=mode;
@@ -1482,8 +1535,8 @@ function layoutCards(){
 
  // Keep the preferred ten-card row while spacing actual card bounds evenly.
  const columns=Math.min(10,state.notes.length);
- const gapX=52;
- const gapY=52;
+ const gapX=80;
+ const gapY=80;
 
  state.notes.forEach(n=>{
   const width=n.type==="map"?(n.mapWidth||n.width||n.el.offsetWidth):(n.width||n.el.offsetWidth);
@@ -1544,12 +1597,13 @@ function scheduleReflow(){
 function scheduleArrange(){
  requestAnimationFrame(()=>arrange(false));
 }
-const backgrounds=["light","sun","stars","planets"];
+const backgrounds=["light","sun","ocean","stars","planets"];
 const backgroundLabels={
  light:"Light",
  stars:"Stars",
  sun:"Sun",
- planets:"Planets"
+ planets:"Planets",
+ ocean:"Ocean"
 };
 function setBackground(name){
  const background=name==="dots"?"stars":backgrounds.includes(name)?name:"stars";
@@ -1837,9 +1891,10 @@ window.addEventListener("keydown",e=>{
    e.preventDefault();
    if(e.repeat)return;
    if(state.selected){
-     if(state.selected.type==="map")focusSelected("fit");
-     else if(state.spaceFocusStep===0)focusSelected("fit");
-     else if(state.spaceFocusStep===1)focusSelected("readable");
+     // Alternate between fitting the whole card and its readable view for
+     // both Markdown and Markmap cards. Keep this as a true toggle so Space
+     // continues to work after the second press instead of becoming inert.
+     focusSelected(state.spaceFocusStep===1?"readable":"fit");
    }
    return;
  }
