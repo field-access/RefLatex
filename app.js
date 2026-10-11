@@ -32,7 +32,7 @@ const ICONS={
  close:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>',
  minus:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg>',
  reset:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2.3 5.7M4 5v6h6"/></svg>',
- mapOpen:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6m0-6-9 9"/><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/></svg>',
+ mapOpen:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2"/><circle cx="13" cy="6" r="2"/><circle cx="13" cy="18" r="2"/><path d="M8 11l3-4M8 13l3 4M15 6h5v5m0-5-6 6"/></svg>',
  cardOpen:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="14" height="16" rx="2"/><path d="M8 8h5M8 12h5M14 3h6v6m0-6-8 8"/></svg>',
  edit:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16.5-.8 4.3 4.3-.8L19 8.5 15.5 5 4 16.5Z"/><path d="m13.8 6.7 3.5 3.5M4 21h16"/></svg>',
  duplicate:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h2"/></svg>',
@@ -45,7 +45,9 @@ function setButtonIcon(button,name,label){
  if(label){button.title=label;button.setAttribute("aria-label",label)}
 }
 function setCardActionIcons(el,type){
- setButtonIcon(el.querySelector("[data-map-open]"),"mapOpen","Open Markmap in new window (M)");
+ const mapOpen=el.querySelector("[data-map-open]");
+ setButtonIcon(mapOpen,"mapOpen","Open Markmap in new window (M)");
+ mapOpen?.classList.remove("map-only");
  setButtonIcon(el.querySelector("[data-card-open]"),"cardOpen","Open card in new window (O)");
  setButtonIcon(el.querySelector("[data-edit]"),"edit","Edit card");
  setButtonIcon(el.querySelector("[data-delete]"),"delete",type==="map"?"Delete map":"Delete card");
@@ -595,8 +597,9 @@ function setCardType(n,type,record=true){
  }
  layoutCards();
  const scale=clampScale(Number.isFinite(state.targetScale)?state.targetScale:state.scale||1);
- const cx=n.x+n.el.offsetWidth/2;
- const cy=n.y+n.el.offsetHeight/2;
+ const rect=n.el.getBoundingClientRect();
+ const cx=(rect.left+rect.width/2-state.x)/state.scale;
+ const cy=(rect.top+rect.height/2-state.y)/state.scale;
  moveTo(innerWidth/2-cx*scale,innerHeight/2-cy*scale,scale);
  save();
 }
@@ -1465,6 +1468,11 @@ function focusSelected(mode="readable"){
     w:n.el.offsetWidth,
     h:n.el.offsetHeight
   };
+  const rect=n.el.getBoundingClientRect();
+  const worldLeft=(rect.left-state.x)/state.scale;
+  const worldTop=(rect.top-state.y)/state.scale;
+  const worldCenterX=worldLeft+r.w/2;
+  const worldCenterY=worldTop+r.h/2;
   const titleOffset=n.type==="map"?40:88;
   const availableWidth=Math.max(240,innerWidth-(n.type==="map"?48:180));
   const availableHeight=Math.max(240,innerHeight-titleOffset-(n.type==="map"?32:40));
@@ -1472,19 +1480,18 @@ function focusSelected(mode="readable"){
   if(mode==="fit"){
     const fitScale=clampScale(Math.min(widthScale,availableHeight/r.h));
     moveTo(
-      innerWidth/2-(r.x+r.w/2)*fitScale,
-      innerHeight/2-(r.y+r.h/2)*fitScale,
+      innerWidth/2-worldCenterX*fitScale,
+      innerHeight/2-worldCenterY*fitScale,
       fitScale
     );
     return;
   }
   const fitScale=n.type==="map"?Math.min(widthScale,availableHeight/r.h):widthScale;
   const targetScale=clampScale(Math.min(1.2,fitScale));
-  const cx=r.x+r.w/2;
 
   moveTo(
-    innerWidth/2-cx*targetScale,
-    titleOffset-r.y*targetScale,
+    innerWidth/2-worldCenterX*targetScale,
+    titleOffset-worldTop*targetScale,
     targetScale
   );
 }

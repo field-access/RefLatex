@@ -4,7 +4,7 @@
 }
 *{box-sizing:border-box}
 html,body{width:100%;height:100%;margin:0;overflow:hidden}
-body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--canvas)}
+body{font-family:Manrope,Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--canvas)}
 #canvas{
  position:fixed;inset:0;overflow:hidden;touch-action:none;
  background-color:var(--canvas);
@@ -57,8 +57,8 @@ body.camera-moving #world{will-change:transform}
  width:960px;max-width:1600px;min-width:420px;height:640px;min-height:320px;
  background:var(--paper);overflow:hidden;
 }
-.map-card .cardbar{height:40px;background:linear-gradient(90deg,#eeebff,#f8f6ff);border-bottom-color:#ded9f6}
-.map-card .cardbody{height:calc(100% - 40px);padding:0;overflow:hidden}
+.map-card .cardbar{height:32px;background:linear-gradient(90deg,#eeebff,#f8f6ff);border-bottom-color:#ded9f6}
+.map-card .cardbody{height:calc(100% - 32px);padding:0;overflow:hidden}
 .map-pane{min-width:0;height:100%;overflow:hidden;background:var(--map-surface,#fbfaff);transition:background .2s ease}
 .map-pane svg{display:block;width:100%;height:100%;font-family:var(--map-font-family,"Inter",ui-sans-serif,system-ui,sans-serif)}
 .map-card .markmap-link{stroke-linecap:round;opacity:.86}
@@ -104,15 +104,16 @@ body.camera-moving #world{will-change:transform}
 .card:not(.map-card)[data-map-color="slate"] .cardbar{background:linear-gradient(90deg,#e2e8ee,#f5f7f9);border-bottom-color:#d6dce2}
 .card.selected{
  z-index:9;
- outline:2px solid #08a98c;
+ outline:2px solid var(--card-accent,#7669d3);
  outline-offset:3px;
- box-shadow:0 0 0 5px #08a98c24,0 0 20px #08a98c38;
+ box-shadow:0 0 0 4px color-mix(in srgb,var(--card-accent,#7669d3) 18%,transparent),
+ 0 0 18px color-mix(in srgb,var(--card-accent,#7669d3) 32%,transparent);
 }
 .cardbar{
- height:40px;cursor:default;position:relative;border-bottom:1px solid transparent;border-radius:34px 34px 0 0;
+ height:32px;cursor:default;position:relative;border-bottom:1px solid transparent;border-radius:34px 34px 0 0;
 }
-.card:not(.has-title) .cardbar{height:12px;background:transparent!important;border-bottom-color:transparent!important}
-.map-card:not(.has-title) .cardbody{height:calc(100% - 12px)}
+.card:not(.has-title) .cardbar{height:10px;background:transparent!important;border-bottom-color:transparent!important}
+.map-card:not(.has-title) .cardbody{height:calc(100% - 10px)}
 .card.has-title:not(.map-card) .cardbody{padding-top:18px}
 .card:not(.has-title):not(.map-card) .cardbody{padding-top:18px}
 .cardbar:hover{border-bottom-color:#e0ddd6}
@@ -441,8 +442,9 @@ body.dark .map-card .cardactions button:hover{
  color:#fff;
 }
 body.dark .card.selected{
- outline-color:#62efc2;
- box-shadow:0 0 0 5px #62efc226,0 0 22px #62efc246;
+ outline-color:var(--card-accent-dark,var(--card-accent,#aaa));
+ box-shadow:0 0 0 4px color-mix(in srgb,var(--card-accent-dark,var(--card-accent,#aaa)) 20%,transparent),
+ 0 0 20px color-mix(in srgb,var(--card-accent-dark,var(--card-accent,#aaa)) 38%,transparent);
 }
 body.dark .map-card[data-map-color="warm"] .cardbar{background:linear-gradient(90deg,#493a29,#302a20)}
 body.dark .map-options select{background:#292824}
@@ -613,14 +615,14 @@ body.fullscreen.controls .toolbar{transform:translateY(-50%)}
 .card[data-font-size="160"] .cardbody{--card-font-scale:1.6}
 .card[data-font-size="180"] .cardbody{--card-font-scale:1.8}
 .card.has-title .map-title{
- position:absolute;left:18px;top:7px;display:block;max-width:calc(100% - 300px);
+ position:absolute;left:16px;top:5px;display:block;max-width:calc(100% - 300px);
  overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--ink);
- font:500 13px/18px "DM Sans",Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:.01em;
+ font:600 11.5px/16px Manrope,Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:-.01em;
  pointer-events:none;
 }
 .card:not(.has-title) .map-title{display:none}
 .card.has-title .map-title::after{
- content:"";position:absolute;left:0;bottom:-8px;width:34px;height:2px;
+ content:"";position:absolute;left:0;bottom:-7px;width:26px;height:2px;
  border-radius:2px;background:currentColor;opacity:.48
 }
 .card[data-map-color="default"]{
@@ -757,3 +759,29 @@ body.dark .card .cardactions select:focus-visible,body.dark .map-options select:
  outline-color:#62efc2;box-shadow:0 0 0 4px #62efc228;
 }
 body.dark .card .cardactions select option,body.dark .map-options select option{background:#20242b;color:#e8edf3}
+
+/* Card accent stays tied to its palette, including the selected outline. */
+.card[data-map-color="default"]{--card-accent:#7669d3;--card-accent-dark:#b6aaff}
+.card[data-map-color="purple"]{--card-accent:#9a62d7;--card-accent-dark:#d0a8ff}
+.card[data-map-color="warm"]{--card-accent:#c57935;--card-accent-dark:#ffc078}
+.card[data-map-color="ocean"]{--card-accent:#198c9a;--card-accent-dark:#79dce5}
+.card[data-map-color="forest"]{--card-accent:#498a52;--card-accent-dark:#9ad88f}
+.card[data-map-color="sunset"]{--card-accent:#d45e70;--card-accent-dark:#ff9eaa}
+.card[data-map-color="slate"]{--card-accent:#637b98;--card-accent-dark:#b4c8df}
+
+/* Slimmer controls and one type family across the canvas interface. */
+.toolbar{width:48px;padding:5px;gap:3px}
+.toolbar .tool,.toolbar .background-select{width:36px;height:36px;min-width:36px}
+.toolbar .tool .icon{width:18px;height:18px}
+.toolbar .divider{width:24px;margin:2px auto}
+.zoom{padding:4px;gap:3px}
+.zoom button{height:27px;padding:0 8px;font-family:Manrope,Inter,ui-sans-serif,system-ui,sans-serif}
+.toolbar .tool,.cardactions select,.map-options select,.editor,.context,.help-dialog{
+ font-family:Manrope,Inter,ui-sans-serif,system-ui,sans-serif
+}
+.card .cardactions select,.map-options select{height:26px;border-radius:7px;font-size:10px}
+*{scrollbar-width:thin;scrollbar-color:#8c94a466 transparent}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{border:1px solid transparent;border-radius:8px;background:#8c94a466;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background:#737e91aa;background-clip:padding-box}
