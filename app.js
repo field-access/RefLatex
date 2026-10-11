@@ -512,9 +512,10 @@ function markmapOptions(n){
  };
 }
 function mapViewportSize(){
+ const scale=clampScale(Number.isFinite(state.targetScale)?state.targetScale:state.scale||1);
  return {
-  width:Math.max(320,Math.min(1600,innerWidth-80)),
-  height:Math.max(320,Math.round(innerHeight*.9))
+  width:Math.max(320,Math.min(1600,Math.floor((innerWidth-80)/scale))),
+  height:Math.max(320,Math.min(1600,Math.round(innerHeight*.88/scale)))
  };
 }
 function prepareMarkmapMarkdown(markdown){
@@ -531,6 +532,10 @@ function prepareMarkmapMarkdown(markdown){
 async function renderMap(n){
  const body=n.el?.querySelector(".cardbody");
  if(!body)return;
+ const renderId=(n.mapRenderId||0)+1;
+ n.mapRenderId=renderId;
+ try{n.mapInstance?.destroy?.()}catch{}
+ n.mapInstance=null;
  applyMapFont(n);
  if(!window.markmap?.Transformer||!window.markmap?.Markmap){
   body.innerHTML='<div class="map-error">Markmap could not load. Check your connection, then reopen this map.</div>';
@@ -548,16 +553,21 @@ async function renderMap(n){
   const map=window.markmap.Markmap.create(svg,options);
   n.mapInstance=map;
   await map.setData(root);
+  if(n.mapRenderId!==renderId||n.type!=="map")return;
   await map.fit();
  }catch(err){
+  if(n.mapRenderId!==renderId||n.type!=="map")return;
   body.innerHTML=`<div class="map-error">${escapeHtml(err.message||"Could not render this map.")}</div>`;
  }
 }
 function setCardType(n,type,record=true){
  if(n.type===type)return;
- const wasMap=n.type==="map";
  if(record)history();
+ n.mapRenderId=(n.mapRenderId||0)+1;
+ try{n.mapInstance?.destroy?.()}catch{}
+ n.mapInstance=null;
  n.type=type;
+ state.spaceFocusStep=0;
  n.el.classList.toggle("map-card",type==="map");
  if(type==="map"){
   n.mapColor=MAP_COLORS.includes(n.mapColor)?n.mapColor:"default";
@@ -583,8 +593,12 @@ function setCardType(n,type,record=true){
   body.innerHTML=renderCardMarkdown(n.md);
   widenCardForTables(n.el);
  }
- if(wasMap&&type==="note")arrange(false);
- else save();
+ layoutCards();
+ const scale=clampScale(Number.isFinite(state.targetScale)?state.targetScale:state.scale||1);
+ const cx=n.x+n.el.offsetWidth/2;
+ const cy=n.y+n.el.offsetHeight/2;
+ moveTo(innerWidth/2-cx*scale,innerHeight/2-cy*scale,scale);
+ save();
 }
 function apply(){
  if(!Number.isFinite(state.x)||!Number.isFinite(state.y)||!Number.isFinite(state.scale)){
@@ -1633,7 +1647,6 @@ window.addEventListener("keydown",e=>{
    if(key==="n")$("#new").click();
    else if(key==="k"&&state.selected){
      setCardType(state.selected,state.selected.type==="map"?"note":"map");
-     focusSelected();
    }else if(key==="m"&&state.selected)openMapTab(state.selected);
    else if(key==="o"&&state.selected)openCardTab(state.selected);
    return;
