@@ -1817,11 +1817,9 @@ function scheduleReflow(){
 function scheduleArrange(){
  requestAnimationFrame(()=>arrange(false));
 }
-const backgrounds=["light","contours","geometry","sun","ocean","stars","planets"];
+const backgrounds=["light","sun","ocean","stars","planets"];
 const backgroundLabels={
  light:"Light",
- contours:"Contours",
- geometry:"Geometry",
  stars:"Stars",
  sun:"Sun",
  planets:"Planets",

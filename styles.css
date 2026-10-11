@@ -42,16 +42,6 @@ body.canvas-panning,body.canvas-panning *{user-select:none!important;-webkit-use
  background-image:url("./assets/backgrounds/ocean.webp");
  background-position:center;background-repeat:no-repeat;background-size:cover;
 }
-#canvas[data-background="contours"]{
- background-color:#faf8f2;
- background-image:url("./assets/backgrounds/contours.webp");
- background-position:center;background-repeat:no-repeat;background-size:cover;
-}
-#canvas[data-background="geometry"]{
- background-color:#faf8f2;
- background-image:url("./assets/backgrounds/geometry.webp");
- background-position:center;background-repeat:no-repeat;background-size:cover;
-}
 #world{position:absolute;left:0;top:0;width:1px;height:1px;transform-origin:0 0}
 body.camera-moving #world{will-change:transform}
 .card{
@@ -737,16 +727,6 @@ body.dark #canvas[data-background="planets"]{
 body.dark #canvas[data-background="ocean"]{
  background-color:#0b1722;
  background-image:linear-gradient(180deg,#07121d55,#07121d99),url("./assets/backgrounds/ocean.webp");
- background-position:center;background-repeat:no-repeat;background-size:cover;
-}
-body.dark #canvas[data-background="contours"]{
- background-color:#151922;
- background-image:linear-gradient(135deg,#10151db8,#171c26c4),url("./assets/backgrounds/contours.webp");
- background-position:center;background-repeat:no-repeat;background-size:cover;
-}
-body.dark #canvas[data-background="geometry"]{
- background-color:#151922;
- background-image:linear-gradient(135deg,#10151db8,#171c26c4),url("./assets/backgrounds/geometry.webp");
  background-position:center;background-repeat:no-repeat;background-size:cover;
 }
 
