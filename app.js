@@ -507,9 +507,14 @@ function renderCardMarkdown(md){
 function markmapOptions(n){
  const colors=MAP_PALETTES[n.mapColor]||MAP_PALETTES.default;
  const depth=node=>node.state?.depth||0;
+ const branchFilter=`markmap-branch-${String(n.id).replace(/[^a-zA-Z0-9_-]/g,"-")}`;
  return {
   color:node=>colors[depth(node)%colors.length],
-  lineWidth:node=>depth(node)===1?3:1.7,
+  // Give the main limbs more weight, then let child branches taper naturally.
+  lineWidth:node=>depth(node)===1?3.6:depth(node)===2?2.25:1.55,
+  // A tiny displacement adds a hand-drawn quality to Markmap's existing curves.
+  // Keep it scoped to the branch paths so labels stay crisp and readable.
+  style:id=>`#${id} .markmap-link{filter:url(#${branchFilter});stroke-linecap:round;stroke-linejoin:round}`,
   duration:350,maxWidth:300,spacingVertical:15,spacingHorizontal:82
  };
 }
@@ -549,6 +554,20 @@ async function renderMap(n){
   body.innerHTML='<div class="map-pane"></div>';
   const pane=body.querySelector(".map-pane");
   const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+  const filterId=`markmap-branch-${String(n.id).replace(/[^a-zA-Z0-9_-]/g,"-")}`;
+  const defs=document.createElementNS("http://www.w3.org/2000/svg","defs");
+  const filter=document.createElementNS("http://www.w3.org/2000/svg","filter");
+  filter.setAttribute("id",filterId);
+  filter.setAttribute("x","-4%");filter.setAttribute("y","-10%");
+  filter.setAttribute("width","108%");filter.setAttribute("height","120%");
+  filter.setAttribute("color-interpolation-filters","sRGB");
+  const turbulence=document.createElementNS("http://www.w3.org/2000/svg","feTurbulence");
+  turbulence.setAttribute("type","fractalNoise");turbulence.setAttribute("baseFrequency",".018 .035");
+  turbulence.setAttribute("numOctaves","1");turbulence.setAttribute("seed","7");turbulence.setAttribute("result","branchNoise");
+  const displacement=document.createElementNS("http://www.w3.org/2000/svg","feDisplacementMap");
+  displacement.setAttribute("in","SourceGraphic");displacement.setAttribute("in2","branchNoise");
+  displacement.setAttribute("scale","1.1");displacement.setAttribute("xChannelSelector","R");displacement.setAttribute("yChannelSelector","G");
+  filter.append(turbulence,displacement);defs.appendChild(filter);svg.appendChild(defs);
   pane.appendChild(svg);
   const options=markmapOptions(n);
   options.initialExpandLevel=6;
@@ -1214,7 +1233,7 @@ function openMapTab(n){
   const rainbow=["#e76f51","#f4a261","#e9c46a","#6b9b67","#299c97","#4e7bc5","#a16bb3","#d5668a"];
   const colors=theme==="default"?rainbow:(MAP_PALETTES[theme]||rainbow);
   const colorPayload=JSON.stringify(colors);
-  const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="${fontStylesheet}"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&family=Patrick+Hand&display=swap"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css"><style>html,body{height:100%;margin:0;background:${surface};color:${textColor};font:14px ${fontStack}}svg{width:100%;height:100%;font-family:${fontStack};font-weight:400}.markmap-node text{font-weight:400!important;fill:${textColor}!important}.markmap-node foreignObject,.markmap-node foreignObject>div,.markmap-foreign{font-family:${fontStack};font-weight:400!important;color:${textColor}!important}</style></head><body><svg id="map"></svg><script src="https://cdn.jsdelivr.net/npm/d3@7"><\/script><script src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18.12"><\/script><script>const md=${payload};const colors=${colorPayload};const root=new markmap.Transformer().transform(md).root;const depth=node=>node.state?.depth||0;markmap.Markmap.create("#map",{duration:350,maxWidth:300,spacingHorizontal:82,spacingVertical:15,color:node=>colors[depth(node)%colors.length],lineWidth:node=>depth(node)===1?3:1.7},root);<\/script></body></html>`;
+  const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="${fontStylesheet}"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&family=Patrick+Hand&display=swap"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css"><style>html,body{height:100%;margin:0;background:${surface};color:${textColor};font:14px ${fontStack}}svg{width:100%;height:100%;font-family:${fontStack};font-weight:400}.markmap-node text{font-weight:400!important;fill:${textColor}!important}.markmap-node foreignObject,.markmap-node foreignObject>div,.markmap-foreign{font-family:${fontStack};font-weight:400!important;color:${textColor}!important}</style></head><body><svg id="map"></svg><script src="https://cdn.jsdelivr.net/npm/d3@7"><\/script><script src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18.12"><\/script><script>const md=${payload};const colors=${colorPayload};const root=new markmap.Transformer().transform(md).root;const depth=node=>node.state?.depth||0;const svg=document.querySelector("#map");svg.innerHTML='<defs><filter id="branch-wobble" x="-4%" y="-10%" width="108%" height="120%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency=".018 .035" numOctaves="1" seed="7" result="branchNoise"/><feDisplacementMap in="SourceGraphic" in2="branchNoise" scale="1.1" xChannelSelector="R" yChannelSelector="G"/></filter></defs>';markmap.Markmap.create(svg,{duration:350,maxWidth:300,spacingHorizontal:82,spacingVertical:15,color:node=>colors[depth(node)%colors.length],lineWidth:node=>depth(node)===1?3.6:depth(node)===2?2.25:1.55,style:id=>"#"+id+" .markmap-link{filter:url(#branch-wobble);stroke-linecap:round;stroke-linejoin:round}"},root);<\/script></body></html>`;
   const tab=window.open();if(!tab){alert("Allow pop-ups to open this mind map.");return}
   tab.document.write(html);tab.document.close();
 }

@@ -785,3 +785,61 @@ body.dark .card .cardactions select option,body.dark .map-options select option{
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{border:1px solid transparent;border-radius:8px;background:#8c94a466;background-clip:padding-box}
 ::-webkit-scrollbar-thumb:hover{background:#737e91aa;background-clip:padding-box}
+
+/* Source editor: a focused writing surface with controls kept visually distinct. */
+.editor{
+ width:min(680px,calc(100vw - 32px));height:min(780px,calc(100vh - 96px));
+ background:color-mix(in srgb,var(--panel) 94%,white 6%);color:var(--ink);
+ border:1px solid color-mix(in srgb,var(--border) 74%,var(--card-accent,#7669d3) 26%);
+ border-radius:18px;box-shadow:0 24px 80px #10152238,0 4px 14px #1015221c;
+ backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)
+}
+.editorhead{
+ min-height:64px;align-items:center;padding:13px 17px 12px 20px;
+ background:linear-gradient(115deg,color-mix(in srgb,var(--panel) 85%,var(--card-accent,#7669d3) 15%),var(--panel));
+ border-bottom:1px solid color-mix(in srgb,var(--border) 75%,transparent)
+}
+.etitle{font-size:13px;font-weight:700;letter-spacing:-.025em;color:var(--ink)}
+.esub{font-size:10px;line-height:1.45;color:var(--muted);margin-top:4px}
+.editorhead .tool{width:30px;height:30px;border-radius:9px;color:var(--muted)}
+.editorhead .tool:hover{background:color-mix(in srgb,var(--card-accent,#7669d3) 12%,transparent);color:var(--ink)}
+#source{
+ min-height:0;padding:21px 23px;background:color-mix(in srgb,var(--paper) 76%,var(--canvas));
+ color:var(--ink);font:13px/1.78 ui-monospace,"Cascadia Code",Consolas,monospace;
+ tab-size:2;caret-color:var(--card-accent,#7669d3)
+}
+#source:focus{box-shadow:inset 3px 0 color-mix(in srgb,var(--card-accent,#7669d3) 70%,transparent)}
+.map-options{
+ flex-wrap:wrap;align-items:center;gap:9px 18px;padding:12px 18px;
+ border-top:1px solid var(--border);background:color-mix(in srgb,var(--panel) 86%,var(--canvas));
+}
+.map-options label{font-size:10px;font-weight:600;letter-spacing:.02em}
+.map-options select{min-width:112px;height:30px!important;padding:0 27px 0 10px!important;border-radius:9px!important;font-size:11px!important}
+.editorfoot{
+ min-height:58px;align-items:center;padding:10px 14px;border-top:1px solid var(--border);
+ background:color-mix(in srgb,var(--panel) 94%,var(--canvas));gap:8px
+}
+.editorfoot button{min-height:34px;padding:0 15px;border:1px solid transparent;border-radius:10px;font:600 11px Manrope,Inter,ui-sans-serif,system-ui,sans-serif;transition:transform .14s ease,background .14s ease,border-color .14s ease,box-shadow .14s ease}
+.editorfoot button:hover{transform:translateY(-1px)}
+.editorfoot .cancel{background:transparent;color:var(--muted);border-color:var(--border)}
+.editorfoot .cancel:hover{background:color-mix(in srgb,var(--paper) 78%,var(--canvas));color:var(--ink)}
+.editorfoot .apply{background:var(--card-accent,#7669d3);color:#fff;box-shadow:0 3px 10px color-mix(in srgb,var(--card-accent,#7669d3) 25%,transparent)}
+.editorfoot .apply:hover{filter:brightness(1.07);box-shadow:0 5px 16px color-mix(in srgb,var(--card-accent,#7669d3) 34%,transparent)}
+body.dark .editor{
+ background:color-mix(in srgb,#1d222b 94%,var(--card-accent-dark,#b6aaff) 6%);
+ border-color:color-mix(in srgb,#4a5260 72%,var(--card-accent-dark,#b6aaff) 28%);
+ box-shadow:0 28px 90px #0009,0 4px 18px #0006
+}
+body.dark .editorhead{background:linear-gradient(115deg,color-mix(in srgb,#252b36 88%,var(--card-accent-dark,#b6aaff) 12%),#20252e)}
+body.dark #source{background:#171b22;color:#e6eaf1;caret-color:var(--card-accent-dark,#b6aaff)}
+body.dark #source:focus{box-shadow:inset 3px 0 color-mix(in srgb,var(--card-accent-dark,#b6aaff) 76%,transparent)}
+body.dark .map-options,body.dark .editorfoot{background:#20252e;border-color:#383f4b}
+body.dark .editorfoot .cancel{color:#b9c0cc;border-color:#414956}
+body.dark .editorfoot .cancel:hover{background:#303744;color:#f1f3f7}
+@media(max-width:560px){
+ .editor{left:8px;top:52px;width:calc(100vw - 16px);height:calc(100vh - 64px);border-radius:14px}
+ .editorfoot{gap:6px;padding:9px}
+ .editorfoot button{padding:0 10px}
+ .map-options{gap:8px 12px;padding:10px 12px}
+ .map-options select{min-width:98px!important}
+}
