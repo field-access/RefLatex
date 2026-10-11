@@ -843,3 +843,44 @@ body.dark .editorfoot .cancel:hover{background:#303744;color:#f1f3f7}
  .map-options{gap:8px 12px;padding:10px 12px}
  .map-options select{min-width:98px!important}
 }
+
+/* Keep the title and the selected-card controls in separate header rows. */
+.card{min-width:410px}
+.map-card{min-width:420px}
+.card.selected.has-title .cardbar{height:64px}
+.card.selected:not(.has-title) .cardbar{height:36px}
+.map-card.selected.has-title .cardbody{height:calc(100% - 64px)}
+.map-card.selected:not(.has-title) .cardbody{height:calc(100% - 36px)}
+.cardactions{
+ top:35px;left:10px;right:10px;height:26px;min-width:0;flex-wrap:nowrap;
+ justify-content:flex-end;gap:3px;overflow:visible
+}
+.card:not(.has-title) .cardactions{top:4px}
+.cardactions select{
+ flex:0 1 auto;min-width:0!important;height:25px!important;padding:0 23px 0 8px!important;
+ border-radius:10px!important;white-space:nowrap
+}
+.cardactions select[data-view]{width:66px;max-width:66px}
+.cardactions select[data-map-color]{width:70px;max-width:70px}
+.cardactions select[data-map-font]{width:88px;max-width:88px}
+.cardactions select[data-font]{width:76px;max-width:76px}
+.cardactions select[data-size]{width:54px;max-width:54px}
+.cardactions button{flex:0 0 22px;width:22px;height:24px;border-radius:8px}
+.card.has-title .map-title{
+ left:24px;right:16px;top:7px;max-width:none;width:auto;
+ font-size:12px;line-height:18px
+}
+.card.has-title .map-title::after{bottom:-8px;width:30px}
+.card .cardactions select,.map-options select{border-radius:10px!important}
+@media(max-width:440px){
+ .card,.map-card{min-width:calc(100vw - 24px)}
+ .cardactions{left:6px;right:6px;gap:2px;flex-wrap:wrap;height:auto}
+ .cardactions select{padding-left:6px!important;padding-right:20px!important}
+ .cardactions select[data-map-font]{width:78px;max-width:78px}
+ .cardactions button{flex-basis:20px;width:20px}
+ .card.selected.has-title .cardbar{height:90px}
+ .card.selected:not(.has-title) .cardbar{height:62px}
+ .card:not(.has-title) .cardactions{top:4px}
+ .map-card.selected.has-title .cardbody{height:calc(100% - 90px)}
+ .map-card.selected:not(.has-title) .cardbody{height:calc(100% - 62px)}
+}
