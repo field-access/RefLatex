@@ -112,6 +112,119 @@ function populateCardFontSelect(el,font){
  selectEl.replaceChildren(...CARD_FONTS.map(([value,label])=>new Option(label,value)));
  selectEl.value=normalizeCardFont(font);
 }
+
+let activeCardMenu=null;
+let cardMenuId=0;
+function syncCardSelect(select){
+ const wrap=select?.closest(".custom-select");
+ if(!wrap)return;
+ const option=select.selectedOptions[0];
+ const trigger=wrap.querySelector(".custom-select-trigger");
+ if(trigger){
+  trigger.querySelector(".custom-select-label").textContent=option?.textContent||"Select";
+  trigger.setAttribute("aria-label",`${select.getAttribute("aria-label")||"Option"}: ${option?.textContent||"Select"}`);
+ }
+ wrap.querySelectorAll(".custom-select-option").forEach(item=>{
+  const selected=item.dataset.value===select.value;
+  item.setAttribute("aria-selected",String(selected));
+  item.classList.toggle("is-selected",selected);
+ });
+}
+function closeCardMenu(restoreFocus=false){
+ if(!activeCardMenu)return;
+ const {wrap,trigger}=activeCardMenu;
+ activeCardMenu.menu.remove();
+ trigger.setAttribute("aria-expanded","false");
+ wrap.classList.remove("menu-open");
+ activeCardMenu=null;
+ if(restoreFocus)trigger.focus();
+}
+function placeCardMenu(menu,trigger){
+ const rect=trigger.getBoundingClientRect();
+ const gap=6,margin=8;
+ const below=innerHeight-rect.bottom-margin;
+ const above=rect.top-margin;
+ const placeAbove=below<210&&above>below;
+ const available=placeAbove?above:below;
+ const height=Math.min(menu.scrollHeight,280,Math.max(100,available-gap));
+ menu.style.maxHeight=`${height}px`;
+ menu.style.minWidth=`${Math.max(154,rect.width)}px`;
+ menu.style.left=`${Math.max(margin,Math.min(rect.left,innerWidth-margin-menu.offsetWidth))}px`;
+ menu.style.top=placeAbove?`${Math.max(margin,rect.top-gap-height)}px`:`${Math.min(innerHeight-margin-height,rect.bottom+gap)}px`;
+}
+function openCardMenu(wrap){
+ if(activeCardMenu?.wrap===wrap){closeCardMenu();return}
+ closeCardMenu();
+ const select=wrap.querySelector("select"),trigger=wrap.querySelector(".custom-select-trigger");
+ const menu=document.createElement("div");
+ menu.className="custom-select-menu";menu.id=`card-select-menu-${++cardMenuId}`;
+ menu.setAttribute("role","listbox");menu.setAttribute("aria-label",select.getAttribute("aria-label")||"Choose an option");
+ const card=wrap.closest(".card");
+ if(card){
+  const styles=getComputedStyle(card);
+  menu.style.setProperty("--menu-accent",styles.getPropertyValue(document.body.classList.contains("dark")?"--card-accent-dark":"--card-accent").trim()||"#7669d3");
+ }
+ for(const option of select.options){
+  const item=document.createElement("button");
+  item.type="button";item.className="custom-select-option";item.setAttribute("role","option");
+  item.dataset.value=option.value;item.textContent=option.textContent;
+  item.setAttribute("aria-selected",String(option.value===select.value));
+  item.classList.toggle("is-selected",option.value===select.value);
+  item.addEventListener("click",()=>{
+   select.value=option.value;
+   select.dispatchEvent(new Event("change",{bubbles:true}));
+   syncCardSelect(select);closeCardMenu();trigger.focus();
+  });
+  menu.appendChild(item);
+ }
+ document.body.appendChild(menu);
+ trigger.setAttribute("aria-expanded","true");trigger.setAttribute("aria-controls",menu.id);
+ wrap.classList.add("menu-open");
+ activeCardMenu={wrap,trigger,menu};
+ placeCardMenu(menu,trigger);
+ const current=menu.querySelector('[aria-selected="true"]')||menu.firstElementChild;
+ current?.focus({preventScroll:true});
+ current?.scrollIntoView({block:"nearest"});
+ menu.addEventListener("keydown",e=>{
+  const options=[...menu.querySelectorAll(".custom-select-option")];
+  const index=options.indexOf(document.activeElement);
+  let next=null;
+  if(e.key==="ArrowDown")next=options[(index+1)%options.length];
+  else if(e.key==="ArrowUp")next=options[(index-1+options.length)%options.length];
+  else if(e.key==="Home")next=options[0];
+  else if(e.key==="End")next=options.at(-1);
+  else if(e.key==="Escape"){e.preventDefault();closeCardMenu(true);return}
+  else if(e.key==="Tab"){closeCardMenu();return}
+  if(next){e.preventDefault();next.focus();next.scrollIntoView({block:"nearest"})}
+ });
+}
+function enhanceCardSelects(card){
+ card.querySelectorAll(".cardactions select").forEach(select=>{
+  if(select.closest(".custom-select"))return;
+  const wrap=document.createElement("div");
+  wrap.className=`custom-select ${select.className}`;
+  wrap.dataset.control=select.dataset.view?"view":select.dataset.mapColor?"theme":select.dataset.mapFont?"map-font":select.dataset.font?"font":"size";
+  const trigger=document.createElement("button");
+  trigger.type="button";trigger.className="custom-select-trigger";
+  trigger.setAttribute("aria-haspopup","listbox");trigger.setAttribute("aria-expanded","false");
+  trigger.title=select.title||select.getAttribute("aria-label")||"Choose an option";
+  trigger.innerHTML='<span class="custom-select-label"></span><svg class="custom-select-chevron" viewBox="0 0 12 12" aria-hidden="true"><path d="m3 4.5 3 3 3-3"/></svg>';
+  trigger.addEventListener("click",()=>openCardMenu(wrap));
+  trigger.addEventListener("keydown",e=>{
+   if(["ArrowDown","ArrowUp","Enter"," "].includes(e.key)){
+    e.preventDefault();openCardMenu(wrap);
+   }
+  });
+  select.classList.add("native-card-select");select.tabIndex=-1;select.setAttribute("aria-hidden","true");
+  select.addEventListener("change",()=>syncCardSelect(select));
+  select.before(wrap);wrap.append(trigger,select);
+  syncCardSelect(select);
+ });
+}
+document.addEventListener("click",e=>{
+ if(activeCardMenu&&!activeCardMenu.menu.contains(e.target)&&!activeCardMenu.wrap.contains(e.target))closeCardMenu();
+});
+window.addEventListener("resize",()=>{if(activeCardMenu)placeCardMenu(activeCardMenu.menu,activeCardMenu.trigger)});
 const editorMapFont=$("#mapFont");
 editorMapFont.replaceChildren(...CARD_FONTS.map(([value,label])=>new Option(label,value)));
 
@@ -523,7 +636,7 @@ function mapViewportSize(){
   // Map dimensions describe the card itself, not canvas world units at the
   // current camera zoom. Keeping them viewport-based prevents huge cards when
   // the canvas happens to be zoomed far out.
-  width:Math.max(420,Math.min(1600,Math.floor(innerWidth-80))),
+  width:Math.max(440,Math.min(1600,Math.floor(innerWidth-80))),
   height:Math.max(320,Math.min(1400,Math.round(innerHeight*.82)))
  };
 }
@@ -608,7 +721,7 @@ function setCardType(n,type,record=true){
  n.el.dataset.mapColor=n.mapColor||"default";
  updateCardHeading(n);
  const view=n.el.querySelector("[data-view]");
- if(view)view.value=type;
+ if(view){view.value=type;syncCardSelect(view)}
  const body=n.el.querySelector(".cardbody");
  if(type==="map"){
   renderMap(n);
@@ -618,7 +731,10 @@ function setCardType(n,type,record=true){
  }
  layoutCards();
  if(state.selected===n){
-  requestAnimationFrame(()=>focusSelected("readable"));
+  requestAnimationFrame(async()=>{
+   await focusSelected("readable");
+   if(state.selected===n)state.spaceFocusStep=0;
+  });
   save();
   return;
  }
@@ -899,8 +1015,8 @@ function openCanvasFile(file){
 
 function makeNote(md,x,y,w=600,record=true,id=null,font="mono",size="100",mapColor=randomCardTheme(),mapFont="modern",mapWidth=null,mapHeight=null){
  if(record)history();
- const width=Math.max(410,Math.min(1200,w||600));
-const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size,width,type:"note",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:normalizeMapFont(mapFont),mapWidth:Number.isFinite(mapWidth)?Math.max(420,Math.min(1600,mapWidth)):null,mapHeight:Number.isFinite(mapHeight)?Math.max(320,Math.min(1200,mapHeight)):null,el:null};
+ const width=Math.max(440,Math.min(1200,w||600));
+const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size,width,type:"note",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:normalizeMapFont(mapFont),mapWidth:Number.isFinite(mapWidth)?Math.max(440,Math.min(1600,mapWidth)):null,mapHeight:Number.isFinite(mapHeight)?Math.max(320,Math.min(1200,mapHeight)):null,el:null};
  state.nextId=Math.max(state.nextId,n.id+1);
  const el=document.createElement("article");
  el.className="card";el.style.left=x+"px";el.style.top=y+"px";el.style.width=width+"px";
@@ -917,7 +1033,8 @@ const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size,width,ty
  populateCardFontSelect(el,font);
  el.dataset.fontSize=["70","80","90","100","110","125","140","160","180"].includes(String(size))?String(size):"100";
  el.querySelector("[data-size]").value=el.dataset.fontSize;
- n.el=el;applyMapFont(n);populateMapFontSelect(el,n.mapFont);updateCardHeading(n);world.appendChild(el);state.notes.push(n);
+ n.el=el;applyMapFont(n);populateMapFontSelect(el,n.mapFont);updateCardHeading(n);
+ enhanceCardSelects(el);world.appendChild(el);state.notes.push(n);
  widenCardForTables(el);
 
  el.addEventListener("pointerdown",e=>{
@@ -961,7 +1078,7 @@ const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size,width,ty
 function makeMap(md,x,y,w=null,h=null,record=true,id=null,mapColor=randomCardTheme(),mapFont="modern"){
  if(record)history();
  const viewport=mapViewportSize();
- const width=Math.max(420,Math.min(1600,w||viewport.width));
+ const width=Math.max(440,Math.min(1600,w||viewport.width));
  const height=Math.max(320,h||viewport.height);
 const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type:"map",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:normalizeMapFont(mapFont),font:"mono",size:"100",el:null,mapInstance:null};
  state.nextId=Math.max(state.nextId,n.id+1);
@@ -979,6 +1096,7 @@ const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type
  populateCardFontSelect(el,n.font);
  el.querySelector("[data-size]").value=n.size;
  el.dataset.fontSize=n.size;
+ enhanceCardSelects(el);
  el.querySelector(".cardbody").style.setProperty("--card-font-scale",String(Number(n.size)/100));
  el.addEventListener("pointerdown",e=>{
   if(e.target.closest(".cardactions"))return;
@@ -1014,7 +1132,7 @@ window.addEventListener("mousemove",e=>{
    r.n.el.style.height=h+"px";
    r.n.mapHeight=h;
   }else{
-   const minWidth=Math.min(r.n.type==="map"?420:410,Math.max(300,innerWidth-24));
+   const minWidth=Math.min(440,Math.max(300,innerWidth-24));
    const w=Math.max(minWidth,Math.min(1600,r.w+(r.side==="right"?dx:-dx)));
    r.n.el.style.width=w+"px";
    if(r.n.type==="map")r.n.mapWidth=w;
@@ -1588,14 +1706,14 @@ function setCardColorTheme(n,color,record=true){
  n.mapColor=next;
  n.el.dataset.mapColor=next;
  const selectEl=n.el.querySelector("[data-map-color]");
- if(selectEl)selectEl.value=next;
+ if(selectEl){selectEl.value=next;syncCardSelect(selectEl)}
  if(n.type==="map")renderMap(n);
  save();
 }
 
 function resizeSelectedWidth(direction){
  const n=state.selected;if(!n)return;
- const min=Math.min(n.type==="map"?420:410,Math.max(300,innerWidth-24)),max=n.type==="map"?1600:1200;
+ const min=Math.min(440,Math.max(300,innerWidth-24)),max=n.type==="map"?1600:1200;
  const current=n.type==="map"?(n.mapWidth||n.el.offsetWidth):(n.width||n.el.offsetWidth);
  const width=Math.max(min,Math.min(max,current+direction*40));
  if(width===current)return;
@@ -1617,6 +1735,7 @@ window.addEventListener("keydown",e=>{
  const editing=document.activeElement===source ||
    document.activeElement?.tagName==="INPUT" ||
    document.activeElement?.tagName==="TEXTAREA";
+ const customSelectFocused=document.activeElement?.closest?.(".custom-select-trigger,.custom-select-menu");
 
  showControls();
 
@@ -1625,7 +1744,7 @@ window.addEventListener("keydown",e=>{
   * - selected card -> focus it
   * - canvas panning is available with middle or right mouse button
   */
- if(e.code==="Space"&&!editing){
+ if(e.code==="Space"&&!editing&&!customSelectFocused){
    e.preventDefault();
    if(e.repeat)return;
    if(state.selected){
@@ -1648,6 +1767,7 @@ window.addEventListener("keydown",e=>{
    }
    return;
  }
+ if(customSelectFocused)return;
 
  /*
   * TOOLBAR AND ZOOM SHORTCUTS
