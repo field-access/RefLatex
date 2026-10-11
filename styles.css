@@ -945,3 +945,46 @@ body.dark .cardbody pre.line-numbered{--code-accent:var(--card-accent-dark,var(-
 .cardbody pre.line-numbered .hljs-variable{color:#89ddff}
 .cardbody pre.line-numbered .hljs-meta,
 .cardbody pre.line-numbered .hljs-section{color:#ffcb6b}
+.card[data-map-color="default"]{--code-tint:#ded9ff}
+.card[data-map-color="purple"]{--code-tint:#ead8ff}
+.card[data-map-color="warm"]{--code-tint:#ffe3c8}
+.card[data-map-color="ocean"]{--code-tint:#c8eeeb}
+.card[data-map-color="forest"]{--code-tint:#dcefd6}
+.card[data-map-color="sunset"]{--code-tint:#ffddd6}
+.card[data-map-color="slate"]{--code-tint:#dce5f1}
+body:not(.dark) .cardbody pre.line-numbered{
+ --code-accent:var(--card-accent,#7669d3);
+ color:#293448;
+ background:linear-gradient(135deg,
+  color-mix(in srgb,color-mix(in srgb,#fff 84%,var(--code-tint,#ded9ff) 16%) 88%,transparent),
+  color-mix(in srgb,color-mix(in srgb,#fff 74%,var(--code-tint,#ded9ff) 26%) 84%,transparent));
+ border-color:color-mix(in srgb,var(--code-accent) 34%,#fff);
+ box-shadow:0 10px 26px #27364c12,0 0 17px color-mix(in srgb,var(--code-tint,#ded9ff) 42%,transparent),inset 0 1px 0 #ffffffc9;
+}
+body:not(.dark) .cardbody pre.line-numbered .code-gutter{
+ color:#738096;
+ background:linear-gradient(90deg,
+  color-mix(in srgb,color-mix(in srgb,#fff 82%,var(--code-tint,#ded9ff) 18%) 88%,transparent) 0%,
+  color-mix(in srgb,color-mix(in srgb,#fff 82%,var(--code-tint,#ded9ff) 18%) 88%,transparent) 78%,transparent 100%);
+}
+body:not(.dark) .cardbody pre.line-numbered code{color:#293448}
+body:not(.dark) .cardbody pre.line-numbered .hljs-keyword,
+body:not(.dark) .cardbody pre.line-numbered .hljs-selector-tag,
+body:not(.dark) .cardbody pre.line-numbered .hljs-literal,
+body:not(.dark) .cardbody pre.line-numbered .hljs-built_in{color:#7441b8}
+body:not(.dark) .cardbody pre.line-numbered .hljs-title.function_,
+body:not(.dark) .cardbody pre.line-numbered .hljs-title.class_,
+body:not(.dark) .cardbody pre.line-numbered .hljs-function .hljs-title{color:#2459a6}
+body:not(.dark) .cardbody pre.line-numbered .hljs-string,
+body:not(.dark) .cardbody pre.line-numbered .hljs-attr,
+body:not(.dark) .cardbody pre.line-numbered .hljs-template-variable{color:#28743b}
+body:not(.dark) .cardbody pre.line-numbered .hljs-number,
+body:not(.dark) .cardbody pre.line-numbered .hljs-regexp,
+body:not(.dark) .cardbody pre.line-numbered .hljs-symbol{color:#b45309}
+body:not(.dark) .cardbody pre.line-numbered .hljs-comment,
+body:not(.dark) .cardbody pre.line-numbered .hljs-quote{color:#68778c}
+body:not(.dark) .cardbody pre.line-numbered .hljs-type,
+body:not(.dark) .cardbody pre.line-numbered .hljs-params,
+body:not(.dark) .cardbody pre.line-numbered .hljs-variable{color:#087b8b}
+body:not(.dark) .cardbody pre.line-numbered .hljs-meta,
+body:not(.dark) .cardbody pre.line-numbered .hljs-section{color:#a35b00}
