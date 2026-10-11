@@ -824,11 +824,11 @@ body.dark .editorfoot .cancel:hover{background:#303744;color:#f1f3f7}
 }
 .card:not(.has-title) .cardactions{top:4px}
 .custom-select{position:relative;flex:0 0 auto;min-width:0;height:24px}
-.custom-select[data-control="view"]{width:88px}
-.custom-select[data-control="theme"]{width:112px}
-.custom-select[data-control="map-font"]{width:128px}
-.custom-select[data-control="font"]{width:116px}
-.custom-select[data-control="size"]{width:72px}
+.custom-select[data-control="view"]{width:78px}
+.custom-select[data-control="theme"]{width:98px}
+.custom-select[data-control="map-font"]{width:98px}
+.custom-select[data-control="font"]{width:98px}
+.custom-select[data-control="size"]{width:62px}
 .native-card-select{display:none!important}
 .custom-select-trigger{
  display:flex!important;align-items:center;justify-content:space-between;gap:4px;
@@ -845,7 +845,7 @@ body.dark .editorfoot .cancel:hover{background:#303744;color:#f1f3f7}
 .cardactions .custom-select.map-only{display:none}
 .map-card .cardactions .custom-select.map-only{display:flex}
 .map-card .cardactions .custom-select[data-control="font"]{display:none}
-.cardactions button{flex:0 0 22px;width:22px;height:24px;border-radius:8px}
+.cardactions button{flex:0 0 20px;width:20px;height:24px;border-radius:8px}
 .card.has-title .map-title{
  left:23px;right:16px;top:4px;max-width:none;width:auto;
  font-size:11px;line-height:14px
@@ -875,8 +875,7 @@ body.dark .custom-select-group{color:#9ca4b3}
 @media(max-width:534px){
  .card,.map-card{min-width:calc(100vw - 24px)}
  .cardactions{left:6px;right:6px;gap:2px;flex-wrap:wrap;height:auto}
- .custom-select[data-control="map-font"]{width:112px}
- .cardactions button{flex-basis:20px;width:20px}
+ .custom-select[data-control="map-font"]{width:94px}
  .card.selected.has-title .cardbar{height:72px}
  .card.selected:not(.has-title) .cardbar{height:52px}
  .card:not(.has-title) .cardactions{top:4px}
