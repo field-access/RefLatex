@@ -5,11 +5,16 @@
 *{box-sizing:border-box}
 html,body{width:100%;height:100%;margin:0;overflow:hidden}
 body{font-family:Manrope,Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--canvas)}
+
 #canvas{
  position:fixed;inset:0;overflow:hidden;touch-action:none;
  background-color:var(--canvas);
  cursor:default;
 }
+body.hand-mode #canvas{cursor:grab}
+body.hand-mode #canvas:active,body.canvas-panning #canvas{cursor:grabbing}
+body :is(button,a,select,[role="button"]){cursor:pointer}
+body.canvas-panning,body.canvas-panning *{user-select:none!important;-webkit-user-select:none!important}
 #canvas[data-background="light"]{
  background-color:#d9d6cf;
  background-image:none;
@@ -47,7 +52,8 @@ body.camera-moving #world{will-change:transform}
 }
 .map-card .cardbar{height:32px;background:linear-gradient(90deg,#eeebff,#f8f6ff);border-bottom-color:#ded9f6}
 .map-card .cardbody{height:calc(100% - 32px);padding:0;overflow:hidden}
-.map-pane{min-width:0;height:100%;overflow:hidden;background:var(--map-surface,#fbfaff);transition:background .2s ease}
+.map-pane{min-width:0;height:100%;overflow:hidden;background:var(--map-surface,#fbfaff);transition:background .2s ease;cursor:grab}
+.map-pane.pen-panning{cursor:grabbing}
 .map-pane svg{display:block;width:100%;height:100%;font-family:var(--map-font-family,"Inter",ui-sans-serif,system-ui,sans-serif)}
 .map-card .markmap-link{stroke-linecap:round;opacity:.86}
 .map-card .markmap-node circle{stroke:var(--paper);stroke-width:2px;filter:drop-shadow(0 1px 2px #0002)}
@@ -108,6 +114,7 @@ body.camera-moving #world{will-change:transform}
  padding:28px 42px 38px;
  overflow-wrap:anywhere;
  user-select:text;
+ cursor:pointer;
  --card-font-scale:1;
 }
 .cardbody h1,.cardbody h2,.cardbody h3,.cardbody h4,.cardbody h5{
@@ -215,28 +222,29 @@ body.camera-moving #world{will-change:transform}
  min-width:40px;
  padding:0;
  display:grid;place-items:center;
- border:0;border-radius:10px;
- background:transparent;
+ border:1px solid var(--border);border-radius:12px;
+ background:var(--paper);
  color:#3c3a36;
  font-size:16px;
  line-height:1;
  cursor:pointer;
- transition:background .14s ease,color .14s ease,transform .12s ease;
+ transition:background-color .1s ease,color .1s ease,transform .08s ease,border-color .1s ease;
 }
-.toolbar .tool:hover{background:#00000009}
+.toolbar .tool:hover{background:var(--panel);border-color:var(--border)}
 .toolbar .tool:active{transform:scale(.92)}
 .icon{display:block;width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .toolbar .tool .icon{width:20px;height:20px}
 .toolbar .tool.active{
  background:var(--accent);
  color:#fff;
+ border-color:var(--accent);
 }
 .background-picker{position:relative}
 .toolbar .background-select{
- width:40px;height:40px;padding:0;border:0;border-radius:10px;
- background:transparent;color:#3c3a36;font-size:19px;cursor:pointer;
+ width:40px;height:40px;padding:0;border-radius:12px;
+ color:#3c3a36;font-size:19px;cursor:pointer;
 }
-.toolbar .background-select:hover,.toolbar .background-select[aria-expanded="true"]{background:#00000009}
+.toolbar .background-select:hover,.toolbar .background-select[aria-expanded="true"]{background:var(--panel);border-color:var(--border)}
 .background-menu{
  position:absolute;left:48px;top:0;display:none;width:150px;padding:5px;
  background:#faf9f6;border:1px solid #00000018;border-radius:9px;z-index:50;
@@ -290,7 +298,7 @@ button.tool,.zoom button{
 }
 button.tool:hover,.zoom button:hover{background:#ebe9e3}
 button.tool.active{background:#e8e6ff;color:var(--accent)}
-.primary{background:#292826!important;color:#fff!important}
+.toolbar .tool.primary{background:var(--accent)!important;color:#fff!important;border-color:var(--accent)}
 .divider{width:1px;height:20px;background:#d0ccc4;margin:0 3px}
 .zlabel{min-width:44px;text-align:center;font-size:11px;color:#77736b}
 
@@ -753,6 +761,7 @@ body.dark .card .cardactions select option,body.dark .map-options select option{
 
 /* Source editor: a focused writing surface with controls kept visually distinct. */
 .editor{
+ left:50%;top:50%;transform:translate(-50%,-50%);
  width:min(680px,calc(100vw - 32px));height:min(780px,calc(100vh - 96px));
  background:color-mix(in srgb,var(--panel) 94%,white 6%);color:var(--ink);
  border:1px solid color-mix(in srgb,var(--border) 74%,var(--card-accent,#7669d3) 26%);
@@ -802,7 +811,7 @@ body.dark .map-options,body.dark .editorfoot{background:#20252e;border-color:#38
 body.dark .editorfoot .cancel{color:#b9c0cc;border-color:#414956}
 body.dark .editorfoot .cancel:hover{background:#303744;color:#f1f3f7}
 @media(max-width:560px){
- .editor{left:8px;top:52px;width:calc(100vw - 16px);height:calc(100vh - 64px);border-radius:14px}
+ .editor{left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100vw - 16px);height:calc(100vh - 32px);border-radius:14px}
  .editorfoot{gap:6px;padding:9px}
  .editorfoot button{padding:0 10px}
  .map-options{gap:8px 12px;padding:10px 12px}

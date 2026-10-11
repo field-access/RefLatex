@@ -24,7 +24,7 @@
 <div id="canvas">
  <div id="world">
  </div>
- <div class="empty" id="empty"><div><b>Paste Markdown + LaTeX here</b><span>A quiet PureRef-style reading board</span></div></div>
+ <div class="empty" id="empty"></div>
 </div>
 
 <div class="toolbar" id="toolbar" aria-label="Canvas buttons">
@@ -73,13 +73,7 @@
 
 <div class="editor" id="editor">
  <div class="editorhead"><div><div class="etitle">Markdown source</div><div class="esub">Use the same source as a readable card or a Markmap</div></div><button class="tool" id="close" title="Close editor (Esc)" aria-label="Close editor"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
- <textarea id="source" spellcheck="false" placeholder="# Concept
-
-Explain the idea here.
-
-For $T(n)=2T(n/2)+n$,
-
-$$T(n)=O(n\log n)$$"></textarea>
+ <textarea id="source" spellcheck="false"></textarea>
  <div class="map-options" id="mapOptions">
   <label>Palette <select id="mapColor"><option value="default">Midnight</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select></label>
   <label>Font <select id="mapFont"><option value="modern">Modern</option><option value="editorial">Editorial</option><option value="geometric">Geometric</option><option value="humanist">Humanist</option><option value="mono">Mono</option><option value="rounded">Rounded</option><option value="handwritten">Handwritten</option></select></label>

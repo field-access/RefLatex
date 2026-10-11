@@ -773,6 +773,83 @@ function mapViewportSize(){
   height:Math.max(320,Math.min(1600,Math.round(innerHeight*.94)))
  };
 }
+function enablePenMapPan(pane,svg,map){
+ let drag=null,suppressClickUntil=0,compatMouseUntil=0,panFrame=0,glideFrame=0;
+ let pendingX=0,pendingY=0,velocityX=0,velocityY=0;
+ const translate=(dx,dy)=>{
+  const scale=window.d3?.zoomTransform?.(svg)?.k||1;
+  if(window.d3&&map.zoom?.translateBy)window.d3.select(svg).call(map.zoom.translateBy,dx/scale,dy/scale);
+ };
+ const flush=()=>{
+  panFrame=0;
+  if(!pendingX&&!pendingY)return;
+  const dx=pendingX,dy=pendingY;pendingX=pendingY=0;translate(dx,dy);
+ };
+ const queuePan=(dx,dy)=>{
+  pendingX+=dx;pendingY+=dy;
+  if(!panFrame)panFrame=requestAnimationFrame(flush);
+ };
+ const glide=()=>{
+  if(glideFrame)cancelAnimationFrame(glideFrame);
+  let previous=performance.now();
+  const step=now=>{
+   const elapsed=Math.min(32,Math.max(1,now-previous));previous=now;
+   translate(velocityX*elapsed,velocityY*elapsed);
+   const friction=Math.exp(-elapsed/105);
+   velocityX*=friction;velocityY*=friction;
+   if(Math.hypot(velocityX,velocityY)>.012)glideFrame=requestAnimationFrame(step);
+   else glideFrame=0;
+  };
+  glideFrame=requestAnimationFrame(step);
+ };
+ pane.addEventListener("pointerdown",e=>{
+  if(e.pointerType!=="pen"||e.button!==0||e.target.closest(".cardactions,.resize"))return;
+  if(glideFrame){cancelAnimationFrame(glideFrame);glideFrame=0}
+  velocityX=velocityY=0;
+  drag={id:e.pointerId,x:e.clientX,y:e.clientY,lastX:e.clientX,lastY:e.clientY,lastTime:e.timeStamp,moved:false};
+  compatMouseUntil=performance.now()+140;
+  try{pane.setPointerCapture(e.pointerId)}catch{}
+ },true);
+ pane.addEventListener("mousedown",e=>{
+  if(performance.now()>compatMouseUntil)return;
+  e.preventDefault();e.stopImmediatePropagation();
+ },true);
+ pane.addEventListener("pointermove",e=>{
+  if(!drag||drag.id!==e.pointerId)return;
+  const coalesced=e.getCoalescedEvents?.();
+  const events=coalesced?.length?coalesced:[e];
+  for(const point of events){
+   if(!drag.moved&&Math.hypot(point.clientX-drag.x,point.clientY-drag.y)<4)continue;
+   drag.moved=true;
+   const dx=point.clientX-drag.lastX,dy=point.clientY-drag.lastY;
+   const elapsed=Math.max(1,point.timeStamp-drag.lastTime);
+   const blend=1-Math.exp(-elapsed/42);
+   velocityX+=(dx/elapsed-velocityX)*blend;velocityY+=(dy/elapsed-velocityY)*blend;
+   queuePan(dx,dy);drag.lastX=point.clientX;drag.lastY=point.clientY;drag.lastTime=point.timeStamp;
+  }
+  if(drag.moved){e.preventDefault();pane.classList.add("pen-panning")}
+ },{passive:false});
+ const finish=e=>{
+  if(!drag||drag.id!==e.pointerId)return;
+  const moved=drag.moved;
+  if(panFrame){cancelAnimationFrame(panFrame);flush()}
+  if(moved){
+   suppressClickUntil=performance.now()+400;
+   if(e.type==="pointerup"){
+    const speed=Math.hypot(velocityX,velocityY),limit=.32;
+    if(speed>limit){velocityX*=limit/speed;velocityY*=limit/speed}
+    if(speed>.035)glide();
+   }
+  }
+  drag=null;pane.classList.remove("pen-panning");
+ };
+ pane.addEventListener("pointerup",finish,true);
+ pane.addEventListener("pointercancel",finish,true);
+ pane.addEventListener("click",e=>{
+  if(performance.now()>suppressClickUntil)return;
+  e.preventDefault();e.stopImmediatePropagation();
+ },true);
+}
 function prepareMarkmapMarkdown(markdown){
  const code=[];
  let source=String(markdown).replace(/(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]*`)/g,match=>{
@@ -819,10 +896,18 @@ async function renderMap(n){
   pane.appendChild(svg);
   const options=markmapOptions(n);
   options.initialExpandLevel=6;
+  // renderMap performs one explicit fit after the SVG has finished laying out.
+  // Disable Markmap's implicit setData fit so there is only one initial transform.
+  options.autoFit=false;
   const map=window.markmap.Markmap.create(svg,options);
+  // Make wheel and trackpad zoom respond more directly without changing panning.
+  map.zoom?.wheelDelta?.(event=>
+   -event.deltaY*(event.deltaMode===1?0.05:event.deltaMode===2?1:0.002)*(event.ctrlKey?10:1)*2.2
+  );
   n.mapInstance=map;
   await map.setData(root);
   if(n.mapRenderId!==renderId||n.type!=="map")return;
+  enablePenMapPan(pane,svg,map);
   await map.fit();
  }catch(err){
   if(n.mapRenderId!==renderId||n.type!=="map")return;
@@ -1268,12 +1353,13 @@ window.addEventListener("mousemove",e=>{
   }
   scheduleReflow();
  }
- if(state.pan){
+ if(state.pan&&state.pan.pointerId==null){
   state.x=state.pan.x+e.clientX-state.pan.sx;state.y=state.pan.y+e.clientY-state.pan.sy;sync();
   if(!panApplyFrame)panApplyFrame=requestAnimationFrame(()=>{panApplyFrame=0;apply()});
  }
 });
-window.addEventListener("mouseup",()=>{
+function finishCanvasDrag(pointerId=null){
+ if(pointerId!==null&&state.pan?.pointerId!==pointerId)return;
  const resized=state.resize;
  const panned=state.pan;
  if(state.resize?.n.type==="map")state.resize.n.mapInstance?.fit();
@@ -1281,9 +1367,13 @@ window.addEventListener("mouseup",()=>{
  if(reflowFrame){cancelAnimationFrame(reflowFrame);reflowFrame=0}
  state.resize=null;state.pan=null;
  canvas.style.cursor=state.hand?"grab":"default";
+ document.body.classList.remove("canvas-panning");
  if(resized){layoutCards();flushSave()}
  else if(panned){flushSave();finishCameraMotion()}
-});
+}
+window.addEventListener("mouseup",()=>{if(state.pan?.pointerId==null)finishCanvasDrag()});
+window.addEventListener("pointerup",e=>{if(state.pan?.pointerId===e.pointerId)finishCanvasDrag(e.pointerId)});
+window.addEventListener("pointercancel",e=>{if(state.pan?.pointerId===e.pointerId)finishCanvasDrag(e.pointerId)});
 function startResize(e,n,side){
  e.preventDefault();e.stopPropagation();select(n);history();
  state.resize={n,side,sx:e.clientX,sy:e.clientY,w:n.el.offsetWidth,h:n.el.offsetHeight,x:n.x};
@@ -1294,9 +1384,23 @@ function startPan(e){
  e.preventDefault();
  e.stopPropagation();
  state.pan={sx:e.clientX,sy:e.clientY,x:state.x,y:state.y};
- document.body.classList.add("camera-moving");
+ document.body.classList.add("camera-moving","canvas-panning");
  canvas.style.cursor="grabbing";
 }
+canvas.addEventListener("pointerdown",e=>{
+ if(e.pointerType!=="pen"||!(e.button===2||(e.buttons&2)))return;
+ e.preventDefault();e.stopPropagation();
+ state.pan={sx:e.clientX,sy:e.clientY,x:state.x,y:state.y,pointerId:e.pointerId};
+ document.body.classList.add("camera-moving","canvas-panning");
+ canvas.style.cursor="grabbing";
+ try{canvas.setPointerCapture(e.pointerId)}catch{}
+},true);
+window.addEventListener("pointermove",e=>{
+ if(state.pan?.pointerId!==e.pointerId)return;
+ e.preventDefault();
+ state.x=state.pan.x+e.clientX-state.pan.sx;state.y=state.pan.y+e.clientY-state.pan.sy;sync();
+ if(!panApplyFrame)panApplyFrame=requestAnimationFrame(()=>{panApplyFrame=0;apply()});
+},{passive:false});
 canvas.addEventListener("mousedown",startPan);
 canvas.addEventListener("contextmenu",e=>e.preventDefault());
 canvas.addEventListener("pointermove",wakeControls,{passive:true});
@@ -1389,6 +1493,7 @@ function updateHandUI(){
  showControls();
  const button=$("#hand");
  button.classList.toggle("active",state.hand);
+ document.body.classList.toggle("hand-mode",state.hand);
  button.innerHTML=state.hand?ICONS.zoom:ICONS.pan;
  button.title=state.hand?"Hand ON · trackpad zoom":"Hand OFF · trackpad pan";
  canvas.style.cursor=state.hand?"grab":"default";
@@ -1742,6 +1847,11 @@ async function focusSelected(mode="readable"){
     n.mapWidth=size.width;n.mapHeight=size.height;
     n.el.style.width=size.width+"px";n.el.style.height=size.height+"px";
     layoutCards();
+   // Let the card body and its SVG receive the new viewport dimensions before
+   // asking Markmap to measure its bounds. Otherwise the first Space can fit
+   // against the previous size and the next press appears to be required.
+   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+   if(state.selected!==n)return;
    }
    try{await n.mapInstance?.fit()}catch{}
    if(state.selected!==n)return;
@@ -1890,10 +2000,9 @@ window.addEventListener("keydown",e=>{
    e.preventDefault();
    if(e.repeat)return;
    if(state.selected){
-     // Alternate between fitting the whole card and its readable view for
-     // both Markdown and Markmap cards. Keep this as a true toggle so Space
-     // continues to work after the second press instead of becoming inert.
-     focusSelected(state.spaceFocusStep===1?"readable":"fit");
+     // A Markmap's Space action is always one predictable fit-and-center.
+     // Markdown retains its fit/readable two-step cycle.
+     focusSelected(state.selected.type==="map"?"fit":state.spaceFocusStep===1?"readable":"fit");
    }
    return;
  }
@@ -2097,7 +2206,7 @@ window.addEventListener("keydown",e=>{
 
  if(e.key==="Escape"){
    if(editor.classList.contains("open"))closeEditor();
-   else context.classList.remove("open");
+   else{context.classList.remove("open");toggleBackgroundMenu(false)}
    return;
  }
 
@@ -2123,7 +2232,7 @@ function load(){
  updateThemeIcon();
  setBackground(localStorage.getItem("reflatex-background")||"stars");
  toggleToolbar(localStorage.getItem("reflatex-toolbar-hidden")!=="1");
- state.hand=true;$("#hand").classList.add("active");canvas.style.cursor="grab";
+ state.hand=true;$("#hand").classList.add("active");document.body.classList.add("hand-mode");canvas.style.cursor="grab";
  sync();apply();empty()
 }
 let resizeFrame=0;
