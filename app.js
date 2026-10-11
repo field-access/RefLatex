@@ -51,7 +51,7 @@ function setCardActionIcons(el,type){
  setButtonIcon(el.querySelector("[data-edit]"),"edit","Edit card");
  setButtonIcon(el.querySelector("[data-delete]"),"delete",type==="map"?"Delete map":"Delete card");
 }
-const LEGACY_MAP_FONTS={modern:"dm-sans",editorial:"lora",geometric:"montserrat",humanist:"nunito",mono:"mono",rounded:"quicksand",handwritten:"hand-patrick"};
+const LEGACY_MAP_FONTS={modern:"dm-sans",editorial:"lora",geometric:"comfortaa",humanist:"nunito",mono:"mono",rounded:"quicksand",handwritten:"hand-patrick"};
 const MAP_PALETTES={
  default:["#5b57b7","#7c78c8","#9b98d8","#bbb9e8","#d5d3f2"],
  purple:["#6846b5","#825fca","#a07fdb","#bca4e8","#d9c9f3"],
@@ -67,14 +67,15 @@ const CARD_FONT_GROUPS=[
   ["mono-dm","DM Mono"],["mono-azeret","Azeret Mono"],["mono-victor","Victor Mono"]
  ]],
  ["Sans serif",[
-  ["sans","System Sans"],["dm-sans","DM Sans"],["poppins","Poppins"],["montserrat","Montserrat"],["raleway","Raleway"],
+  ["sans","System Sans"],["dm-sans","DM Sans"],["poppins","Poppins"],["raleway","Raleway"],
   ["josefin-sans","Josefin Sans"],["nunito","Nunito"],["quicksand","Quicksand"],["league-spartan","League Spartan"]
  ]],
  ["Serif",[
-  ["slab","Roboto Slab"],["editorial-serif","Editorial Serif"],["playfair","Playfair Display"],["lora","Lora"],
-  ["merriweather","Merriweather"],["alegreya","Alegreya"],["cormorant","Cormorant Garamond"],["fraunces","Fraunces"],
+  ["slab","Roboto Slab"],["editorial-serif","Editorial Serif"],["lora","Lora"],
+  ["alegreya","Alegreya"],["cormorant","Cormorant Garamond"],["fraunces","Fraunces"],
   ["bodoni","Bodoni Moda"]
  ]],
+ ["Rounded",[["comfortaa","Comfortaa"],["fredoka","Fredoka"],["varela-round","Varela Round"]]],
  ["Display",[
   ["bebas-neue","Bebas Neue"],["cinzel","Cinzel"]
  ]],
@@ -86,12 +87,14 @@ const CARD_FONT_GROUPS=[
 ];
 const CARD_FONTS=CARD_FONT_GROUPS.flatMap(([,fonts])=>fonts);
 const MAP_FONTS=CARD_FONTS.map(([value])=>value);
+function randomCardFont(){return CARD_FONTS[Math.floor(Math.random()*CARD_FONTS.length)][0]}
 const LEGACY_CARD_FONTS={
  hand:"hand-patrick",caveat:"hand-patrick","hand-caveat":"hand-patrick","hand-script":"dancing-script",
  "hand-soft":"hand-patrick","hand-bold":"hand-kalam","hand-marker":"hand-kalam",
  "mono-terminal":"mono-typewriter","mono-inconsolata":"mono-fira","mono-roboto":"mono-code","mono-source":"mono-code","mono-ubuntu":"mono-typewriter",
  serif:"lora",editorial:"editorial-serif",humanist:"nunito",maiandra:"josefin-sans",inter:"dm-sans",
- "nunito-sans":"nunito",manrope:"dm-sans","space-grotesk":"league-spartan",outfit:"poppins",rubik:"dm-sans",archivo:"montserrat",rounded:"quicksand",
+ "nunito-sans":"nunito",manrope:"dm-sans","space-grotesk":"league-spartan",outfit:"poppins",rubik:"dm-sans",archivo:"dm-sans",rounded:"quicksand",
+ montserrat:"dm-sans",playfair:"fraunces",merriweather:"lora",
  oswald:"league-spartan","dm-serif-display":"fraunces",anton:"bebas-neue",shrikhand:"bebas-neue","abril-fatface":"cinzel"
 };
 
@@ -99,12 +102,13 @@ const GOOGLE_FONT_SPECS={
  "mono-code":["JetBrains+Mono","wght@400;500;600"],"mono-typewriter":["Space+Mono","wght@400;700"],
  "mono-fira":["Fira+Code","wght@400;500;600"],"mono-courier":["Courier+Prime","wght@400;700"],
  "mono-dm":["DM+Mono","wght@400;500"],"mono-azeret":["Azeret+Mono","wght@400;500;600"],"mono-victor":["Victor+Mono","wght@400;500;600"],
- "dm-sans":["DM+Sans","wght@400;500;600;700"],poppins:["Poppins","wght@400;500;600;700"],montserrat:["Montserrat","wght@400;500;600;700"],
+ "dm-sans":["DM+Sans","wght@400;500;600;700"],poppins:["Poppins","wght@400;500;600;700"],
  raleway:["Raleway","wght@400;500;600;700"],"josefin-sans":["Josefin+Sans","wght@400;500;600;700"],nunito:["Nunito","wght@400;500;600;700"],
  quicksand:["Quicksand","wght@400;500;600;700"],"league-spartan":["League+Spartan","wght@400;500;600;700"],
- slab:["Roboto+Slab","wght@400;500;600;700"],playfair:["Playfair+Display","wght@400;500;600;700"],lora:["Lora","wght@400;500;600;700"],
- merriweather:["Merriweather","wght@400;700"],alegreya:["Alegreya","wght@400;500;600;700"],cormorant:["Cormorant+Garamond","wght@400;500;600;700"],
+ slab:["Roboto+Slab","wght@400;500;600;700"],lora:["Lora","wght@400;500;600;700"],
+ alegreya:["Alegreya","wght@400;500;600;700"],cormorant:["Cormorant+Garamond","wght@400;500;600;700"],
  fraunces:["Fraunces","wght@400;500;600;700"],bodoni:["Bodoni+Moda","wght@400;500;600;700"],
+ comfortaa:["Comfortaa","wght@400;500;600;700"],fredoka:["Fredoka","wght@400;500;600;700"],"varela-round":["Varela+Round","wght@400"],
  "bebas-neue":["Bebas+Neue","wght@400"],cinzel:["Cinzel","wght@400;500;600;700"],
  "comic-neue":["Comic+Neue","wght@400;700"],"coming-soon":["Coming+Soon","wght@400"],itim:["Itim","wght@400"],
  "hand-kalam":["Kalam","wght@300;400;700"],"hand-patrick":["Patrick+Hand","wght@400"],"dancing-script":["Dancing+Script","wght@400;500;600;700"],
@@ -143,10 +147,11 @@ function mapFontStack(font){
   "mono-code":'"JetBrains Mono","Cascadia Code","Fira Code",Consolas,ui-monospace,monospace',"mono-typewriter":'"Space Mono","Courier New",Courier,monospace',"mono-fira":'"Fira Code",ui-monospace,monospace',"mono-courier":'"Courier Prime","Courier New",Courier,monospace',
   "mono-dm":'"DM Mono",ui-monospace,monospace',"mono-azeret":'"Azeret Mono",ui-monospace,monospace',"mono-victor":'"Victor Mono",ui-monospace,monospace',
   sans:'ui-sans-serif,system-ui,sans-serif',"dm-sans":'"DM Sans",ui-sans-serif,system-ui,sans-serif',poppins:'"Poppins",ui-sans-serif,system-ui,sans-serif',
-  montserrat:'"Montserrat",ui-sans-serif,system-ui,sans-serif',raleway:'"Raleway",ui-sans-serif,system-ui,sans-serif',"josefin-sans":'"Josefin Sans",ui-sans-serif,system-ui,sans-serif',
+  comfortaa:'"Comfortaa",ui-sans-serif,system-ui,sans-serif',fredoka:'"Fredoka",ui-sans-serif,system-ui,sans-serif',"varela-round":'"Varela Round",ui-sans-serif,system-ui,sans-serif',
+  raleway:'"Raleway",ui-sans-serif,system-ui,sans-serif',"josefin-sans":'"Josefin Sans",ui-sans-serif,system-ui,sans-serif',
   nunito:'"Nunito",ui-sans-serif,system-ui,sans-serif',quicksand:'"Quicksand",ui-sans-serif,system-ui,sans-serif',"league-spartan":'"League Spartan",ui-sans-serif,system-ui,sans-serif',
-  slab:'"Roboto Slab",Georgia,serif',"editorial-serif":'Cambria,Georgia,"Times New Roman",serif',playfair:'"Playfair Display",Georgia,serif',
-  lora:'"Lora",Georgia,serif',merriweather:'"Merriweather",Georgia,serif',alegreya:'"Alegreya",Georgia,serif',
+  slab:'"Roboto Slab",Georgia,serif',"editorial-serif":'Cambria,Georgia,"Times New Roman",serif',
+  lora:'"Lora",Georgia,serif',alegreya:'"Alegreya",Georgia,serif',
   cormorant:'"Cormorant Garamond",Georgia,serif',fraunces:'"Fraunces",Georgia,serif',bodoni:'"Bodoni Moda",Georgia,serif',
   "bebas-neue":'"Bebas Neue",Impact,sans-serif',cinzel:'"Cinzel",Georgia,serif',
   "comic-neue":'"Comic Neue","Comic Sans MS",cursive',"coming-soon":'"Coming Soon","Comic Sans MS",cursive',itim:'"Itim","Comic Sans MS",cursive',
@@ -1141,7 +1146,7 @@ function openCanvasFile(file){
  reader.readAsText(file);
 }
 
-function makeNote(md,x,y,w=600,record=true,id=null,font="mono",size="100",mapColor=randomCardTheme(),mapFont="modern",mapWidth=null,mapHeight=null){
+function makeNote(md,x,y,w=600,record=true,id=null,font=randomCardFont(),size="100",mapColor=randomCardTheme(),mapFont="modern",mapWidth=null,mapHeight=null){
  if(record)history();
  const minWidth=Math.min(520,Math.max(300,innerWidth-24));
  const width=Math.max(minWidth,Math.min(1200,w||600));
@@ -1201,7 +1206,7 @@ const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size,width,ty
  empty();
  return n;
 }
-function makeMap(md,x,y,w=null,h=null,record=true,id=null,mapColor=randomCardTheme(),mapFont="modern"){
+function makeMap(md,x,y,w=null,h=null,record=true,id=null,mapColor=randomCardTheme(),mapFont=randomCardFont()){
  if(record)history();
  const viewport=mapViewportSize();
  const width=Math.max(Math.min(520,Math.max(300,innerWidth-24)),Math.min(1600,w||viewport.width));
@@ -1460,8 +1465,8 @@ function applyEditor(type=state.editorMode){
   const p=worldPoint(innerWidth/2,innerHeight/2);
   const size=mapViewportSize();
   const n=type==="map"
-   ? makeMap(md,p.x-size.width/2,p.y-size.height/2,size.width,size.height,true,null,$("#mapColor").value,$("#mapFont").value)
-   : makeNote(md,p.x-300,p.y-150,600,true,null,"mono","100",$("#mapColor").value,$("#mapFont").value);
+   ? makeMap(md,p.x-size.width/2,p.y-size.height/2,size.width,size.height,true,null,$("#mapColor").value,randomCardFont())
+   : makeNote(md,p.x-300,p.y-150,600,true,null,randomCardFont(),"100",$("#mapColor").value,$("#mapFont").value);
   select(n);inserted=true;
  }
  closeEditor();
