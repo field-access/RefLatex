@@ -1299,7 +1299,6 @@ $("#hand").onclick=()=>{
 showControls();
 }
 $("#new").onclick=()=>openEditor("note")
-$("#fit").onclick=()=>{fit(true);save()}
 $("#center").onclick=()=>{
  const b=cardBounds();
  if(!b){moveTo(innerWidth/2,innerHeight/2,1);save();return}
@@ -1545,7 +1544,6 @@ window.addEventListener("keydown",e=>{
    const actions={
      h:()=>$("#hand").click(),
      e:()=>state.selected&&editNote(state.selected),
-     f:()=>$("#fit").click(),
      c:()=>$("#center").click(),
      a:()=>$("#arrange").click(),
      b:()=>toggleToolbar(),
