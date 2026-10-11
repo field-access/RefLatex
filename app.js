@@ -79,6 +79,7 @@ const CARD_FONT_GROUPS=[
   ["bebas-neue","Bebas Neue"],["cinzel","Cinzel"]
  ]],
  ["Handwritten",[
+  ["comic-neue","Comic Neue"],["coming-soon","Coming Soon"],["itim","Itim"],
   ["hand-kalam","Kalam"],["hand-patrick","Patrick Hand"],["dancing-script","Dancing Script"],
   ["sacramento","Sacramento"],["satisfy","Satisfy"],["marck-script","Marck Script"]
  ]]
@@ -105,6 +106,7 @@ const GOOGLE_FONT_SPECS={
  merriweather:["Merriweather","wght@400;700"],alegreya:["Alegreya","wght@400;500;600;700"],cormorant:["Cormorant+Garamond","wght@400;500;600;700"],
  fraunces:["Fraunces","wght@400;500;600;700"],bodoni:["Bodoni+Moda","wght@400;500;600;700"],
  "bebas-neue":["Bebas+Neue","wght@400"],cinzel:["Cinzel","wght@400;500;600;700"],
+ "comic-neue":["Comic+Neue","wght@400;700"],"coming-soon":["Coming+Soon","wght@400"],itim:["Itim","wght@400"],
  "hand-kalam":["Kalam","wght@300;400;700"],"hand-patrick":["Patrick+Hand","wght@400"],"dancing-script":["Dancing+Script","wght@400;500;600;700"],
  sacramento:["Sacramento","wght@400"],satisfy:["Satisfy","wght@400"],"marck-script":["Marck+Script","wght@400"]
 };
@@ -121,13 +123,12 @@ function ensureFontLoaded(font){
 }
 
 function normalizeCardFont(font){
- const value=LEGACY_CARD_FONTS[font]||font;
+ const value=LEGACY_CARD_FONTS[font]||LEGACY_MAP_FONTS[font]||font;
  return CARD_FONTS.some(([key])=>key===value)?value:"mono";
 }
 
 function normalizeMapFont(font){
- const value=LEGACY_MAP_FONTS[font]||LEGACY_CARD_FONTS[font]||font;
- return MAP_FONTS.includes(value)?value:"dm-sans";
+ return normalizeCardFont(font);
 }
 function createCardFontGroups(){
  return CARD_FONT_GROUPS.map(([label,fonts])=>{
@@ -135,14 +136,6 @@ function createCardFontGroups(){
   group.append(...fonts.map(([value,name])=>new Option(name,value)));
   return group;
  });
-}
-function populateMapFontSelect(el,font){
- const selectEl=el.querySelector("[data-map-font]");
- if(!selectEl)return;
- selectEl.replaceChildren(...createCardFontGroups());
- selectEl.value=normalizeMapFont(font);
- syncCardSelect(selectEl);
- ensureFontLoaded(selectEl.value);
 }
 function mapFontStack(font){
  const stacks={
@@ -156,15 +149,21 @@ function mapFontStack(font){
   lora:'"Lora",Georgia,serif',merriweather:'"Merriweather",Georgia,serif',alegreya:'"Alegreya",Georgia,serif',
   cormorant:'"Cormorant Garamond",Georgia,serif',fraunces:'"Fraunces",Georgia,serif',bodoni:'"Bodoni Moda",Georgia,serif',
   "bebas-neue":'"Bebas Neue",Impact,sans-serif',cinzel:'"Cinzel",Georgia,serif',
+  "comic-neue":'"Comic Neue","Comic Sans MS",cursive',"coming-soon":'"Coming Soon","Comic Sans MS",cursive',itim:'"Itim","Comic Sans MS",cursive',
   "hand-kalam":'"Kalam",cursive',"hand-patrick":'"Patrick Hand",cursive',"dancing-script":'"Dancing Script",cursive',
   sacramento:'"Sacramento",cursive',satisfy:'"Satisfy",cursive',"marck-script":'"Marck Script",cursive',
  };
  return stacks[normalizeMapFont(font)]||stacks["dm-sans"];
 }
 function applyMapFont(n,font=n.mapFont){
- n.mapFont=normalizeMapFont(font);
- ensureFontLoaded(n.mapFont);
- if(n.el){n.el.dataset.mapFont=n.mapFont;n.el.style.setProperty("--map-font-family",mapFontStack(n.mapFont));}
+ const value=normalizeCardFont(font);
+ n.font=value;n.mapFont=value;
+ ensureFontLoaded(value);
+ if(n.el){
+  n.el.dataset.font=value;n.el.dataset.mapFont=value;
+  n.el.style.setProperty("--card-font-family",mapFontStack(value));
+  n.el.style.setProperty("--map-font-family",mapFontStack(value));
+ }
 }
 
 function populateCardFontSelect(el,font){
@@ -176,10 +175,13 @@ function populateCardFontSelect(el,font){
 }
 function applyCardFont(n,font=n.font){
  n.font=normalizeCardFont(font);
+ n.mapFont=n.font;
  ensureFontLoaded(n.font);
  if(n.el){
   n.el.dataset.font=n.font;
+  n.el.dataset.mapFont=n.font;
   n.el.style.setProperty("--card-font-family",mapFontStack(n.font));
+  n.el.style.setProperty("--map-font-family",mapFontStack(n.font));
  }
 }
 
@@ -280,7 +282,7 @@ function enhanceCustomSelect(select){
   if(select.closest(".custom-select"))return;
   const wrap=document.createElement("div");
   wrap.className=`custom-select ${select.className}`;
-  wrap.dataset.control=select.dataset.view?"view":(select.dataset.mapColor||select.id==="mapColor")?"theme":(select.dataset.mapFont||select.id==="mapFont")?"map-font":select.dataset.font?"font":"size";
+  wrap.dataset.control=select.hasAttribute("data-view")?"view":(select.hasAttribute("data-map-color")||select.id==="mapColor")?"theme":(select.hasAttribute("data-map-font")||select.id==="mapFont")?"map-font":select.hasAttribute("data-font")?"font":"size";
   const trigger=document.createElement("button");
   trigger.type="button";trigger.className="custom-select-trigger";
   trigger.setAttribute("aria-haspopup","listbox");trigger.setAttribute("aria-expanded","false");
@@ -1143,11 +1145,11 @@ function makeNote(md,x,y,w=600,record=true,id=null,font="mono",size="100",mapCol
  if(record)history();
  const minWidth=Math.min(520,Math.max(300,innerWidth-24));
  const width=Math.max(minWidth,Math.min(1200,w||600));
-const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size,width,type:"note",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:normalizeMapFont(mapFont),mapWidth:Number.isFinite(mapWidth)?Math.max(minWidth,Math.min(1600,mapWidth)):null,mapHeight:Number.isFinite(mapHeight)?Math.max(320,Math.min(1200,mapHeight)):null,el:null};
+const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size,width,type:"note",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:normalizeCardFont(font),mapWidth:Number.isFinite(mapWidth)?Math.max(minWidth,Math.min(1600,mapWidth)):null,mapHeight:Number.isFinite(mapHeight)?Math.max(320,Math.min(1200,mapHeight)):null,el:null};
  state.nextId=Math.max(state.nextId,n.id+1);
  const el=document.createElement("article");
  el.className="card";el.style.left=x+"px";el.style.top=y+"px";el.style.width=width+"px";
- el.innerHTML=`<div class="cardbar"><div class="map-title"></div></div><div class="cardactions"><select data-view aria-label="Card view" title="Card view"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-map-color aria-label="Card color theme" title="Card color theme"><option value="default">Midnight</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select><select data-map-font class="map-only" aria-label="Map font" title="Map font (V / Shift+V)"><option value="modern">Modern</option><option value="editorial">Editorial</option><option value="geometric">Geometric</option><option value="humanist">Humanist</option><option value="mono">Mono</option><option value="rounded">Rounded</option><option value="handwritten">Handwritten</option></select><select data-font aria-label="Card font" title="Card font (V / Shift+V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option><option value="slab">Slab</option><option value="humanist">Humanist</option><option value="rounded">Rounded</option><option value="editorial">Editorial</option><option value="hand">Handwritten</option><option value="hand-soft">Hand Soft</option><option value="hand-bold">Hand Bold</option><option value="hand-marker">Hand Marker</option><option value="hand-script">Hand Script</option></select><select data-size aria-label="Card font size" title="Card font size"><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option><option value="180">180%</option></select><button data-map-open class="map-only"></button><button data-card-open></button><button data-edit></button><button data-delete></button></div>
+ el.innerHTML=`<div class="cardbar"><div class="map-title"></div></div><div class="cardactions"><select data-view aria-label="Card view" title="Card view"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-map-color aria-label="Card color theme" title="Card color theme"><option value="default">Midnight</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select><select data-font aria-label="Font" title="Font (V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option><option value="slab">Slab</option><option value="humanist">Humanist</option><option value="rounded">Rounded</option><option value="editorial">Editorial</option><option value="hand">Handwritten</option><option value="hand-soft">Hand Soft</option><option value="hand-bold">Hand Bold</option><option value="hand-marker">Hand Marker</option><option value="hand-script">Hand Script</option></select><select data-size aria-label="Card font size" title="Card font size"><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option><option value="180">180%</option></select><button data-map-open class="map-only"></button><button data-card-open></button><button data-edit></button><button data-delete></button></div>
  <div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div><div class="resize bottom" data-side="bottom" title="Resize map height"></div>
  <div class="cardbody">${renderCardMarkdown(md)}</div>`;
  setCardActionIcons(el,"note");
@@ -1156,12 +1158,11 @@ const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size,width,ty
  el.dataset.mapColor=n.mapColor||"default";
  applyMapFont(n);
  el.querySelector("[data-map-color]").value=n.mapColor||"default";
- populateMapFontSelect(el,n.mapFont);
  el.querySelector("[data-view]").value="note";
  populateCardFontSelect(el,font);
  el.dataset.fontSize=["70","80","90","100","110","125","140","160","180"].includes(String(size))?String(size):"100";
  el.querySelector("[data-size]").value=el.dataset.fontSize;
- n.el=el;applyMapFont(n);populateMapFontSelect(el,n.mapFont);updateCardHeading(n);
+ n.el=el;applyCardFont(n,n.font);updateCardHeading(n);
  enhanceCardSelects(el);world.appendChild(el);state.notes.push(n);
  widenCardForTables(el);
 
@@ -1185,9 +1186,6 @@ const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size,width,ty
  el.querySelector("[data-map-color]").onchange=e=>{
   setCardColorTheme(n,e.target.value);
  };
- el.querySelector("[data-map-font]").onchange=e=>{
-  history();applyMapFont(n,e.target.value);save();
- };
  el.querySelector("[data-font]").onchange=e=>{
   history();applyCardFont(n,e.target.value);widenCardForTables(el);save();
  };
@@ -1208,19 +1206,18 @@ function makeMap(md,x,y,w=null,h=null,record=true,id=null,mapColor=randomCardThe
  const viewport=mapViewportSize();
  const width=Math.max(Math.min(520,Math.max(300,innerWidth-24)),Math.min(1600,w||viewport.width));
  const height=Math.max(320,h||viewport.height);
-const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type:"map",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:normalizeMapFont(mapFont),font:"mono",size:"100",el:null,mapInstance:null};
+const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type:"map",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:normalizeCardFont(mapFont),font:normalizeCardFont(mapFont),size:"100",el:null,mapInstance:null};
  state.nextId=Math.max(state.nextId,n.id+1);
  const el=document.createElement("article");
  el.className="card map-card";el.style.left=x+"px";el.style.top=y+"px";el.style.width=width+"px";el.style.height=height+"px";
  el.dataset.mapColor=n.mapColor;
  applyMapFont(n);
  el.dataset.font=n.font;
- el.innerHTML=`<div class="cardbar"><div class="map-title"></div></div><div class="cardactions"><select data-view aria-label="Card view" title="Card view"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-map-color aria-label="Card color theme" title="Card color theme"><option value="default">Midnight</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select><select data-map-font class="map-only" aria-label="Map font" title="Map font (V / Shift+V)"><option value="modern">Modern</option><option value="editorial">Editorial</option><option value="geometric">Geometric</option><option value="humanist">Humanist</option><option value="mono">Mono</option><option value="rounded">Rounded</option><option value="handwritten">Handwritten</option></select><select data-font aria-label="Card font" title="Card font"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option></select><select data-size aria-label="Card font size" title="Card font size (1–9)"><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option><option value="180">180%</option></select><button data-map-open></button><button data-card-open></button><button data-edit></button><button data-delete></button></div><div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div><div class="resize bottom" data-side="bottom" title="Resize map height"></div><div class="cardbody"><div class="map-loading">Rendering mind map…</div></div>`;
+ el.innerHTML=`<div class="cardbar"><div class="map-title"></div></div><div class="cardactions"><select data-view aria-label="Card view" title="Card view"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-map-color aria-label="Card color theme" title="Card color theme"><option value="default">Midnight</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select><select data-font aria-label="Font" title="Font (V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option></select><select data-size aria-label="Card font size" title="Card font size (1–9)"><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option><option value="180">180%</option></select><button data-map-open></button><button data-card-open></button><button data-edit></button><button data-delete></button></div><div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div><div class="resize bottom" data-side="bottom" title="Resize map height"></div><div class="cardbody"><div class="map-loading">Rendering mind map…</div></div>`;
  setCardActionIcons(el,"map");
- n.el=el;applyMapFont(n);populateMapFontSelect(el,n.mapFont);updateCardHeading(n);world.appendChild(el);state.notes.push(n);
+ n.el=el;applyCardFont(n,n.font);updateCardHeading(n);world.appendChild(el);state.notes.push(n);
  el.querySelector("[data-view]").value="map";
  el.querySelector("[data-map-color]").value=n.mapColor;
- populateMapFontSelect(el,n.mapFont);
  populateCardFontSelect(el,n.font);
  el.querySelector("[data-size]").value=n.size;
  el.dataset.fontSize=n.size;
@@ -1242,9 +1239,6 @@ const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type
  el.querySelector("[data-view]").onchange=e=>setCardType(n,e.target.value);
  el.querySelector("[data-map-color]").onchange=e=>{
   setCardColorTheme(n,e.target.value);
- };
- el.querySelector("[data-map-font]").onchange=e=>{
-  history();applyMapFont(n,e.target.value);save();
  };
  el.querySelector("[data-font]").onchange=e=>{history();applyCardFont(n,e.target.value);save()};
  el.querySelector("[data-size]").onchange=e=>{history();n.size=e.target.value;el.dataset.fontSize=n.size;el.querySelector(".cardbody").style.setProperty("--card-font-scale",String(Number(n.size)/100));save()};
@@ -1430,7 +1424,7 @@ function openEditor(mode="note",n=null){
  state.editorMode=mode;
  source.value=n?.md||"";
  $("#mapColor").value=n?.mapColor||randomCardTheme();
- $("#mapFont").value=normalizeMapFont(n?.mapFont);
+ $("#mapFont").value=normalizeCardFont(n?.font||n?.mapFont||"mono");
  syncCardSelect($("#mapColor"));
  syncCardSelect($("#mapFont"));
  $("#applyCard").textContent=n?"Update card":"Place card";
@@ -1827,7 +1821,7 @@ function cycleFont(direction=1){
  const n=state.selected||state.notes.find(note=>note.el===activeCard);
  if(!n)return;
  select(n);
- const fontSelect=n.el.querySelector(n.type==="map"?"[data-map-font]":"[data-font]");
+ const fontSelect=n.el.querySelector("[data-font]");
  const options=[...fontSelect.options];
  const index=options.findIndex(option=>option.value===fontSelect.value);
  const next=(index+direction+options.length)%options.length;
