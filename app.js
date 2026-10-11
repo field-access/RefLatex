@@ -51,7 +51,7 @@ function setCardActionIcons(el,type){
  setButtonIcon(el.querySelector("[data-edit]"),"edit","Edit card");
  setButtonIcon(el.querySelector("[data-delete]"),"delete",type==="map"?"Delete map":"Delete card");
 }
-const LEGACY_MAP_FONTS={modern:"dm-sans",editorial:"lora",geometric:"space-grotesk",humanist:"nunito-sans",mono:"mono",rounded:"rounded",handwritten:"hand-caveat"};
+const LEGACY_MAP_FONTS={modern:"dm-sans",editorial:"lora",geometric:"montserrat",humanist:"nunito",mono:"mono",rounded:"quicksand",handwritten:"hand-patrick"};
 const MAP_PALETTES={
  default:["#5b57b7","#7c78c8","#9b98d8","#bbb9e8","#d5d3f2"],
  purple:["#6846b5","#825fca","#a07fdb","#bca4e8","#d9c9f3"],
@@ -61,21 +61,63 @@ const MAP_PALETTES={
  sunset:["#bf4d68","#dc6b66","#eb8e68","#f1b070","#f5d08b"],
  slate:["#475569","#5c6b7d","#788697","#9ba7b2","#c1c8ce"]
 };
-const CARD_FONTS=[
- ["mono","Mono"],["mono-code","JetBrains Mono"],["mono-typewriter","Space Mono"],["mono-fira","Fira Code"],["mono-courier","Courier Prime"],
- ["sans","Sans"],["slab","Roboto Slab"],["rounded","Rounded"],["editorial","Editorial"],
- ["nunito-sans","Nunito Sans"],["dm-sans","DM Sans"],["manrope","Manrope"],["space-grotesk","Space Grotesk"],
- ["outfit","Outfit"],["rubik","Rubik"],["archivo","Archivo"],
- ["playfair","Playfair Display"],["lora","Lora"],["merriweather","Merriweather"],["alegreya","Alegreya"],
- ["hand-caveat","Caveat"],["hand-kalam","Kalam"],["hand-patrick","Patrick Hand"]
+const CARD_FONT_GROUPS=[
+ ["Monospace",[
+  ["mono","Mono"],["mono-code","JetBrains Mono"],["mono-typewriter","Space Mono"],["mono-fira","Fira Code"],["mono-courier","Courier Prime"],
+  ["mono-dm","DM Mono"],["mono-azeret","Azeret Mono"],["mono-victor","Victor Mono"]
+ ]],
+ ["Sans serif",[
+  ["sans","System Sans"],["dm-sans","DM Sans"],["poppins","Poppins"],["montserrat","Montserrat"],["raleway","Raleway"],
+  ["josefin-sans","Josefin Sans"],["nunito","Nunito"],["quicksand","Quicksand"],["league-spartan","League Spartan"],["oswald","Oswald"]
+ ]],
+ ["Serif",[
+  ["slab","Roboto Slab"],["editorial-serif","Editorial Serif"],["playfair","Playfair Display"],["lora","Lora"],
+  ["merriweather","Merriweather"],["alegreya","Alegreya"],["cormorant","Cormorant Garamond"],["fraunces","Fraunces"],
+  ["dm-serif-display","DM Serif Display"],["bodoni","Bodoni Moda"]
+ ]],
+ ["Display",[
+  ["anton","Anton"],["bebas-neue","Bebas Neue"],["shrikhand","Shrikhand"],["abril-fatface","Abril Fatface"],["cinzel","Cinzel"]
+ ]],
+ ["Handwritten",[
+  ["hand-kalam","Kalam"],["hand-patrick","Patrick Hand"],["dancing-script","Dancing Script"],
+  ["sacramento","Sacramento"],["satisfy","Satisfy"],["marck-script","Marck Script"]
+ ]]
 ];
+const CARD_FONTS=CARD_FONT_GROUPS.flatMap(([,fonts])=>fonts);
 const MAP_FONTS=CARD_FONTS.map(([value])=>value);
 const LEGACY_CARD_FONTS={
- hand:"hand-caveat",caveat:"hand-caveat","hand-script":"hand-caveat",
+ hand:"hand-patrick",caveat:"hand-patrick","hand-caveat":"hand-patrick","hand-script":"dancing-script",
  "hand-soft":"hand-patrick","hand-bold":"hand-kalam","hand-marker":"hand-kalam",
  "mono-terminal":"mono-typewriter","mono-inconsolata":"mono-fira","mono-roboto":"mono-code","mono-source":"mono-code","mono-ubuntu":"mono-typewriter",
- serif:"lora",humanist:"nunito-sans",maiandra:"nunito-sans",inter:"dm-sans"
+ serif:"lora",editorial:"editorial-serif",humanist:"nunito",maiandra:"josefin-sans",inter:"dm-sans",
+ "nunito-sans":"nunito",manrope:"dm-sans","space-grotesk":"league-spartan",outfit:"poppins",rubik:"dm-sans",archivo:"montserrat",rounded:"quicksand"
 };
+
+const GOOGLE_FONT_SPECS={
+ "mono-code":["JetBrains+Mono","wght@400;500;600"],"mono-typewriter":["Space+Mono","wght@400;700"],
+ "mono-fira":["Fira+Code","wght@400;500;600"],"mono-courier":["Courier+Prime","wght@400;700"],
+ "mono-dm":["DM+Mono","wght@400;500"],"mono-azeret":["Azeret+Mono","wght@400;500;600"],"mono-victor":["Victor+Mono","wght@400;500;600"],
+ "dm-sans":["DM+Sans","wght@400;500;600;700"],poppins:["Poppins","wght@400;500;600;700"],montserrat:["Montserrat","wght@400;500;600;700"],
+ raleway:["Raleway","wght@400;500;600;700"],"josefin-sans":["Josefin+Sans","wght@400;500;600;700"],nunito:["Nunito","wght@400;500;600;700"],
+ quicksand:["Quicksand","wght@400;500;600;700"],"league-spartan":["League+Spartan","wght@400;500;600;700"],oswald:["Oswald","wght@400;500;600;700"],
+ slab:["Roboto+Slab","wght@400;500;600;700"],playfair:["Playfair+Display","wght@400;500;600;700"],lora:["Lora","wght@400;500;600;700"],
+ merriweather:["Merriweather","wght@400;700"],alegreya:["Alegreya","wght@400;500;600;700"],cormorant:["Cormorant+Garamond","wght@400;500;600;700"],
+ fraunces:["Fraunces","wght@400;500;600;700"],"dm-serif-display":["DM+Serif+Display","wght@400"],bodoni:["Bodoni+Moda","wght@400;500;600;700"],
+ anton:["Anton","wght@400"],"bebas-neue":["Bebas+Neue","wght@400"],shrikhand:["Shrikhand","wght@400"],"abril-fatface":["Abril+Fatface","wght@400"],cinzel:["Cinzel","wght@400;500;600;700"],
+ "hand-kalam":["Kalam","wght@300;400;700"],"hand-patrick":["Patrick+Hand","wght@400"],"dancing-script":["Dancing+Script","wght@400;500;600;700"],
+ sacramento:["Sacramento","wght@400"],satisfy:["Satisfy","wght@400"],"marck-script":["Marck+Script","wght@400"]
+};
+function googleFontStylesheetUrl(font){
+ const key=normalizeCardFont(font),spec=GOOGLE_FONT_SPECS[key];
+ return spec?`https://fonts.googleapis.com/css2?family=${spec[0]}:${spec[1]}&display=swap`:"";
+}
+function ensureFontLoaded(font){
+ const key=normalizeCardFont(font),href=googleFontStylesheetUrl(key);
+ if(!href||document.getElementById(`card-font-${key}`))return;
+ const link=document.createElement("link");
+ link.id=`card-font-${key}`;link.rel="stylesheet";link.dataset.cardFont=key;link.href=href;
+ document.head.appendChild(link);
+}
 
 function normalizeCardFont(font){
  const value=LEGACY_CARD_FONTS[font]||font;
@@ -86,30 +128,56 @@ function normalizeMapFont(font){
  const value=LEGACY_MAP_FONTS[font]||LEGACY_CARD_FONTS[font]||font;
  return MAP_FONTS.includes(value)?value:"dm-sans";
 }
+function createCardFontGroups(){
+ return CARD_FONT_GROUPS.map(([label,fonts])=>{
+  const group=document.createElement("optgroup");group.label=label;
+  group.append(...fonts.map(([value,name])=>new Option(name,value)));
+  return group;
+ });
+}
 function populateMapFontSelect(el,font){
  const selectEl=el.querySelector("[data-map-font]");
  if(!selectEl)return;
- selectEl.replaceChildren(...CARD_FONTS.map(([value,label])=>new Option(label,value)));
+ selectEl.replaceChildren(...createCardFontGroups());
  selectEl.value=normalizeMapFont(font);
+ ensureFontLoaded(selectEl.value);
 }
 function mapFontStack(font){
  const stacks={
   mono:'ui-monospace,SFMono-Regular,Consolas,monospace',
   "mono-code":'"JetBrains Mono","Cascadia Code","Fira Code",Consolas,ui-monospace,monospace',"mono-typewriter":'"Space Mono","Courier New",Courier,monospace',"mono-fira":'"Fira Code",ui-monospace,monospace',"mono-courier":'"Courier Prime","Courier New",Courier,monospace',
-  sans:'ui-sans-serif,system-ui,sans-serif',slab:'"Roboto Slab",Georgia,serif',rounded:'"Nunito","Arial Rounded MT Bold","Trebuchet MS",sans-serif',editorial:'Cambria,Georgia,"Times New Roman",serif',"hand-caveat":'"Caveat",cursive',"hand-kalam":'"Kalam",cursive',"hand-patrick":'"Patrick Hand",cursive',
-  "nunito-sans":'"Nunito Sans","Trebuchet MS",ui-sans-serif,sans-serif',"dm-sans":'"DM Sans",ui-sans-serif,system-ui,sans-serif',manrope:'"Manrope",ui-sans-serif,system-ui,sans-serif',"space-grotesk":'"Space Grotesk",ui-sans-serif,system-ui,sans-serif',outfit:'"Outfit",ui-sans-serif,system-ui,sans-serif',rubik:'"Rubik",ui-sans-serif,system-ui,sans-serif',archivo:'"Archivo",ui-sans-serif,system-ui,sans-serif',playfair:'"Playfair Display",Georgia,serif',lora:'"Lora",Georgia,serif',merriweather:'"Merriweather",Georgia,serif',alegreya:'"Alegreya",Georgia,serif',caveat:'"Caveat","Segoe Print",cursive',
+  "mono-dm":'"DM Mono",ui-monospace,monospace',"mono-azeret":'"Azeret Mono",ui-monospace,monospace',"mono-victor":'"Victor Mono",ui-monospace,monospace',
+  sans:'ui-sans-serif,system-ui,sans-serif',"dm-sans":'"DM Sans",ui-sans-serif,system-ui,sans-serif',poppins:'"Poppins",ui-sans-serif,system-ui,sans-serif',
+  montserrat:'"Montserrat",ui-sans-serif,system-ui,sans-serif',raleway:'"Raleway",ui-sans-serif,system-ui,sans-serif',"josefin-sans":'"Josefin Sans",ui-sans-serif,system-ui,sans-serif',
+  nunito:'"Nunito",ui-sans-serif,system-ui,sans-serif',quicksand:'"Quicksand",ui-sans-serif,system-ui,sans-serif',"league-spartan":'"League Spartan",ui-sans-serif,system-ui,sans-serif',oswald:'"Oswald",ui-sans-serif,system-ui,sans-serif',
+  slab:'"Roboto Slab",Georgia,serif',"editorial-serif":'Cambria,Georgia,"Times New Roman",serif',playfair:'"Playfair Display",Georgia,serif',
+  lora:'"Lora",Georgia,serif',merriweather:'"Merriweather",Georgia,serif',alegreya:'"Alegreya",Georgia,serif',
+  cormorant:'"Cormorant Garamond",Georgia,serif',fraunces:'"Fraunces",Georgia,serif',"dm-serif-display":'"DM Serif Display",Georgia,serif',bodoni:'"Bodoni Moda",Georgia,serif',
+  anton:'"Anton",Impact,sans-serif',"bebas-neue":'"Bebas Neue",Impact,sans-serif',shrikhand:'"Shrikhand",Georgia,serif',"abril-fatface":'"Abril Fatface",Georgia,serif',cinzel:'"Cinzel",Georgia,serif',
+  "hand-kalam":'"Kalam",cursive',"hand-patrick":'"Patrick Hand",cursive',"dancing-script":'"Dancing Script",cursive',
+  sacramento:'"Sacramento",cursive',satisfy:'"Satisfy",cursive',"marck-script":'"Marck Script",cursive',
  };
  return stacks[normalizeMapFont(font)]||stacks["dm-sans"];
 }
 function applyMapFont(n,font=n.mapFont){
  n.mapFont=normalizeMapFont(font);
+ ensureFontLoaded(n.mapFont);
  if(n.el){n.el.dataset.mapFont=n.mapFont;n.el.style.setProperty("--map-font-family",mapFontStack(n.mapFont));}
 }
 
 function populateCardFontSelect(el,font){
  const selectEl=el.querySelector("[data-font]");
- selectEl.replaceChildren(...CARD_FONTS.map(([value,label])=>new Option(label,value)));
+ selectEl.replaceChildren(...createCardFontGroups());
  selectEl.value=normalizeCardFont(font);
+ ensureFontLoaded(selectEl.value);
+}
+function applyCardFont(n,font=n.font){
+ n.font=normalizeCardFont(font);
+ ensureFontLoaded(n.font);
+ if(n.el){
+  n.el.dataset.font=n.font;
+  n.el.style.setProperty("--card-font-family",mapFontStack(n.font));
+ }
 }
 
 let activeCardMenu=null;
@@ -164,7 +232,14 @@ function openCardMenu(wrap){
   const styles=getComputedStyle(card);
   menu.style.setProperty("--menu-accent",styles.getPropertyValue(document.body.classList.contains("dark")?"--card-accent-dark":"--card-accent").trim()||"#7669d3");
  }
+ let previousGroup="";
  for(const option of select.options){
+  const group=option.parentElement?.tagName==="OPTGROUP"?option.parentElement.label:"";
+  if(group&&group!==previousGroup){
+   const heading=document.createElement("div");heading.className="custom-select-group";
+   heading.setAttribute("role","presentation");heading.textContent=group;menu.appendChild(heading);
+  }
+  previousGroup=group;
   const item=document.createElement("button");
   item.type="button";item.className="custom-select-option";item.setAttribute("role","option");
   item.dataset.value=option.value;item.textContent=option.textContent;
@@ -226,7 +301,7 @@ document.addEventListener("click",e=>{
 });
 window.addEventListener("resize",()=>{if(activeCardMenu)placeCardMenu(activeCardMenu.menu,activeCardMenu.trigger)});
 const editorMapFont=$("#mapFont");
-editorMapFont.replaceChildren(...CARD_FONTS.map(([value,label])=>new Option(label,value)));
+editorMapFont.replaceChildren(...createCardFontGroups());
 
 function showControls(){
   document.body.classList.remove("controls-hidden");
@@ -1026,6 +1101,7 @@ const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size,width,ty
  <div class="cardbody">${renderCardMarkdown(md)}</div>`;
  setCardActionIcons(el,"note");
  el.dataset.font=n.font;
+ el.style.setProperty("--card-font-family",mapFontStack(n.font));
  el.dataset.mapColor=n.mapColor||"default";
  applyMapFont(n);
  el.querySelector("[data-map-color]").value=n.mapColor||"default";
@@ -1062,7 +1138,7 @@ const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size,width,ty
   history();applyMapFont(n,e.target.value);save();
  };
  el.querySelector("[data-font]").onchange=e=>{
-  history();n.font=normalizeCardFont(e.target.value);el.dataset.font=n.font;widenCardForTables(el);save();
+  history();applyCardFont(n,e.target.value);widenCardForTables(el);save();
  };
  el.querySelector("[data-font]").onfocus=()=>select(n);
  el.querySelector("[data-size]").onchange=e=>{
@@ -1119,7 +1195,7 @@ const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type
  el.querySelector("[data-map-font]").onchange=e=>{
   history();applyMapFont(n,e.target.value);save();
  };
- el.querySelector("[data-font]").onchange=e=>{history();n.font=normalizeCardFont(e.target.value);el.dataset.font=n.font;save()};
+ el.querySelector("[data-font]").onchange=e=>{history();applyCardFont(n,e.target.value);save()};
  el.querySelector("[data-size]").onchange=e=>{history();n.size=e.target.value;el.dataset.fontSize=n.size;el.querySelector(".cardbody").style.setProperty("--card-font-scale",String(Number(n.size)/100));save()};
  el.querySelectorAll(".resize").forEach(r=>r.onmousedown=e=>{if(e.button===0)startResize(e,n,r.dataset.side)});
  n.mapReady=renderMap(n);empty();return n;
@@ -1356,11 +1432,12 @@ function openMapTab(n){
    :{default:"#fbfaff",purple:"#fcf9ff",warm:"#fffaf3",ocean:"#f1fbfa",forest:"#f4faf2",sunset:"#fff8f4",slate:"#f5f7f8"};
   const surface=surfaces[theme];
   const textColor=darkMode?"#e7eaf1":"#272622";
-  const fontStylesheet="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Courier+Prime:wght@400;700&family=DM+Sans:wght@400;500;600;700&family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Lora:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Merriweather:wght@400;700&family=Nunito:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&family=Roboto+Slab:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Alegreya:wght@400;500;600;700&family=Archivo:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Rubik:wght@400;500;600;700&display=swap";
+  const fontStylesheet=googleFontStylesheetUrl(n.mapFont);
+  const fontLink=fontStylesheet?`<link rel="stylesheet" href="${fontStylesheet}">`:"";
   const rainbow=["#e76f51","#f4a261","#e9c46a","#6b9b67","#299c97","#4e7bc5","#a16bb3","#d5668a"];
   const colors=theme==="default"?rainbow:(MAP_PALETTES[theme]||rainbow);
   const colorPayload=JSON.stringify(colors);
-  const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="${fontStylesheet}"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&family=Patrick+Hand&display=swap"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css"><style>html,body{height:100%;margin:0;background:${surface};color:${textColor};font:14px ${fontStack}}svg{width:100%;height:100%;font-family:${fontStack};font-weight:400}.markmap-node text{font-weight:400!important;fill:${textColor}!important}.markmap-node foreignObject,.markmap-node foreignObject>div,.markmap-foreign{font-family:${fontStack};font-weight:400!important;color:${textColor}!important}</style></head><body><svg id="map"></svg><script src="https://cdn.jsdelivr.net/npm/d3@7"><\/script><script src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18.12"><\/script><script>const md=${payload};const colors=${colorPayload};const root=new markmap.Transformer().transform(md).root;const depth=node=>node.state?.depth||0;const svg=document.querySelector("#map");svg.innerHTML='<defs><filter id="branch-wobble" x="-4%" y="-10%" width="108%" height="120%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency=".018 .035" numOctaves="1" seed="7" result="branchNoise"/><feDisplacementMap in="SourceGraphic" in2="branchNoise" scale="1.1" xChannelSelector="R" yChannelSelector="G"/></filter></defs>';markmap.Markmap.create(svg,{duration:350,maxWidth:300,spacingHorizontal:82,spacingVertical:15,color:node=>colors[depth(node)%colors.length],lineWidth:node=>depth(node)===1?3.6:depth(node)===2?2.25:1.55,style:id=>"#"+id+" .markmap-link{filter:url(#branch-wobble);stroke-linecap:round;stroke-linejoin:round}"},root);<\/script></body></html>`;
+  const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>${fontLink}<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css"><style>html,body{height:100%;margin:0;background:${surface};color:${textColor};font:14px ${fontStack}}svg{width:100%;height:100%;font-family:${fontStack};font-weight:400}.markmap-node text{font-weight:400!important;fill:${textColor}!important}.markmap-node foreignObject,.markmap-node foreignObject>div,.markmap-foreign{font-family:${fontStack};font-weight:400!important;color:${textColor}!important}</style></head><body><svg id="map"></svg><script src="https://cdn.jsdelivr.net/npm/d3@7"><\/script><script src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18.12"><\/script><script>const md=${payload};const colors=${colorPayload};const root=new markmap.Transformer().transform(md).root;const depth=node=>node.state?.depth||0;const svg=document.querySelector("#map");svg.innerHTML='<defs><filter id="branch-wobble" x="-4%" y="-10%" width="108%" height="120%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency=".018 .035" numOctaves="1" seed="7" result="branchNoise"/><feDisplacementMap in="SourceGraphic" in2="branchNoise" scale="1.1" xChannelSelector="R" yChannelSelector="G"/></filter></defs>';markmap.Markmap.create(svg,{duration:350,maxWidth:300,spacingHorizontal:82,spacingVertical:15,color:node=>colors[depth(node)%colors.length],lineWidth:node=>depth(node)===1?3.6:depth(node)===2?2.25:1.55,style:id=>"#"+id+" .markmap-link{filter:url(#branch-wobble);stroke-linecap:round;stroke-linejoin:round}"},root);<\/script></body></html>`;
   const tab=window.open();if(!tab){alert("Allow pop-ups to open this mind map.");return}
   tab.document.write(html);tab.document.close();
 }
@@ -1660,14 +1737,17 @@ function openCardTab(n){
  const titleHtml=heading?`<div class="cardbar"><div class="map-title">${escapeHtml(heading)}</div></div>`:`<div class="cardbar"><div class="map-title"></div></div>`;
  const theme=MAP_COLORS.includes(n.mapColor)?n.mapColor:"default";
  const font=normalizeCardFont(n.type==="map"?n.mapFont:n.font);
+ const fontStack=mapFontStack(font);
+ const fontStylesheet=googleFontStylesheetUrl(font);
+ const fontLink=fontStylesheet?`<link rel="stylesheet" href="${escapeHtml(fontStylesheet)}">`:"";
  const size=["70","80","90","100","110","125","140","160","180"].includes(String(n.size))?String(n.size):"100";
  const stylesheet=escapeHtml(new URL("styles.css",location.href).href);
  const supportingStyles=[...document.querySelectorAll('link[rel="stylesheet"]')]
-  .filter(link=>link.href.includes("fonts.googleapis.com")||link.href.includes("katex.min.css"))
+  .filter(link=>link.dataset.uiFonts==="true"||link.href.includes("katex.min.css"))
   .map(link=>`<link rel="stylesheet" href="${escapeHtml(link.href)}">`).join("");
  const dark=document.body.classList.contains("dark");
  const width=Math.max(300,Math.min(1600,n.el.offsetWidth||600));
- const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="stylesheet" href="${stylesheet}">${supportingStyles}<style>html,body{min-height:100%;margin:0}body{min-height:100vh;display:grid;place-items:center;padding:24px;box-sizing:border-box;background:var(--canvas);color:var(--ink)}.card.card-window{position:relative;left:auto;top:auto;width:min(${width}px,calc(100vw - 48px));max-width:100%;max-height:calc(100vh - 48px);overflow:hidden;box-sizing:border-box}.card-window .cardbar{cursor:default}.card-window .cardactions,.card-window .resize{display:none!important}.card-window .cardbody{max-height:calc(100vh - 112px);overflow:auto}@media(max-width:600px){body{padding:12px}.card.card-window{width:100%;max-height:calc(100vh - 24px)}.card-window .cardbody{max-height:calc(100vh - 88px)}}</style></head><body class="${dark?"dark":""}"><article class="card card-window${heading?" has-title":""}" data-map-color="${theme}" data-font="${font}" data-font-size="${size}">${titleHtml}<div class="cardbody">${renderCardMarkdown(n.md)}</div></article></body></html>`;
+ const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="stylesheet" href="${stylesheet}">${supportingStyles}${fontLink}<style>html,body{min-height:100%;margin:0}body{min-height:100vh;display:grid;place-items:center;padding:24px;box-sizing:border-box;background:var(--canvas);color:var(--ink)}.card.card-window{position:relative;left:auto;top:auto;width:min(${width}px,calc(100vw - 48px));max-width:100%;max-height:calc(100vh - 48px);overflow:hidden;box-sizing:border-box}.card-window .cardbar{cursor:default}.card-window .cardactions,.card-window .resize{display:none!important}.card-window .cardbody{max-height:calc(100vh - 112px);overflow:auto}@media(max-width:600px){body{padding:12px}.card.card-window{width:100%;max-height:calc(100vh - 24px)}.card-window .cardbody{max-height:calc(100vh - 88px)}}</style></head><body class="${dark?"dark":""}"><article class="card card-window${heading?" has-title":""}" data-map-color="${theme}" data-font="${font}" data-font-size="${size}" style="--card-font-family:${escapeHtml(fontStack)}">${titleHtml}<div class="cardbody">${renderCardMarkdown(n.md)}</div></article></body></html>`;
  const tab=window.open();
  if(!tab){alert("Allow pop-ups to open this card.");return}
  tab.document.write(html);tab.document.close();
