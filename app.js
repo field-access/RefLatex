@@ -774,6 +774,45 @@ function mapViewportSize(){
  };
 }
 const PEN_PAN_GAIN=1.7;
+function enablePenMapWheel(pane,svg,map){
+ let lastPointer=null;
+ const rememberPointer=e=>{
+  if(!Number.isFinite(e.clientX)||!Number.isFinite(e.clientY))return;
+  // Some tablet drivers keep emitting pointer events after pen hover ends.
+  // Preserve the last known pointer type so synthetic mouse events do not
+  // replace the pen's actual zoom anchor.
+  if(e.pointerType==="pen"||!lastPointer||lastPointer.type!=="pen")
+   lastPointer={x:e.clientX,y:e.clientY,type:e.pointerType||"mouse"};
+ };
+ pane.addEventListener("pointermove",rememberPointer,true);
+ pane.addEventListener("pointerdown",rememberPointer,true);
+ pane.addEventListener("wheel",e=>{
+  const card=pane.closest(".map-card");
+  if(!card?.classList.contains("selected")){
+   e.preventDefault();e.stopImmediatePropagation();return;
+  }
+  // Pen-tablet wheel events can carry a stale (often 0,0) client position.
+  // Use their valid event position when available, otherwise the latest pen
+  // hover point, and finally the map center instead of a stale mouse point.
+  e.preventDefault();e.stopImmediatePropagation();
+  const rect=svg.getBoundingClientRect();
+  const inside=(x,y)=>x>=rect.left&&x<=rect.right&&y>=rect.top&&y<=rect.bottom;
+  let clientX=e.clientX,clientY=e.clientY;
+  // Tablet drivers often expose wheel as a compatibility MouseEvent, so its
+  // coordinates can be stale even when they are nonzero and inside the map.
+  // Pen pointermove is the reliable source of the current stylus position.
+  if(lastPointer?.type==="pen"&&inside(lastPointer.x,lastPointer.y)){
+   clientX=lastPointer.x;clientY=lastPointer.y;
+  }else if((clientX===0&&clientY===0)||!inside(clientX,clientY)){
+   clientX=rect.left+rect.width/2;clientY=rect.top+rect.height/2;
+  }
+  const point=window.d3?.pointer?.({clientX,clientY},svg)||[rect.width/2,rect.height/2];
+  const unit=e.deltaMode===1?0.05:e.deltaMode===2?1:0.002;
+  const exponent=-e.deltaY*unit*(e.ctrlKey?10:1)*2.2;
+  if(!Number.isFinite(exponent)||!window.d3||!map.zoom?.scaleBy)return;
+  window.d3.select(svg).call(map.zoom.scaleBy,2**Math.max(-4,Math.min(4,exponent)),point);
+ },{capture:true,passive:false});
+}
 function enablePenMapPan(pane,svg,map){
  let drag=null,suppressClickUntil=0,compatMouseUntil=0,panFrame=0,glideFrame=0;
  let pendingX=0,pendingY=0,velocityX=0,velocityY=0;
@@ -905,10 +944,8 @@ async function renderMap(n){
   if(defaultZoomFilter)map.zoom.filter(function(event){
    return n.el.classList.contains("selected")&&defaultZoomFilter.call(this,event);
   });
-  // Make wheel and trackpad zoom respond more directly without changing panning.
-  map.zoom?.wheelDelta?.(event=>
-   -event.deltaY*(event.deltaMode===1?0.05:event.deltaMode===2?1:0.002)*(event.ctrlKey?10:1)*2.2
-  );
+  // Handle wheel zoom ourselves so pen-tablet events use a reliable anchor.
+  enablePenMapWheel(pane,svg,map);
   n.mapInstance=map;
   await map.setData(root);
   if(n.mapRenderId!==renderId||n.type!=="map")return;
