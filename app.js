@@ -928,11 +928,13 @@ window.addEventListener("mousemove",e=>{
  }
 });
 window.addEventListener("mouseup",()=>{
+ const resized=state.resize?.n||null;
  if(state.resize||state.pan){flushSave()}
  if(state.resize?.n.type==="map")state.resize.n.mapInstance?.fit();
  if(panApplyFrame){cancelAnimationFrame(panApplyFrame);panApplyFrame=0;apply()}
  state.resize=null;state.pan=null;
  canvas.style.cursor=state.hand?"grab":"default";
+ if(resized)scheduleArrange();
 });
 function startResize(e,n,side){
  e.preventDefault();e.stopPropagation();select(n);history();
@@ -1095,6 +1097,7 @@ function closeEditor(){
 }
 function applyEditor(type=state.editorMode){
  const md=source.value.trim();if(!md)return;
+ let inserted=false;
  if(state.editId!==null){
   const n=state.notes.find(x=>x.id===state.editId);if(!n)return;
   history();n.md=md;n.mapColor=$("#mapColor").value;applyMapFont(n,$("#mapFont").value);
@@ -1112,9 +1115,11 @@ function applyEditor(type=state.editorMode){
   const n=type==="map"
    ? makeMap(md,p.x-size.width/2,p.y-size.height/2,size.width,size.height,true,null,$("#mapColor").value,$("#mapFont").value)
    : makeNote(md,p.x-300,p.y-150,600,true);
-  select(n)
+  select(n);inserted=true;
  }
- closeEditor();save()
+ closeEditor();
+ if(inserted)scheduleArrange();
+ save()
 }
 function openMapTab(n){
   const payload=JSON.stringify(prepareMarkmapMarkdown(n.md)).replace(/</g,"\\u003c");
@@ -1233,6 +1238,9 @@ function arrange(record=true){
   save();
  });
 }
+function scheduleArrange(){
+ requestAnimationFrame(()=>arrange(false));
+}
 const backgrounds=["light","sun","stars","planets"];
 const backgroundLabels={
  light:"Light",
@@ -1347,7 +1355,7 @@ document.addEventListener("paste",e=>{
  const p=worldPoint(innerWidth/2,innerHeight/2);
  const n=makeNote(md,p.x-300,p.y-150,600,true);
  select(n);
- requestAnimationFrame(()=>arrange(false));
+ scheduleArrange();
 });
 
 function focusSelected(mode="readable"){
@@ -1473,6 +1481,7 @@ function resizeSelectedWidth(direction){
  n.el.style.width=width+"px";
  if(n.type==="map")n.mapWidth=width;
  else n.width=width;
+ scheduleArrange();
  save();
 }
 
