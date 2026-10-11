@@ -519,10 +519,12 @@ function markmapOptions(n){
  };
 }
 function mapViewportSize(){
- const scale=clampScale(Number.isFinite(state.targetScale)?state.targetScale:state.scale||1);
  return {
-  width:Math.max(320,Math.min(1600,Math.floor((innerWidth-80)/scale))),
-  height:Math.max(320,Math.min(1600,Math.round(innerHeight*.76/scale)))
+  // Map dimensions describe the card itself, not canvas world units at the
+  // current camera zoom. Keeping them viewport-based prevents huge cards when
+  // the canvas happens to be zoomed far out.
+  width:Math.max(420,Math.min(1600,Math.floor(innerWidth-80))),
+  height:Math.max(320,Math.min(1400,Math.round(innerHeight*.82)))
  };
 }
 function prepareMarkmapMarkdown(markdown){
@@ -1470,19 +1472,24 @@ document.addEventListener("paste",e=>{
  scheduleArrange();
 });
 
-function focusSelected(mode="readable"){
+async function focusSelected(mode="readable"){
   const n=state.selected;
   if(!n)return;
   state.spaceFocusStep=mode==="fit"?1:2;
 
-  if(n.type==="map"){
+  if(n.type==="map"&&mode==="fit"){
    const size=mapViewportSize();
    if(n.mapWidth!==size.width||n.mapHeight!==size.height){
     history();
     n.mapWidth=size.width;n.mapHeight=size.height;
     n.el.style.width=size.width+"px";n.el.style.height=size.height+"px";
-    save();
    }
+   // Reflow the whole canvas around the new map bounds, then fit the tree
+   // inside the resized map pane before centering the card on screen.
+   layoutCards();
+   try{await n.mapInstance?.fit()}catch{}
+   if(state.selected!==n)return;
+   save();
   }
 
   // Fit Markdown cards to the available width; Markmaps also fit vertically.
@@ -1497,7 +1504,7 @@ function focusSelected(mode="readable"){
   const worldTop=(rect.top-state.y)/state.scale;
   const worldCenterX=worldLeft+r.w/2;
   const worldCenterY=worldTop+r.h/2;
-  const titleOffset=n.type==="map"?40:88;
+  const titleOffset=n.type==="map"?32:88;
   const availableWidth=Math.max(240,innerWidth-(n.type==="map"?48:180));
   const availableHeight=Math.max(240,innerHeight-titleOffset-(n.type==="map"?32:40));
   const widthScale=availableWidth/r.w;
@@ -1622,7 +1629,8 @@ window.addEventListener("keydown",e=>{
    e.preventDefault();
    if(e.repeat)return;
    if(state.selected){
-     if(state.spaceFocusStep===0)focusSelected("fit");
+     if(state.selected.type==="map")focusSelected("fit");
+     else if(state.spaceFocusStep===0)focusSelected("fit");
      else if(state.spaceFocusStep===1)focusSelected("readable");
    }
    return;
