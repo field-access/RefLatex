@@ -28,12 +28,12 @@
 </div>
 
 <div class="toolbar" id="toolbar" aria-label="Canvas buttons">
- <button class="tool active" id="hand" title="Navigation: Zoom / Scroll (H)" aria-label="Navigation: Zoom / Scroll"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.4 15.4 5 5M8.3 10.8h5M10.8 8.3v5"/></svg></button>
- <button class="tool primary" id="new" title="New Markdown card (N)">＋</button>
- <button class="tool" id="center" title="Center and fit all cards (C)" aria-label="Center and fit all cards"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
- <button class="tool" id="arrange" title="Arrange cards (A)" aria-label="Arrange cards"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg></button>
+ <button class="tool active" id="hand" title="Navigation: Zoom / Scroll (H)" aria-label="Navigation: Zoom / Scroll"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.4 15.4 5 5M8.3 10.8h5M10.8 8.3v5"/></svg></button>
+ <button class="tool primary" id="new" title="New Markdown card (N)" aria-label="New Markdown card"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+ <button class="tool" id="center" title="Center and fit all cards (C)" aria-label="Center and fit all cards"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+ <button class="tool" id="arrange" title="Arrange cards (A)" aria-label="Arrange cards"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg></button>
  <div class="background-picker">
-  <button class="tool background-select" id="background" title="Background" aria-label="Background" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 1.25 4.75L18 8l-4.75 1.25L12 14l-1.25-4.75L6 8l4.75-1.25L12 2Z"/><path d="m19 14 .75 2.25L22 17l-2.25.75L19 20l-.75-2.25L16 17l2.25-.75L19 14ZM5 14l.7 2.3L8 17l-2.3.7L5 20l-.7-2.3L2 17l2.3-.7L5 14Z"/></svg></button>
+  <button class="tool background-select" id="background" title="Background" aria-label="Background" aria-expanded="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 1.25 4.75L18 8l-4.75 1.25L12 14l-1.25-4.75L6 8l4.75-1.25L12 2Z"/><path d="m19 14 .75 2.25L22 17l-2.25.75L19 20l-.75-2.25L16 17l2.25-.75L19 14ZM5 14l.7 2.3L8 17l-2.3.7L5 20l-.7-2.3L2 17l2.3-.7L5 14Z"/></svg></button>
   <div class="background-menu" id="backgroundMenu" role="menu">
    <button type="button" data-background-choice="light" role="menuitem"><svg viewBox="0 0 32 22" aria-hidden="true"><rect width="32" height="22" fill="#d9d6cf"/><path d="M5 5h.1M16 5h.1M27 5h.1M5 16h.1M16 16h.1M27 16h.1" stroke="#77736b" stroke-width="2" stroke-linecap="round"/></svg><span>Light</span></button>
    <button type="button" data-background-choice="sun" role="menuitem"><svg viewBox="0 0 32 22" aria-hidden="true"><rect width="32" height="22" fill="#d9d6cf"/><circle cx="24" cy="7" r="4" fill="#edbe62"/><path d="M24 1v-2M24 16v-2M18 7h-2M30 7h-2M20 3l-2-2M28 3l2-2" stroke="#c79239" stroke-width="1"/></svg><span>Sun</span></button>
@@ -42,24 +42,24 @@
   </div>
  </div>
  <span class="divider"></span>
- <button class="tool" id="theme" title="Toggle dark mode (T)">☾</button>
+ <button class="tool" id="theme" title="Toggle dark mode (T)" aria-label="Toggle dark mode"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.4 15.1A8.7 8.7 0 0 1 8.9 3.6 8.8 8.8 0 1 0 20.4 15.1Z"/></svg></button>
  <span class="divider"></span>
- <button class="tool" id="saveCanvas" title="Save canvas (Ctrl/Cmd+S)">↓</button>
- <button class="tool" id="openCanvas" title="Open canvas (Ctrl/Cmd+O)">↑</button>
+ <button class="tool" id="saveCanvas" title="Save canvas (Ctrl/Cmd+S)" aria-label="Save canvas"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg></button>
+ <button class="tool" id="openCanvas" title="Open canvas (Ctrl/Cmd+O)" aria-label="Open canvas"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h6l2 2H20v10H4z"/><path d="M12 15V4m-4 4 4-4 4 4"/></svg></button>
  <input id="canvasFile" type="file" accept=".json,application/json" hidden>
- <button class="tool" id="full" title="Fullscreen (Ctrl/Cmd+Shift+F)">⛶</button>
+ <button class="tool" id="full" title="Fullscreen (Ctrl/Cmd+Shift+F)" aria-label="Fullscreen"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
 </div>
 
 <div class="zoom">
- <button id="minus" title="Zoom out (-)">−</button><span class="zlabel" id="zoomLabel">100%</span>
- <button id="plus" title="Zoom in (+)">＋</button><button class="tool" id="reset" title="Reset zoom (0)">100%</button>
+ <button id="minus" title="Zoom out (-)" aria-label="Zoom out"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg></button><span class="zlabel" id="zoomLabel">100%</span>
+ <button id="plus" title="Zoom in (+)" aria-label="Zoom in"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button><button class="tool" id="reset" title="Reset zoom (0)" aria-label="Reset zoom"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a8 8 0 1 1 2.3 5.7M4 5v6h6"/></svg></button>
 </div>
 
-<div class="hint" id="hint">✋ Hand ON = trackpad/wheel zoom · Hand OFF = trackpad/mouse scroll pan · −/+ zoom · [/] selected card width · 1–9 text size · B buttons · N new card · K cycle Markdown/Markmap · M Markmap window · O card window · Shift+C change card theme · Esc close</div>
-<div class="edge" id="edge">☰</div>
+<div class="hint" id="hint">Zoom mode: trackpad/wheel zoom · Pan mode: trackpad scroll · −/= zoom · [/] selected card width · 1–9 text size · N new card · K cycle Markdown/Markmap · M Markmap window · O card window · Shift+C change card theme · Esc close</div>
+<div class="edge" id="edge" aria-label="Show toolbar"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></div>
 
 <div class="editor" id="editor">
- <div class="editorhead"><div><div class="etitle">Markdown source</div><div class="esub">Use the same source as a readable card or a Markmap</div></div><button class="tool" id="close" title="Close editor (Esc)">×</button></div>
+ <div class="editorhead"><div><div class="etitle">Markdown source</div><div class="esub">Use the same source as a readable card or a Markmap</div></div><button class="tool" id="close" title="Close editor (Esc)" aria-label="Close editor"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
  <textarea id="source" spellcheck="false" placeholder="# Concept
 
 Explain the idea here.
@@ -75,8 +75,8 @@ $$T(n)=O(n\log n)$$"></textarea>
 </div>
 
 <div class="context" id="context">
- <button id="edit">Edit</button><button id="duplicate">Duplicate</button>
- <button id="copy">Copy Markdown</button><button id="remove">Delete</button>
+ <button id="edit"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16.5-.8 4.3 4.3-.8L19 8.5 15.5 5 4 16.5Z"/><path d="m13.8 6.7 3.5 3.5M4 21h16"/></svg><span>Edit</span></button><button id="duplicate"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h2"/></svg><span>Duplicate</span></button>
+ <button id="copy"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h2"/></svg><span>Copy Markdown</span></button><button id="remove"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3"/></svg><span>Delete</span></button>
 </div>
 
 <script src="app.js" defer></script>

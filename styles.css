@@ -196,8 +196,9 @@ body.camera-moving #world{will-change:transform}
 .map-card .cardactions [data-font]{display:none}
 .cardactions select:hover{background:#eeece6;color:#333}
 .cardactions button{
- border:0;background:transparent;width:26px;height:25px;border-radius:5px;color:#777;
+ display:grid;place-items:center;border:0;background:transparent;width:26px;height:25px;padding:0;border-radius:5px;color:#777;
 }
+.cardactions button .icon{width:15px;height:15px}
 .cardactions button:hover{background:#eeece6;color:#333}
 .toolbar,.zoom{
  position:fixed;z-index:30;
@@ -228,7 +229,8 @@ body.camera-moving #world{will-change:transform}
 }
 .toolbar .tool:hover{background:#00000009}
 .toolbar .tool:active{transform:scale(.92)}
-.toolbar .tool svg{display:block;width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.icon{display:block;width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.toolbar .tool .icon{width:20px;height:20px}
 .toolbar .tool.active{
  background:var(--accent);
  color:#fff;
@@ -281,6 +283,7 @@ body.camera-moving #world{will-change:transform}
  right:14px;bottom:14px;
  border-radius:12px;
 }
+.zoom button .icon{width:16px;height:16px}
 button.tool,.zoom button{
  border:0;background:transparent;border-radius:8px;
  height:31px;padding:0 10px;
@@ -348,10 +351,12 @@ body.controls .hint{opacity:1;pointer-events:auto}
  background:#faf9f6;border:1px solid #00000018;border-radius:7px
 }
 .context.open{display:block}
-.context button{display:block;width:100%;border:0;background:transparent;text-align:left;padding:8px;border-radius:5px;font-size:11px}
+.context button{display:flex;align-items:center;gap:9px;width:100%;border:0;background:transparent;text-align:left;padding:8px;border-radius:7px;font-size:11px}
+.context button .icon{width:15px;height:15px;color:var(--muted)}
 .context button:hover{background:#ebe9e3}
 .edge{position:fixed;z-index:40;left:0;top:50%;transform:translateY(-50%);width:20px;height:74px;
  border-radius:0 9px 9px 0;background:var(--panel);border:1px solid #0001;display:none;place-items:center}
+.edge .icon{width:13px;height:13px}
 body.dark{
  --canvas:#171716;--paper:#242321;--ink:#e9e6df;--muted:#9d9990;
  --panel:#252421e8;--border:#47443e;
