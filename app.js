@@ -773,12 +773,13 @@ function mapViewportSize(){
   height:Math.max(320,Math.min(1600,Math.round(innerHeight*.94)))
  };
 }
+const PEN_PAN_GAIN=1.7;
 function enablePenMapPan(pane,svg,map){
  let drag=null,suppressClickUntil=0,compatMouseUntil=0,panFrame=0,glideFrame=0;
  let pendingX=0,pendingY=0,velocityX=0,velocityY=0;
  const translate=(dx,dy)=>{
   const scale=window.d3?.zoomTransform?.(svg)?.k||1;
-  if(window.d3&&map.zoom?.translateBy)window.d3.select(svg).call(map.zoom.translateBy,dx/scale,dy/scale);
+  if(window.d3&&map.zoom?.translateBy)window.d3.select(svg).call(map.zoom.translateBy,dx*PEN_PAN_GAIN/scale,dy*PEN_PAN_GAIN/scale);
  };
  const flush=()=>{
   panFrame=0;
@@ -803,7 +804,7 @@ function enablePenMapPan(pane,svg,map){
   glideFrame=requestAnimationFrame(step);
  };
  pane.addEventListener("pointerdown",e=>{
-  if(e.pointerType!=="pen"||e.button!==0||e.target.closest(".cardactions,.resize"))return;
+  if(e.pointerType!=="pen"||e.button!==0||!pane.closest(".map-card")?.classList.contains("selected")||e.target.closest(".cardactions,.resize"))return;
   if(glideFrame){cancelAnimationFrame(glideFrame);glideFrame=0}
   velocityX=velocityY=0;
   drag={id:e.pointerId,x:e.clientX,y:e.clientY,lastX:e.clientX,lastY:e.clientY,lastTime:e.timeStamp,moved:false};
@@ -900,6 +901,10 @@ async function renderMap(n){
   // Disable Markmap's implicit setData fit so there is only one initial transform.
   options.autoFit=false;
   const map=window.markmap.Markmap.create(svg,options);
+  const defaultZoomFilter=map.zoom?.filter?.();
+  if(defaultZoomFilter)map.zoom.filter(function(event){
+   return n.el.classList.contains("selected")&&defaultZoomFilter.call(this,event);
+  });
   // Make wheel and trackpad zoom respond more directly without changing panning.
   map.zoom?.wheelDelta?.(event=>
    -event.deltaY*(event.deltaMode===1?0.05:event.deltaMode===2?1:0.002)*(event.ctrlKey?10:1)*2.2
@@ -907,6 +912,15 @@ async function renderMap(n){
   n.mapInstance=map;
   await map.setData(root);
   if(n.mapRenderId!==renderId||n.type!=="map")return;
+  pane.querySelectorAll(".markmap-node pre").forEach(pre=>{
+   pre.classList.add("map-codeblock");
+   const code=pre.querySelector("code");
+   if(!code||!window.hljs)return;
+   const languageClass=[...code.classList].find(name=>name.startsWith("language-"));
+   const language=languageClass?.slice("language-".length);
+   if(language&&!hljs.getLanguage(language))code.classList.remove(languageClass);
+   try{hljs.highlightElement(code)}catch{}
+  });
   enablePenMapPan(pane,svg,map);
   await map.fit();
  }catch(err){
@@ -987,9 +1001,11 @@ function zoomPrecise(f,cx=innerWidth/2,cy=innerHeight/2){
   setCameraImmediate(innerWidth/2,innerHeight/2,1);
   return;
  }
- const wx=(cx-state.targetX)/state.targetScale;
- const wy=(cy-state.targetY)/state.targetScale;
- const ns=clampScale(state.targetScale*f);
+ // Anchor to the transform actually rendered beneath the pointer. Using a
+ // pending animation target here makes zoom drift away from pen/tablet input.
+ const wx=(cx-state.x)/state.scale;
+ const wy=(cy-state.y)/state.scale;
+ const ns=clampScale(state.scale*f);
  state.targetX=cx-wx*ns;
  state.targetY=cy-wy*ns;
  state.targetScale=ns;
@@ -1335,7 +1351,7 @@ const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type
  el.querySelectorAll(".resize").forEach(r=>r.onmousedown=e=>{if(e.button===0)startResize(e,n,r.dataset.side)});
  n.mapReady=renderMap(n);empty();return n;
 }
-let panApplyFrame=0,pendingPenCanvasPan=null;
+let panApplyFrame=0,pendingPenCanvasPan=null,suppressCanvasClickUntil=0;
 window.addEventListener("mousemove",e=>{
  if(state.resize){
   const r=state.resize,dx=(e.clientX-r.sx)/state.scale;
@@ -1354,6 +1370,9 @@ window.addEventListener("mousemove",e=>{
   scheduleReflow();
  }
  if(state.pan&&state.pan.pointerId==null){
+  if(Math.hypot(e.clientX-state.pan.sx,e.clientY-state.pan.sy)>=5){
+   state.pan.moved=true;suppressCanvasClickUntil=performance.now()+500;
+  }
   state.x=state.pan.x+e.clientX-state.pan.sx;state.y=state.pan.y+e.clientY-state.pan.sy;sync();
   if(!panApplyFrame)panApplyFrame=requestAnimationFrame(()=>{panApplyFrame=0;apply()});
  }
@@ -1383,6 +1402,7 @@ function startPan(e){
  if(e.button!==1&&e.button!==2)return;
  e.preventDefault();
  e.stopPropagation();
+ if(e.target===canvas||e.target===world)select(null);
  state.pan={sx:e.clientX,sy:e.clientY,x:state.x,y:state.y};
  document.body.classList.add("camera-moving","canvas-panning");
  canvas.style.cursor="grabbing";
@@ -1391,14 +1411,18 @@ canvas.addEventListener("pointerdown",e=>{
  if(e.pointerType!=="pen")return;
  const rightButton=e.button===2||(e.buttons&2);
  const leftCanvasBackground=e.button===0&&e.target===canvas;
+ const mapPane=e.target.closest?.(".map-pane");
+ const mapIsUnselected=mapPane&&!mapPane.closest(".map-card")?.classList.contains("selected");
  const leftCardSurface=e.button===0&&e.target.closest?.(".card")&&
-  !e.target.closest(".map-pane,.cardactions,.resize,button,a,select,input,textarea,[contenteditable='true']");
+  (!mapPane||mapIsUnselected)&&
+  !e.target.closest(".cardactions,.resize,button,a,select,input,textarea,[contenteditable='true']");
  if(leftCardSurface){
   pendingPenCanvasPan={pointerId:e.pointerId,x:e.clientX,y:e.clientY};
   try{canvas.setPointerCapture(e.pointerId)}catch{}
   return;
  }
  if(!rightButton&&!leftCanvasBackground)return;
+ if(leftCanvasBackground)select(null);
  e.preventDefault();e.stopPropagation();
  state.pan={sx:e.clientX,sy:e.clientY,x:state.x,y:state.y,pointerId:e.pointerId};
  document.body.classList.add("camera-moving","canvas-panning");
@@ -1412,7 +1436,8 @@ window.addEventListener("pointermove",e=>{
  e.preventDefault();
  pendingPenCanvasPan=null;
  window.getSelection()?.removeAllRanges();
- state.pan={sx:pending.x,sy:pending.y,x:state.x,y:state.y,pointerId:e.pointerId};
+ state.pan={sx:pending.x,sy:pending.y,x:state.x,y:state.y,pointerId:e.pointerId,moved:true};
+ suppressCanvasClickUntil=performance.now()+500;
  document.body.classList.add("camera-moving","canvas-panning");
  canvas.style.cursor="grabbing";
 },{capture:true,passive:false});
@@ -1425,9 +1450,15 @@ window.addEventListener("pointercancel",e=>{
 window.addEventListener("pointermove",e=>{
  if(state.pan?.pointerId!==e.pointerId)return;
  e.preventDefault();
- state.x=state.pan.x+e.clientX-state.pan.sx;state.y=state.pan.y+e.clientY-state.pan.sy;sync();
+ state.pan.moved=true;suppressCanvasClickUntil=performance.now()+500;
+ state.x=state.pan.x+(e.clientX-state.pan.sx)*PEN_PAN_GAIN;state.y=state.pan.y+(e.clientY-state.pan.sy)*PEN_PAN_GAIN;sync();
  if(!panApplyFrame)panApplyFrame=requestAnimationFrame(()=>{panApplyFrame=0;apply()});
 },{passive:false});
+canvas.addEventListener("click",e=>{
+ if(e.target!==canvas&&e.target!==world)return;
+ if(performance.now()<suppressCanvasClickUntil)return;
+ select(null);
+});
 canvas.addEventListener("mousedown",startPan);
 canvas.addEventListener("contextmenu",e=>e.preventDefault());
 canvas.addEventListener("pointermove",wakeControls,{passive:true});
@@ -1486,8 +1517,19 @@ function scheduleWheelFrame(){
  });
 }
 
+// A wheel over an unselected Markmap must not fall through to either
+// Markmap's own zoom behavior or the canvas camera. Selected maps keep their
+// local wheel zoom; the canvas wheel handler below ignores them.
 canvas.addEventListener("wheel",e=>{
- if(e.target.closest?.(".map-pane"))return;
+ const mapCard=e.target.closest?.(".map-card");
+ if(!mapCard||mapCard.classList.contains("selected"))return;
+ e.preventDefault();
+ e.stopImmediatePropagation();
+},{capture:true,passive:false});
+
+canvas.addEventListener("wheel",e=>{
+ const mapCard=e.target.closest?.(".map-card");
+ if(mapCard?.classList.contains("selected"))return;
  e.preventDefault();
 
  const d=wheelUnitDelta(e);
@@ -1713,6 +1755,10 @@ function arrange(record=true){
  if(record)history();
  layoutCards();
  requestAnimationFrame(()=>{
+  // Arrange changes canvas card positions, not the map's internal viewport.
+  // Re-fitting every Markmap here resets its zoom transform and can make the
+  // content jump toward a corner. Each map is fitted once when it renders;
+  // preserve that view while arranging the cards around it.
   fit(false);
   save();
  });
@@ -1857,16 +1903,15 @@ async function focusSelected(mode="readable"){
   const n=state.selected;
   if(!n)return;
   state.spaceFocusStep=mode==="fit"?1:2;
+  const fitMap=n.type==="map"&&mode==="fit";
 
   if(n.type==="map"){
-   // Wait for Markmap's first layout before fitting it. Fitting while
-   // setData() is still running leaves the first Space press centered on an
-   // empty or partial SVG, which made a second press appear necessary.
+   // Wait for the initial render before measuring or centering this map.
    try{await n.mapReady}catch{}
    if(state.selected!==n||n.type!=="map")return;
   }
 
-  if(n.type==="map"&&mode==="fit"){
+  if(fitMap){
    const size=mapViewportSize();
    const dimensionsChanged=n.mapWidth!==size.width||n.mapHeight!==size.height;
    if(dimensionsChanged){
@@ -1874,15 +1919,9 @@ async function focusSelected(mode="readable"){
     n.mapWidth=size.width;n.mapHeight=size.height;
     n.el.style.width=size.width+"px";n.el.style.height=size.height+"px";
     layoutCards();
-   // Let the card body and its SVG receive the new viewport dimensions before
-   // asking Markmap to measure its bounds. Otherwise the first Space can fit
-   // against the previous size and the next press appears to be required.
-   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-   if(state.selected!==n)return;
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    if(state.selected!==n)return;
    }
-   try{await n.mapInstance?.fit()}catch{}
-   if(state.selected!==n)return;
-   save();
   }
 
   // Fit Markdown cards to the available width; Markmaps also fit vertically.
@@ -1904,11 +1943,25 @@ async function focusSelected(mode="readable"){
   const widthScale=availableWidth/r.w;
   if(mode==="fit"){
     const fitScale=clampScale(Math.min(widthScale,availableHeight/r.h));
-    moveTo(
-      innerWidth/2-worldCenterX*fitScale,
-      innerHeight/2-worldCenterY*fitScale,
-      fitScale
-    );
+    const cameraX=innerWidth/2-worldCenterX*fitScale;
+    const cameraY=innerHeight/2-worldCenterY*fitScale;
+    if(fitMap){
+      // Markmap.fit() measures the SVG's client rect. Center and size the
+      // card first so that measurement uses the final canvas zoom; fitting
+      // before this camera change made one Space press appear to need a second.
+      if(state.raf){cancelAnimationFrame(state.raf);state.raf=0}
+      setCameraImmediate(cameraX,cameraY,fitScale);
+      finishCameraMotion();
+      try{
+        await n.mapInstance?.setData();
+        if(state.selected!==n)return;
+        await n.mapInstance?.fit();
+      }catch{}
+      if(state.selected!==n)return;
+      save();
+    }else{
+      moveTo(cameraX,cameraY,fitScale);
+    }
     return;
   }
   const fitScale=n.type==="map"?Math.min(widthScale,availableHeight/r.h):widthScale;
@@ -2021,6 +2074,7 @@ window.addEventListener("keydown",e=>{
  /*
   * SPACE
   * - selected card -> focus it
+  * - no selected card -> center the canvas
   * - canvas panning is available with middle or right mouse button
   */
  if(e.code==="Space"&&!editing&&!customSelectFocused){
@@ -2030,7 +2084,7 @@ window.addEventListener("keydown",e=>{
      // A Markmap's Space action is always one predictable fit-and-center.
      // Markdown retains its fit/readable two-step cycle.
      focusSelected(state.selected.type==="map"?"fit":state.spaceFocusStep===1?"readable":"fit");
-   }
+   }else $("#center").click();
    return;
  }
 

@@ -56,6 +56,7 @@ body.camera-moving #world{will-change:transform}
 .map-card .cardbar{height:32px;background:linear-gradient(90deg,#eeebff,#f8f6ff);border-bottom-color:#ded9f6}
 .map-card .cardbody{height:calc(100% - 32px);padding:0;overflow:hidden}
 .map-pane{min-width:0;height:100%;overflow:hidden;background:var(--map-surface,#fbfaff);transition:background .2s ease;cursor:grab}
+.map-card:not(.selected) .map-pane{cursor:default}
 .map-pane.pen-panning{cursor:grabbing}
 .map-pane svg{display:block;width:100%;height:100%;font-family:var(--map-font-family,"Inter",ui-sans-serif,system-ui,sans-serif)}
 .map-card .markmap-link{stroke-linecap:round;opacity:.86}
@@ -63,6 +64,35 @@ body.camera-moving #world{will-change:transform}
 .map-card .markmap-node text{font-size:calc(14px * var(--card-font-scale,1))!important;font-weight:400!important;fill:var(--ink)}
 .map-card .markmap-node foreignObject>div,
 .map-card .markmap-node .markmap-foreign{font-family:var(--map-font-family,"Inter",ui-sans-serif,system-ui,sans-serif);font-size:calc(14px * var(--card-font-scale,1))!important;font-weight:400!important;line-height:1.4;color:var(--ink)}
+.map-card .markmap-node pre.map-codeblock{
+ --code-accent:var(--card-accent,#7669d3);
+ --code-keyword:color-mix(in srgb,#7441b8 78%,var(--code-accent) 22%);
+ --code-function:color-mix(in srgb,#2459a6 78%,var(--code-accent) 22%);
+ --code-string:color-mix(in srgb,#28743b 82%,var(--code-accent) 18%);
+ box-sizing:border-box;max-width:300px;margin:4px 0;padding:8px 10px;overflow:auto;
+ white-space:pre-wrap;overflow-wrap:anywhere;tab-size:2;
+ border:1px solid color-mix(in srgb,var(--code-accent) 30%,var(--border));border-radius:10px;
+ background:color-mix(in srgb,var(--map-surface,#fbfaff) 88%,var(--code-accent) 12%);
+ color:var(--ink);font:calc(11px * var(--card-font-scale,1))/1.5 ui-monospace,SFMono-Regular,Consolas,monospace
+}
+.map-card .markmap-node pre.map-codeblock code{font:inherit;color:inherit;white-space:inherit}
+.map-card .markmap-node pre.map-codeblock .hljs-keyword,
+.map-card .markmap-node pre.map-codeblock .hljs-selector-tag,
+.map-card .markmap-node pre.map-codeblock .hljs-literal,
+.map-card .markmap-node pre.map-codeblock .hljs-built_in{color:var(--code-keyword)}
+.map-card .markmap-node pre.map-codeblock .hljs-title.function_,
+.map-card .markmap-node pre.map-codeblock .hljs-title.class_,
+.map-card .markmap-node pre.map-codeblock .hljs-function .hljs-title{color:var(--code-function)}
+.map-card .markmap-node pre.map-codeblock .hljs-string,
+.map-card .markmap-node pre.map-codeblock .hljs-attr{color:var(--code-string)}
+body.dark .map-card .markmap-node pre.map-codeblock{
+ --code-accent:var(--card-accent-dark,var(--card-accent,#7669d3));
+ --code-keyword:color-mix(in srgb,#c792ea 76%,var(--code-accent) 24%);
+ --code-function:color-mix(in srgb,#82aaff 78%,var(--code-accent) 22%);
+ --code-string:color-mix(in srgb,#c3e88d 82%,var(--code-accent) 18%);
+ background:color-mix(in srgb,var(--map-surface,#17181d) 90%,var(--code-accent) 10%);
+ border-color:color-mix(in srgb,var(--code-accent) 30%,#ffffff18)
+}
 .map-card .map-loading{display:grid;place-items:center;height:100%;color:var(--muted);font-size:12px}
 .map-card .map-error{padding:24px;color:#a34a42;font:12px/1.5 ui-monospace,monospace}
 .map-card .map-title{pointer-events:none}
