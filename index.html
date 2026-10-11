@@ -28,12 +28,12 @@
 </div>
 
 <div class="toolbar" id="toolbar" aria-label="Canvas buttons">
- <button class="tool active" id="hand" title="Hand: Zoom / Scroll (H)">✋</button>
+ <button class="tool active" id="hand" title="Navigation: Zoom / Scroll (H)" aria-label="Navigation: Zoom / Scroll"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.4 15.4 5 5M8.3 10.8h5M10.8 8.3v5"/></svg></button>
  <button class="tool primary" id="new" title="New Markdown card (N)">＋</button>
- <button class="tool" id="center" title="Center canvas (C)">◎</button>
- <button class="tool" id="arrange" title="Arrange cards (A)">⊞</button>
+ <button class="tool" id="center" title="Center and fit all cards (C)" aria-label="Center and fit all cards"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+ <button class="tool" id="arrange" title="Arrange cards (A)" aria-label="Arrange cards"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg></button>
  <div class="background-picker">
-  <button class="tool background-select" id="background" title="Background" aria-label="Background" aria-expanded="false">◌</button>
+  <button class="tool background-select" id="background" title="Background" aria-label="Background" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 1.25 4.75L18 8l-4.75 1.25L12 14l-1.25-4.75L6 8l4.75-1.25L12 2Z"/><path d="m19 14 .75 2.25L22 17l-2.25.75L19 20l-.75-2.25L16 17l2.25-.75L19 14ZM5 14l.7 2.3L8 17l-2.3.7L5 20l-.7-2.3L2 17l2.3-.7L5 14Z"/></svg></button>
   <div class="background-menu" id="backgroundMenu" role="menu">
    <button type="button" data-background-choice="light" role="menuitem"><svg viewBox="0 0 32 22" aria-hidden="true"><rect width="32" height="22" fill="#d9d6cf"/><path d="M5 5h.1M16 5h.1M27 5h.1M5 16h.1M16 16h.1M27 16h.1" stroke="#77736b" stroke-width="2" stroke-linecap="round"/></svg><span>Light</span></button>
    <button type="button" data-background-choice="sun" role="menuitem"><svg viewBox="0 0 32 22" aria-hidden="true"><rect width="32" height="22" fill="#d9d6cf"/><circle cx="24" cy="7" r="4" fill="#edbe62"/><path d="M24 1v-2M24 16v-2M18 7h-2M30 7h-2M20 3l-2-2M28 3l2-2" stroke="#c79239" stroke-width="1"/></svg><span>Sun</span></button>

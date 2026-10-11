@@ -16,6 +16,11 @@ const state={
  undo:[],redo:[],historyLock:false,raf:0,saveTimer:0,hideTimer:0,
 };
 const MAP_COLORS=["default","purple","warm","ocean","forest","sunset","slate"];
+function randomCardTheme(){return MAP_COLORS[1+Math.floor(Math.random()*(MAP_COLORS.length-1))]}
+const ICONS={
+ zoom:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.4 15.4 5 5M8.3 10.8h5M10.8 8.3v5"/></svg>',
+ pan:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v20M2 12h20M12 2l-3 3M12 2l3 3M12 22l-3-3M12 22l3-3M2 12l3-3M2 12l3 3M22 12l-3-3M22 12l-3 3"/></svg>'
+};
 const LEGACY_MAP_FONTS={modern:"dm-sans",editorial:"lora",geometric:"space-grotesk",humanist:"nunito-sans",mono:"mono",rounded:"rounded",handwritten:"hand-caveat"};
 const MAP_PALETTES={
  default:["#5b57b7","#7c78c8","#9b98d8","#bbb9e8","#d5d3f2"],
@@ -800,7 +805,7 @@ function openCanvasFile(file){
  reader.readAsText(file);
 }
 
-function makeNote(md,x,y,w=600,record=true,id=null,font="mono",size="100",mapColor="default",mapFont="modern",mapWidth=null,mapHeight=null){
+function makeNote(md,x,y,w=600,record=true,id=null,font="mono",size="100",mapColor=randomCardTheme(),mapFont="modern",mapWidth=null,mapHeight=null){
  if(record)history();
  const width=Math.max(300,Math.min(1200,w||600));
 const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size,width,type:"note",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:normalizeMapFont(mapFont),mapWidth:Number.isFinite(mapWidth)?Math.max(420,Math.min(1600,mapWidth)):null,mapHeight:Number.isFinite(mapHeight)?Math.max(320,Math.min(1200,mapHeight)):null,el:null};
@@ -860,7 +865,7 @@ const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size,width,ty
  empty();
  return n;
 }
-function makeMap(md,x,y,w=null,h=null,record=true,id=null,mapColor="default",mapFont="modern"){
+function makeMap(md,x,y,w=null,h=null,record=true,id=null,mapColor=randomCardTheme(),mapFont="modern"){
  if(record)history();
  const viewport=mapViewportSize();
  const width=Math.max(420,Math.min(1600,w||viewport.width));
@@ -921,6 +926,7 @@ window.addEventListener("mousemove",e=>{
    else r.n.width=w;
    if(r.side==="left"){r.n.x=r.x+r.w-w;r.n.el.style.left=r.n.x+"px"}
   }
+  scheduleReflow();
  }
  if(state.pan){
   state.x=state.pan.x+e.clientX-state.pan.sx;state.y=state.pan.y+e.clientY-state.pan.sy;sync();
@@ -928,13 +934,15 @@ window.addEventListener("mousemove",e=>{
  }
 });
 window.addEventListener("mouseup",()=>{
- const resized=state.resize?.n||null;
- if(state.resize||state.pan){flushSave()}
+ const resized=state.resize;
+ const panned=state.pan;
  if(state.resize?.n.type==="map")state.resize.n.mapInstance?.fit();
  if(panApplyFrame){cancelAnimationFrame(panApplyFrame);panApplyFrame=0;apply()}
+ if(reflowFrame){cancelAnimationFrame(reflowFrame);reflowFrame=0}
  state.resize=null;state.pan=null;
  canvas.style.cursor=state.hand?"grab":"default";
- if(resized)scheduleArrange();
+ if(resized){layoutCards();flushSave()}
+ else if(panned)flushSave();
 });
 function startResize(e,n,side){
  e.preventDefault();e.stopPropagation();select(n);history();
@@ -1039,7 +1047,7 @@ function updateHandUI(){
  showControls();
  const button=$("#hand");
  button.classList.toggle("active",state.hand);
- button.textContent=state.hand?"✋":"✋";
+ button.innerHTML=state.hand?ICONS.zoom:ICONS.pan;
  button.title=state.hand?"Hand ON · trackpad zoom":"Hand OFF · trackpad pan";
  canvas.style.cursor=state.hand?"grab":"default";
 }
@@ -1078,7 +1086,7 @@ function openEditor(mode="note",n=null){
  state.editId=n?.id??null;
  state.editorMode=mode;
  source.value=n?.md||"";
- $("#mapColor").value=n?.mapColor||"default";
+ $("#mapColor").value=n?.mapColor||randomCardTheme();
  $("#mapFont").value=normalizeMapFont(n?.mapFont);
  $("#applyCard").textContent=n?"Update card":"Place card";
  $("#applyMap").textContent=n?"Update map":"Place map";
@@ -1114,7 +1122,7 @@ function applyEditor(type=state.editorMode){
   const size=mapViewportSize();
   const n=type==="map"
    ? makeMap(md,p.x-size.width/2,p.y-size.height/2,size.width,size.height,true,null,$("#mapColor").value,$("#mapFont").value)
-   : makeNote(md,p.x-300,p.y-150,600,true);
+   : makeNote(md,p.x-300,p.y-150,600,true,null,"mono","100",$("#mapColor").value,$("#mapFont").value);
   select(n);inserted=true;
  }
  closeEditor();
@@ -1176,9 +1184,8 @@ function fit(widthOnly=false){
  const cx=b.minX+w/2,cy=b.minY+h/2;
  moveTo(innerWidth/2-cx*s,widthOnly?state.targetY:innerHeight/2-cy*s,s)
 }
-function arrange(record=true){
+function layoutCards(){
  if(!state.notes.length)return;
- if(record)history();
 
  // Preserve each card's width, including widths expanded for tables.
  const columns=10;
@@ -1233,9 +1240,22 @@ function arrange(record=true){
   rowTop+=rowHeights[row]+gapY;
  }
 
+}
+function arrange(record=true){
+ if(!state.notes.length)return;
+ if(record)history();
+ layoutCards();
  requestAnimationFrame(()=>{
   fit(false);
   save();
+ });
+}
+let reflowFrame=0;
+function scheduleReflow(){
+ if(reflowFrame)return;
+ reflowFrame=requestAnimationFrame(()=>{
+  reflowFrame=0;
+  layoutCards();
  });
 }
 function scheduleArrange(){
@@ -1308,14 +1328,7 @@ showControls();
 }
 $("#new").onclick=()=>openEditor("note")
 $("#center").onclick=()=>{
- const b=cardBounds();
- if(!b){moveTo(innerWidth/2,innerHeight/2,1);save();return}
- const scale=MIN_SCALE;
- moveTo(
-  innerWidth/2-(b.minX+b.maxX)*scale/2,
-  innerHeight/2-(b.minY+b.maxY)*scale/2,
-  scale
- );
+ fit(false);
  save();
 }
 $("#arrange").onclick=arrange
@@ -1481,7 +1494,7 @@ function resizeSelectedWidth(direction){
  n.el.style.width=width+"px";
  if(n.type==="map")n.mapWidth=width;
  else n.width=width;
- scheduleArrange();
+ layoutCards();
  save();
 }
 
