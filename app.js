@@ -637,7 +637,7 @@ function mapViewportSize(){
   // current camera zoom. Keeping them viewport-based prevents huge cards when
   // the canvas happens to be zoomed far out.
   width:Math.max(Math.min(520,Math.max(300,innerWidth-24)),Math.min(1600,Math.floor(innerWidth-80))),
-  height:Math.max(320,Math.min(1400,Math.round(innerHeight*.82)))
+  height:Math.max(320,Math.min(1600,Math.round(innerHeight*.94)))
  };
 }
 function prepareMarkmapMarkdown(markdown){
@@ -724,7 +724,7 @@ function setCardType(n,type,record=true){
  if(view){view.value=type;syncCardSelect(view)}
  const body=n.el.querySelector(".cardbody");
  if(type==="map"){
-  renderMap(n);
+  n.mapReady=renderMap(n);
  }else{
   body.innerHTML=renderCardMarkdown(n.md);
   widenCardForTables(n.el);
@@ -1122,7 +1122,7 @@ const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type
  el.querySelector("[data-font]").onchange=e=>{history();n.font=normalizeCardFont(e.target.value);el.dataset.font=n.font;save()};
  el.querySelector("[data-size]").onchange=e=>{history();n.size=e.target.value;el.dataset.fontSize=n.size;el.querySelector(".cardbody").style.setProperty("--card-font-scale",String(Number(n.size)/100));save()};
  el.querySelectorAll(".resize").forEach(r=>r.onmousedown=e=>{if(e.button===0)startResize(e,n,r.dataset.side)});
- renderMap(n);empty();return n;
+ n.mapReady=renderMap(n);empty();return n;
 }
 let panApplyFrame=0;
 window.addEventListener("mousemove",e=>{
@@ -1326,7 +1326,7 @@ function applyEditor(type=state.editorMode){
   const n=state.notes.find(x=>x.id===state.editId);if(!n)return;
   history();n.md=md;n.mapColor=$("#mapColor").value;applyMapFont(n,$("#mapFont").value);
   if(n.type!==type)setCardType(n,type,false);
-  else if(type==="map")renderMap(n);
+  else if(type==="map")n.mapReady=renderMap(n);
   else n.el.querySelector(".cardbody").innerHTML=renderCardMarkdown(md);
   updateCardHeading(n);
   n.el.dataset.mapColor=n.mapColor;
@@ -1596,16 +1596,23 @@ async function focusSelected(mode="readable"){
   if(!n)return;
   state.spaceFocusStep=mode==="fit"?1:2;
 
+  if(n.type==="map"){
+   // Wait for Markmap's first layout before fitting it. Fitting while
+   // setData() is still running leaves the first Space press centered on an
+   // empty or partial SVG, which made a second press appear necessary.
+   try{await n.mapReady}catch{}
+   if(state.selected!==n||n.type!=="map")return;
+  }
+
   if(n.type==="map"&&mode==="fit"){
    const size=mapViewportSize();
-   if(n.mapWidth!==size.width||n.mapHeight!==size.height){
+   const dimensionsChanged=n.mapWidth!==size.width||n.mapHeight!==size.height;
+   if(dimensionsChanged){
     history();
     n.mapWidth=size.width;n.mapHeight=size.height;
     n.el.style.width=size.width+"px";n.el.style.height=size.height+"px";
+    layoutCards();
    }
-   // Reflow the whole canvas around the new map bounds, then fit the tree
-   // inside the resized map pane before centering the card on screen.
-   layoutCards();
    try{await n.mapInstance?.fit()}catch{}
    if(state.selected!==n)return;
    save();
@@ -1618,14 +1625,15 @@ async function focusSelected(mode="readable"){
     w:n.el.offsetWidth,
     h:n.el.offsetHeight
   };
-  const rect=n.el.getBoundingClientRect();
-  const worldLeft=(rect.left-state.x)/state.scale;
-  const worldTop=(rect.top-state.y)/state.scale;
+  // n.x/n.y are the canonical canvas coordinates. Using the transformed
+  // client rect made focus depend on the camera's current animation frame.
+  const worldLeft=n.x;
+  const worldTop=n.y;
   const worldCenterX=worldLeft+r.w/2;
   const worldCenterY=worldTop+r.h/2;
-  const titleOffset=n.type==="map"?32:88;
+  const titleOffset=n.type==="map"?24:88;
   const availableWidth=Math.max(240,innerWidth-(n.type==="map"?48:180));
-  const availableHeight=Math.max(240,innerHeight-titleOffset-(n.type==="map"?32:40));
+  const availableHeight=Math.max(240,innerHeight-titleOffset-(n.type==="map"?24:40));
   const widthScale=availableWidth/r.w;
   if(mode==="fit"){
     const fitScale=clampScale(Math.min(widthScale,availableHeight/r.h));
@@ -1708,7 +1716,7 @@ function setCardColorTheme(n,color,record=true){
  n.el.dataset.mapColor=next;
  const selectEl=n.el.querySelector("[data-map-color]");
  if(selectEl){selectEl.value=next;syncCardSelect(selectEl)}
- if(n.type==="map")renderMap(n);
+ if(n.type==="map")n.mapReady=renderMap(n);
  save();
 }
 
