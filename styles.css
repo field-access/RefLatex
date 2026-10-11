@@ -16,35 +16,18 @@ body{font-family:Manrope,Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",
 }
 #canvas[data-background="stars"]{
  background-color:#090d15;
- background-image:
-  radial-gradient(1px 1px at 17px 23px,#dce7ffb8 98%,transparent),
-  radial-gradient(1px 1px at 71px 64px,#ffffff80 98%,transparent),
-  radial-gradient(1.4px 1.4px at 126px 119px,#d9e8ffb0 98%,transparent),
-  radial-gradient(1px 1px at 39px 151px,#c6d8ff88 98%,transparent),
-  radial-gradient(1.2px 1.2px at 202px 77px,#ffffff99 98%,transparent),
-  radial-gradient(1px 1px at 84px 224px,#dce7ff99 98%,transparent),
-  radial-gradient(ellipse at 52% -18%,#24345455,transparent 68%);
- background-size:193px 181px,257px 223px,331px 293px,419px 367px,557px 487px,691px 601px,100% 100%;
+ background-image:url("./assets/backgrounds/stars.png");
+ background-position:center;background-repeat:no-repeat;background-size:cover;
 }
 #canvas[data-background="sun"]{
- background-color:#ebe6dc;
- background-image:
-  radial-gradient(circle at 78% 18%,#f0c875b8 0 5.5%,#f0c87548 5.8% 10%,transparent 25%),
-  linear-gradient(180deg,#eee9df 0%,#e4ded2 58%,#d7d1c7 100%);
+ background-color:#eee5dc;
+ background-image:url("./assets/backgrounds/sun.png");
+ background-position:center;background-repeat:no-repeat;background-size:cover;
 }
 #canvas[data-background="planets"]{
  background-color:#080d17;
- background-image:
-  radial-gradient(ellipse 340px 104px at 77% 51%,transparent 47%,#e8d2b6aa 48% 49%,transparent 50%),
-  radial-gradient(circle 175px at 77% 47%,#f6dfbb 0%,#d39a8c 36%,#8e7b91 66%,#46536d 88%,#28364e 100%),
-  radial-gradient(circle 205px at 77% 47%,#e7ad7440 0%,transparent 100%),
-  radial-gradient(1px 1px at 17px 23px,#dce7ffb8 98%,transparent),
-  radial-gradient(1px 1px at 71px 64px,#ffffff80 98%,transparent),
-  radial-gradient(1.4px 1.4px at 126px 119px,#d9e8ffb0 98%,transparent),
-  radial-gradient(1px 1px at 39px 151px,#c6d8ff88 98%,transparent),
-  radial-gradient(1.2px 1.2px at 202px 77px,#ffffff99 98%,transparent),
-  radial-gradient(ellipse at 52% -18%,#24345455,transparent 68%);
- background-size:100% 100%,100% 100%,100% 100%,193px 181px,257px 223px,331px 293px,419px 367px,557px 487px,100% 100%;
+ background-image:url("./assets/backgrounds/planets.png");
+ background-position:center;background-repeat:no-repeat;background-size:cover;
 }
 #world{position:absolute;left:0;top:0;width:1px;height:1px;transform-origin:0 0}
 body.camera-moving #world{will-change:transform}
@@ -693,35 +676,18 @@ body.dark #canvas[data-background="light"]{
 }
 body.dark #canvas[data-background="sun"]{
  background-color:#111722;
- background-image:
-  radial-gradient(circle at 78% 18%,#f3ca7b77 0 5.5%,#e8ae5340 5.8% 11%,transparent 27%),
-  linear-gradient(180deg,#111722 0%,#171c25 62%,#1d2027 100%);
+ background-image:linear-gradient(180deg,#0d1425a8,#171b25bd),url("./assets/backgrounds/sun.png");
+ background-position:center;background-repeat:no-repeat;background-size:cover;
 }
 body.dark #canvas[data-background="stars"]{
  background-color:#090d15;
- background-image:
-  radial-gradient(1px 1px at 17px 23px,#dce7ffb8 98%,transparent),
-  radial-gradient(1px 1px at 71px 64px,#ffffff80 98%,transparent),
-  radial-gradient(1.4px 1.4px at 126px 119px,#d9e8ffb0 98%,transparent),
-  radial-gradient(1px 1px at 39px 151px,#c6d8ff88 98%,transparent),
-  radial-gradient(1.2px 1.2px at 202px 77px,#ffffff99 98%,transparent),
-  radial-gradient(1px 1px at 84px 224px,#dce7ff99 98%,transparent),
-  radial-gradient(ellipse at 52% -18%,#24345455,transparent 68%);
- background-size:193px 181px,257px 223px,331px 293px,419px 367px,557px 487px,691px 601px,100% 100%;
+ background-image:url("./assets/backgrounds/stars.png");
+ background-position:center;background-repeat:no-repeat;background-size:cover;
 }
 body.dark #canvas[data-background="planets"]{
  background-color:#080d17;
- background-image:
-  radial-gradient(ellipse 340px 104px at 77% 51%,transparent 47%,#e8d2b6aa 48% 49%,transparent 50%),
-  radial-gradient(circle 175px at 77% 47%,#f6dfbb 0%,#d39a8c 36%,#8e7b91 66%,#46536d 88%,#28364e 100%),
-  radial-gradient(circle 205px at 77% 47%,#e7ad7440 0%,transparent 100%),
-  radial-gradient(1px 1px at 17px 23px,#dce7ffb8 98%,transparent),
-  radial-gradient(1px 1px at 71px 64px,#ffffff80 98%,transparent),
-  radial-gradient(1.4px 1.4px at 126px 119px,#d9e8ffb0 98%,transparent),
-  radial-gradient(1px 1px at 39px 151px,#c6d8ff88 98%,transparent),
-  radial-gradient(1.2px 1.2px at 202px 77px,#ffffff99 98%,transparent),
-  radial-gradient(ellipse at 52% -18%,#24345455,transparent 68%);
- background-size:100% 100%,100% 100%,100% 100%,193px 181px,257px 223px,331px 293px,419px 367px,557px 487px,100% 100%;
+ background-image:url("./assets/backgrounds/planets.png");
+ background-position:center;background-repeat:no-repeat;background-size:cover;
 }
 
 /* Compact, consistent card controls with an explicit focus state. */
