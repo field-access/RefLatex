@@ -1343,7 +1343,11 @@ document.addEventListener("click",e=>{
 document.addEventListener("paste",e=>{
  if(document.activeElement===source)return;
  const md=e.clipboardData?.getData("text/plain");if(!md?.trim())return;
- e.preventDefault();const p=worldPoint(innerWidth/2,innerHeight/2),n=makeNote(md,p.x-300,p.y-150,600,true);select(n);save()
+ e.preventDefault();
+ const p=worldPoint(innerWidth/2,innerHeight/2);
+ const n=makeNote(md,p.x-300,p.y-150,600,true);
+ select(n);
+ requestAnimationFrame(()=>arrange(false));
 });
 
 function focusSelected(mode="readable"){
