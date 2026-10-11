@@ -1721,9 +1721,15 @@ function layoutCards(){
 
  // Force layout after Markdown/KaTeX rendering.
  state.notes.forEach(n=>{
-  widenCardForTables(n.el);
-  if(n.type==="map")n.mapWidth=n.el.offsetWidth;
-  else n.width=n.el.offsetWidth;
+  if(n.type==="map"){
+   // Table auto-width belongs to Markdown cards. Running it on Markmap's
+   // foreignObject content can overwrite the map's saved border width during
+   // Arrange, making a selected map visibly resize.
+   n.mapWidth=n.el.offsetWidth;
+  }else{
+   widenCardForTables(n.el);
+   n.width=n.el.offsetWidth;
+  }
   void n.el.offsetHeight;
  });
 
@@ -1774,9 +1780,11 @@ function scheduleReflow(){
 function scheduleArrange(){
  requestAnimationFrame(()=>arrange(false));
 }
-const backgrounds=["light","sun","ocean","stars","planets"];
+const backgrounds=["light","contours","geometry","sun","ocean","stars","planets"];
 const backgroundLabels={
  light:"Light",
+ contours:"Contours",
+ geometry:"Geometry",
  stars:"Stars",
  sun:"Sun",
  planets:"Planets",

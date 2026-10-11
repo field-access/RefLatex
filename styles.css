@@ -42,6 +42,16 @@ body.canvas-panning,body.canvas-panning *{user-select:none!important;-webkit-use
  background-image:url("./assets/backgrounds/ocean.webp");
  background-position:center;background-repeat:no-repeat;background-size:cover;
 }
+#canvas[data-background="contours"]{
+ background-color:#faf8f2;
+ background-image:url("./assets/backgrounds/contours.webp");
+ background-position:center;background-repeat:no-repeat;background-size:cover;
+}
+#canvas[data-background="geometry"]{
+ background-color:#faf8f2;
+ background-image:url("./assets/backgrounds/geometry.webp");
+ background-position:center;background-repeat:no-repeat;background-size:cover;
+}
 #world{position:absolute;left:0;top:0;width:1px;height:1px;transform-origin:0 0}
 body.camera-moving #world{will-change:transform}
 .card{
@@ -279,7 +289,7 @@ body.dark .map-card .markmap-node pre.map-codeblock{
 }
 .toolbar .background-select:hover,.toolbar .background-select[aria-expanded="true"]{background:var(--panel);border-color:var(--border)}
 .background-menu{
- position:absolute;left:48px;top:0;display:none;width:150px;padding:5px;
+ position:absolute;left:48px;top:0;display:none;width:150px;max-height:min(72vh,340px);overflow-y:auto;padding:5px;
  background:#faf9f6;border:1px solid #00000018;border-radius:9px;z-index:50;
 }
 .background-menu.open{display:grid;gap:2px}
@@ -727,6 +737,16 @@ body.dark #canvas[data-background="planets"]{
 body.dark #canvas[data-background="ocean"]{
  background-color:#0b1722;
  background-image:linear-gradient(180deg,#07121d55,#07121d99),url("./assets/backgrounds/ocean.webp");
+ background-position:center;background-repeat:no-repeat;background-size:cover;
+}
+body.dark #canvas[data-background="contours"]{
+ background-color:#151922;
+ background-image:linear-gradient(135deg,#10151db8,#171c26c4),url("./assets/backgrounds/contours.webp");
+ background-position:center;background-repeat:no-repeat;background-size:cover;
+}
+body.dark #canvas[data-background="geometry"]{
+ background-color:#151922;
+ background-image:linear-gradient(135deg,#10151db8,#171c26c4),url("./assets/backgrounds/geometry.webp");
  background-position:center;background-repeat:no-repeat;background-size:cover;
 }
 
