@@ -1335,7 +1335,7 @@ const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type
  el.querySelectorAll(".resize").forEach(r=>r.onmousedown=e=>{if(e.button===0)startResize(e,n,r.dataset.side)});
  n.mapReady=renderMap(n);empty();return n;
 }
-let panApplyFrame=0;
+let panApplyFrame=0,pendingPenCanvasPan=null;
 window.addEventListener("mousemove",e=>{
  if(state.resize){
   const r=state.resize,dx=(e.clientX-r.sx)/state.scale;
@@ -1388,12 +1388,39 @@ function startPan(e){
  canvas.style.cursor="grabbing";
 }
 canvas.addEventListener("pointerdown",e=>{
- if(e.pointerType!=="pen"||!(e.button===2||(e.buttons&2)))return;
+ if(e.pointerType!=="pen")return;
+ const rightButton=e.button===2||(e.buttons&2);
+ const leftCanvasBackground=e.button===0&&e.target===canvas;
+ const leftCardSurface=e.button===0&&e.target.closest?.(".card")&&
+  !e.target.closest(".map-pane,.cardactions,.resize,button,a,select,input,textarea,[contenteditable='true']");
+ if(leftCardSurface){
+  pendingPenCanvasPan={pointerId:e.pointerId,x:e.clientX,y:e.clientY};
+  try{canvas.setPointerCapture(e.pointerId)}catch{}
+  return;
+ }
+ if(!rightButton&&!leftCanvasBackground)return;
  e.preventDefault();e.stopPropagation();
  state.pan={sx:e.clientX,sy:e.clientY,x:state.x,y:state.y,pointerId:e.pointerId};
  document.body.classList.add("camera-moving","canvas-panning");
  canvas.style.cursor="grabbing";
  try{canvas.setPointerCapture(e.pointerId)}catch{}
+},true);
+window.addEventListener("pointermove",e=>{
+ const pending=pendingPenCanvasPan;
+ if(!pending||e.pointerType!=="pen"||pending.pointerId!==e.pointerId)return;
+ if(Math.hypot(e.clientX-pending.x,e.clientY-pending.y)<6)return;
+ e.preventDefault();
+ pendingPenCanvasPan=null;
+ window.getSelection()?.removeAllRanges();
+ state.pan={sx:pending.x,sy:pending.y,x:state.x,y:state.y,pointerId:e.pointerId};
+ document.body.classList.add("camera-moving","canvas-panning");
+ canvas.style.cursor="grabbing";
+},{capture:true,passive:false});
+window.addEventListener("pointerup",e=>{
+ if(pendingPenCanvasPan?.pointerId===e.pointerId)pendingPenCanvasPan=null;
+},true);
+window.addEventListener("pointercancel",e=>{
+ if(pendingPenCanvasPan?.pointerId===e.pointerId)pendingPenCanvasPan=null;
 },true);
 window.addEventListener("pointermove",e=>{
  if(state.pan?.pointerId!==e.pointerId)return;
