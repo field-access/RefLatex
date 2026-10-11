@@ -121,8 +121,9 @@ function syncCardSelect(select){
  const option=select.selectedOptions[0];
  const trigger=wrap.querySelector(".custom-select-trigger");
  if(trigger){
-  trigger.querySelector(".custom-select-label").textContent=option?.textContent||"Select";
-  trigger.setAttribute("aria-label",`${select.getAttribute("aria-label")||"Option"}: ${option?.textContent||"Select"}`);
+  const label=option?.textContent||select.value||select.getAttribute("aria-label")||"Select";
+  trigger.querySelector(".custom-select-label").textContent=label;
+  trigger.setAttribute("aria-label",`${select.getAttribute("aria-label")||"Option"}: ${label}`);
  }
  wrap.querySelectorAll(".custom-select-option").forEach(item=>{
   const selected=item.dataset.value===select.value;
@@ -636,7 +637,7 @@ function mapViewportSize(){
   // Map dimensions describe the card itself, not canvas world units at the
   // current camera zoom. Keeping them viewport-based prevents huge cards when
   // the canvas happens to be zoomed far out.
-  width:Math.max(440,Math.min(1600,Math.floor(innerWidth-80))),
+  width:Math.max(Math.min(520,Math.max(300,innerWidth-24)),Math.min(1600,Math.floor(innerWidth-80))),
   height:Math.max(320,Math.min(1400,Math.round(innerHeight*.82)))
  };
 }
@@ -1015,8 +1016,9 @@ function openCanvasFile(file){
 
 function makeNote(md,x,y,w=600,record=true,id=null,font="mono",size="100",mapColor=randomCardTheme(),mapFont="modern",mapWidth=null,mapHeight=null){
  if(record)history();
- const width=Math.max(440,Math.min(1200,w||600));
-const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size,width,type:"note",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:normalizeMapFont(mapFont),mapWidth:Number.isFinite(mapWidth)?Math.max(440,Math.min(1600,mapWidth)):null,mapHeight:Number.isFinite(mapHeight)?Math.max(320,Math.min(1200,mapHeight)):null,el:null};
+ const minWidth=Math.min(520,Math.max(300,innerWidth-24));
+ const width=Math.max(minWidth,Math.min(1200,w||600));
+const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size,width,type:"note",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:normalizeMapFont(mapFont),mapWidth:Number.isFinite(mapWidth)?Math.max(minWidth,Math.min(1600,mapWidth)):null,mapHeight:Number.isFinite(mapHeight)?Math.max(320,Math.min(1200,mapHeight)):null,el:null};
  state.nextId=Math.max(state.nextId,n.id+1);
  const el=document.createElement("article");
  el.className="card";el.style.left=x+"px";el.style.top=y+"px";el.style.width=width+"px";
@@ -1078,7 +1080,7 @@ const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size,width,ty
 function makeMap(md,x,y,w=null,h=null,record=true,id=null,mapColor=randomCardTheme(),mapFont="modern"){
  if(record)history();
  const viewport=mapViewportSize();
- const width=Math.max(440,Math.min(1600,w||viewport.width));
+ const width=Math.max(Math.min(520,Math.max(300,innerWidth-24)),Math.min(1600,w||viewport.width));
  const height=Math.max(320,h||viewport.height);
 const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type:"map",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:normalizeMapFont(mapFont),font:"mono",size:"100",el:null,mapInstance:null};
  state.nextId=Math.max(state.nextId,n.id+1);
@@ -1132,7 +1134,7 @@ window.addEventListener("mousemove",e=>{
    r.n.el.style.height=h+"px";
    r.n.mapHeight=h;
   }else{
-   const minWidth=Math.min(440,Math.max(300,innerWidth-24));
+   const minWidth=Math.min(520,Math.max(300,innerWidth-24));
    const w=Math.max(minWidth,Math.min(1600,r.w+(r.side==="right"?dx:-dx)));
    r.n.el.style.width=w+"px";
    if(r.n.type==="map")r.n.mapWidth=w;
@@ -1713,7 +1715,7 @@ function setCardColorTheme(n,color,record=true){
 
 function resizeSelectedWidth(direction){
  const n=state.selected;if(!n)return;
- const min=Math.min(440,Math.max(300,innerWidth-24)),max=n.type==="map"?1600:1200;
+ const min=Math.min(520,Math.max(300,innerWidth-24)),max=n.type==="map"?1600:1200;
  const current=n.type==="map"?(n.mapWidth||n.el.offsetWidth):(n.width||n.el.offsetWidth);
  const width=Math.max(min,Math.min(max,current+direction*40));
  if(width===current)return;

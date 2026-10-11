@@ -845,8 +845,8 @@ body.dark .editorfoot .cancel:hover{background:#303744;color:#f1f3f7}
 }
 
 /* Keep the title and the selected-card controls in separate header rows. */
-.card{min-width:440px}
-.map-card{min-width:440px}
+.card{min-width:520px}
+.map-card{min-width:520px}
 .card.selected.has-title .cardbar{height:44px}
 .card.selected:not(.has-title) .cardbar{height:26px}
 .map-card.selected.has-title .cardbody{height:calc(100% - 44px)}
@@ -856,22 +856,22 @@ body.dark .editorfoot .cancel:hover{background:#303744;color:#f1f3f7}
  justify-content:flex-end;gap:3px;overflow:visible
 }
 .card:not(.has-title) .cardactions{top:4px}
-.custom-select{position:relative;flex:0 0 auto;min-width:0;height:22px}
-.custom-select[data-control="view"]{width:70px}
-.custom-select[data-control="theme"]{width:86px}
-.custom-select[data-control="map-font"]{width:90px}
-.custom-select[data-control="font"]{width:82px}
-.custom-select[data-control="size"]{width:56px}
-.native-card-select{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important;opacity:0!important;pointer-events:none!important}
+.custom-select{position:relative;flex:0 0 auto;min-width:0;height:24px}
+.custom-select[data-control="view"]{width:82px}
+.custom-select[data-control="theme"]{width:104px}
+.custom-select[data-control="map-font"]{width:124px}
+.custom-select[data-control="font"]{width:100px}
+.custom-select[data-control="size"]{width:68px}
+.native-card-select{display:none!important}
 .custom-select-trigger{
  display:flex!important;align-items:center;justify-content:space-between;gap:4px;
- width:100%!important;height:22px!important;min-width:0!important;padding:0 7px!important;
+ width:100%!important;height:24px!important;min-width:0!important;padding:0 8px!important;
  border:1px solid color-mix(in srgb,var(--ink) 16%,transparent)!important;border-radius:9px!important;
  background:color-mix(in srgb,var(--paper) 86%,transparent)!important;color:var(--ink)!important;
- box-shadow:0 1px 2px #1111;font:600 9px/1 Manrope,Inter,ui-sans-serif,system-ui,sans-serif!important;
+ box-shadow:0 1px 2px #1111;font:600 11px/1 Manrope,Inter,ui-sans-serif,system-ui,sans-serif!important;
  cursor:pointer;white-space:nowrap;overflow:hidden;transition:background .14s ease,border-color .14s ease,box-shadow .14s ease
 }
-.custom-select-label{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.custom-select-label{min-width:0;overflow:hidden;text-overflow:clip}
 .custom-select-chevron{flex:0 0 10px;width:10px;height:10px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;opacity:.72}
 .custom-select-trigger:hover,.custom-select.menu-open .custom-select-trigger{background:color-mix(in srgb,var(--paper) 68%,var(--card-accent,#7669d3) 18%)!important;border-color:color-mix(in srgb,var(--card-accent,#7669d3) 48%,transparent)!important}
 .custom-select-trigger:focus-visible{outline:2px solid var(--card-accent,#7669d3);outline-offset:2px}
@@ -889,7 +889,7 @@ body.dark .editorfoot .cancel:hover{background:#303744;color:#f1f3f7}
  padding:5px;border:1px solid color-mix(in srgb,var(--menu-accent,#7669d3) 28%,#c8cbd3);
  border-radius:16px;background:#fffefa;color:#292a30;
  box-shadow:0 14px 38px #10152235,0 3px 10px #10152220;
- font:500 11px/1.3 Manrope,Inter,ui-sans-serif,system-ui,sans-serif;
+ font:500 12px/1.35 Manrope,Inter,ui-sans-serif,system-ui,sans-serif;
  scrollbar-width:thin
 }
 .custom-select-option{
@@ -902,10 +902,10 @@ body.dark .editorfoot .cancel:hover{background:#303744;color:#f1f3f7}
 body.dark .custom-select-menu{border-color:color-mix(in srgb,var(--menu-accent,#b6aaff) 30%,#4b5260);background:#20242c;color:#e7eaf1;box-shadow:0 16px 42px #0009,0 3px 12px #0007}
 body.dark .custom-select-option:hover,body.dark .custom-select-option:focus-visible{background:color-mix(in srgb,var(--menu-accent,#b6aaff) 20%,#292f39)}
 body.dark .custom-select-option.is-selected{background:color-mix(in srgb,var(--menu-accent,#b6aaff) 24%,#252a33);color:#fff}
-@media(max-width:440px){
+@media(max-width:534px){
  .card,.map-card{min-width:calc(100vw - 24px)}
  .cardactions{left:6px;right:6px;gap:2px;flex-wrap:wrap;height:auto}
- .custom-select[data-control="map-font"]{width:78px}
+ .custom-select[data-control="map-font"]{width:112px}
  .cardactions button{flex-basis:20px;width:20px}
  .card.selected.has-title .cardbar{height:72px}
  .card.selected:not(.has-title) .cardbar{height:52px}
