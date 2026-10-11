@@ -788,7 +788,7 @@ function downloadCanvas(){
  setTimeout(()=>URL.revokeObjectURL(url),1000);
 
  $("#hint").textContent="Canvas saved";
- setTimeout(()=>$("#hint").textContent="Zoom mode: trackpad/wheel zoom · Pan mode: trackpad scroll · −/= zoom · [/] selected card width · 1–9 text size · N new card · K cycle Markdown/Markmap · M Markmap window · O card window · Shift+C change card theme · Esc close",1800);
+ setTimeout(()=>$("#hint").textContent="",1800);
 }
 
 function openCanvasFile(file){
@@ -842,7 +842,7 @@ function openCanvasFile(file){
    save();
 
    $("#hint").textContent=`Opened ${file.name}`;
-   setTimeout(()=>$("#hint").textContent="Zoom mode: trackpad/wheel zoom · Pan mode: trackpad scroll · −/= zoom · [/] selected card width · 1–9 text size · N new card · K cycle Markdown/Markmap · M Markmap window · O card window · Shift+C change card theme · Esc close",2200);
+   setTimeout(()=>$("#hint").textContent="",2200);
 
   }catch(err){
    state.historyLock=false;
@@ -1367,16 +1367,26 @@ async function toggleFull(){
   if(document.fullscreenElement)await document.exitFullscreen();
   else await document.documentElement.requestFullscreen();
  }catch{}
- document.body.classList.toggle("fullscreen",!!document.fullscreenElement||!document.body.classList.contains("fullscreen"));
- document.body.classList.add("controls");
- revealControls();
 }
 document.addEventListener("mousemove",e=>{if(document.body.classList.contains("fullscreen")&&(e.clientY<80||e.clientX<25))revealControls()});
 document.addEventListener("fullscreenchange",()=>{
  const active=!!document.fullscreenElement;
  document.body.classList.toggle("fullscreen",active);
- if(active){document.body.classList.add("controls");revealControls()}
 });
+
+const helpBackdrop=$("#helpBackdrop");
+function openHelp(){
+ helpBackdrop.hidden=false;
+ $("#closeHelp").focus();
+}
+function closeHelp(){
+ if(helpBackdrop.hidden)return;
+ helpBackdrop.hidden=true;
+ $("#help").focus();
+}
+$("#help").onclick=openHelp;
+$("#closeHelp").onclick=closeHelp;
+helpBackdrop.addEventListener("click",e=>{if(e.target===helpBackdrop)closeHelp()});
 
 $("#hand").onclick=()=>{
  state.hand=!state.hand;
@@ -1556,6 +1566,11 @@ function resizeSelectedWidth(direction){
 }
 
 window.addEventListener("keydown",e=>{
+ if(!helpBackdrop.hidden){
+   e.stopImmediatePropagation();
+   if(e.key==="Escape"){e.preventDefault();closeHelp()}
+   return;
+ }
  const mod=e.ctrlKey||e.metaKey;
  const editing=document.activeElement===source ||
    document.activeElement?.tagName==="INPUT" ||
