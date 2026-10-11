@@ -899,6 +899,13 @@ body.dark .custom-select-group{color:#9ca4b3}
 /* Markdown code blocks: restrained dark glass with colorful editor-style tokens. */
 .cardbody pre.line-numbered{
  --code-accent:var(--card-accent,#7669d3);
+ --syntax-keyword:color-mix(in srgb,#c792ea 76%,var(--code-accent) 24%);
+ --syntax-function:color-mix(in srgb,#82aaff 78%,var(--code-accent) 22%);
+ --syntax-string:color-mix(in srgb,#c3e88d 82%,var(--code-accent) 18%);
+ --syntax-number:color-mix(in srgb,#f78c6c 84%,var(--code-accent) 16%);
+ --syntax-comment:#8290a3;
+ --syntax-type:color-mix(in srgb,#89ddff 82%,var(--code-accent) 18%);
+ --syntax-meta:color-mix(in srgb,#ffcb6b 84%,var(--code-accent) 16%);
  display:flex;align-items:stretch;gap:0;box-sizing:border-box;width:100%;
  padding:16px 14px;margin:20px 0;overflow:auto;white-space:pre;tab-size:4;
  color:#e4eaf3;
@@ -913,12 +920,14 @@ body.dark .custom-select-group{color:#9ca4b3}
 }
 body.dark .cardbody pre.line-numbered{--code-accent:var(--card-accent-dark,var(--card-accent,#7669d3))}
 .cardbody pre.line-numbered .code-gutter{
- position:sticky;left:0;z-index:1;display:block;flex:0 0 3.7em;align-self:stretch;
- padding-right:1em;text-align:right;color:#8793a4;user-select:none;
- background:linear-gradient(90deg,#111720 0%,#111720 78%,transparent 100%);
- font:calc(16px * var(--card-font-scale))/1.6 ui-monospace,SFMono-Regular,Consolas,monospace
+ position:relative;display:block;box-sizing:border-box;flex:0 0 3.7em;align-self:stretch;
+ margin-right:1em;padding-right:.8em;text-align:right;color:#8793a4;user-select:none;
+ border-right:1px solid color-mix(in srgb,var(--code-accent) 25%,#ffffff18);
+ background:color-mix(in srgb,#111720 82%,var(--code-accent) 18%);
+ font:calc(16px * var(--card-font-scale))/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;
+ font-variant-numeric:tabular-nums
 }
-.cardbody pre.line-numbered .code-gutter span{display:block;min-height:1.6em}
+.cardbody pre.line-numbered .code-gutter span{display:block;height:1.6em;line-height:1.6em;overflow:hidden}
 .cardbody pre.line-numbered code{
  display:block;flex:0 0 auto;width:max-content;min-width:calc(100% - 3.7em);
  padding:0!important;background:transparent!important;color:#e4eaf3;
@@ -928,23 +937,23 @@ body.dark .cardbody pre.line-numbered{--code-accent:var(--card-accent-dark,var(-
 .cardbody pre.line-numbered .hljs-keyword,
 .cardbody pre.line-numbered .hljs-selector-tag,
 .cardbody pre.line-numbered .hljs-literal,
-.cardbody pre.line-numbered .hljs-built_in{color:#c792ea}
+.cardbody pre.line-numbered .hljs-built_in{color:var(--syntax-keyword)}
 .cardbody pre.line-numbered .hljs-title.function_,
 .cardbody pre.line-numbered .hljs-title.class_,
-.cardbody pre.line-numbered .hljs-function .hljs-title{color:#82aaff}
+.cardbody pre.line-numbered .hljs-function .hljs-title{color:var(--syntax-function)}
 .cardbody pre.line-numbered .hljs-string,
 .cardbody pre.line-numbered .hljs-attr,
-.cardbody pre.line-numbered .hljs-template-variable{color:#c3e88d}
+.cardbody pre.line-numbered .hljs-template-variable{color:var(--syntax-string)}
 .cardbody pre.line-numbered .hljs-number,
 .cardbody pre.line-numbered .hljs-regexp,
-.cardbody pre.line-numbered .hljs-symbol{color:#f78c6c}
+.cardbody pre.line-numbered .hljs-symbol{color:var(--syntax-number)}
 .cardbody pre.line-numbered .hljs-comment,
-.cardbody pre.line-numbered .hljs-quote{color:#8290a3;font-style:italic}
+.cardbody pre.line-numbered .hljs-quote{color:var(--syntax-comment);font-style:italic}
 .cardbody pre.line-numbered .hljs-type,
 .cardbody pre.line-numbered .hljs-params,
-.cardbody pre.line-numbered .hljs-variable{color:#89ddff}
+.cardbody pre.line-numbered .hljs-variable{color:var(--syntax-type)}
 .cardbody pre.line-numbered .hljs-meta,
-.cardbody pre.line-numbered .hljs-section{color:#ffcb6b}
+.cardbody pre.line-numbered .hljs-section{color:var(--syntax-meta)}
 .card[data-map-color="default"]{--code-tint:#ded9ff}
 .card[data-map-color="purple"]{--code-tint:#ead8ff}
 .card[data-map-color="warm"]{--code-tint:#ffe3c8}
@@ -954,6 +963,13 @@ body.dark .cardbody pre.line-numbered{--code-accent:var(--card-accent-dark,var(-
 .card[data-map-color="slate"]{--code-tint:#dce5f1}
 body:not(.dark) .cardbody pre.line-numbered{
  --code-accent:var(--card-accent,#7669d3);
+ --syntax-keyword:color-mix(in srgb,#7441b8 78%,var(--code-accent) 22%);
+ --syntax-function:color-mix(in srgb,#2459a6 78%,var(--code-accent) 22%);
+ --syntax-string:color-mix(in srgb,#28743b 82%,var(--code-accent) 18%);
+ --syntax-number:color-mix(in srgb,#b45309 84%,var(--code-accent) 16%);
+ --syntax-comment:#68778c;
+ --syntax-type:color-mix(in srgb,#087b8b 82%,var(--code-accent) 18%);
+ --syntax-meta:color-mix(in srgb,#a35b00 84%,var(--code-accent) 16%);
  color:#293448;
  background:linear-gradient(135deg,
   color-mix(in srgb,color-mix(in srgb,#fff 84%,var(--code-tint,#ded9ff) 16%) 88%,transparent),
@@ -963,28 +979,27 @@ body:not(.dark) .cardbody pre.line-numbered{
 }
 body:not(.dark) .cardbody pre.line-numbered .code-gutter{
  color:#738096;
- background:linear-gradient(90deg,
-  color-mix(in srgb,color-mix(in srgb,#fff 82%,var(--code-tint,#ded9ff) 18%) 88%,transparent) 0%,
-  color-mix(in srgb,color-mix(in srgb,#fff 82%,var(--code-tint,#ded9ff) 18%) 88%,transparent) 78%,transparent 100%);
+ border-right-color:color-mix(in srgb,var(--code-accent) 22%,#64748b38);
+ background:color-mix(in srgb,#fff 82%,var(--code-tint,#ded9ff) 18%);
 }
 body:not(.dark) .cardbody pre.line-numbered code{color:#293448}
 body:not(.dark) .cardbody pre.line-numbered .hljs-keyword,
 body:not(.dark) .cardbody pre.line-numbered .hljs-selector-tag,
 body:not(.dark) .cardbody pre.line-numbered .hljs-literal,
-body:not(.dark) .cardbody pre.line-numbered .hljs-built_in{color:#7441b8}
+body:not(.dark) .cardbody pre.line-numbered .hljs-built_in{color:var(--syntax-keyword)}
 body:not(.dark) .cardbody pre.line-numbered .hljs-title.function_,
 body:not(.dark) .cardbody pre.line-numbered .hljs-title.class_,
-body:not(.dark) .cardbody pre.line-numbered .hljs-function .hljs-title{color:#2459a6}
+body:not(.dark) .cardbody pre.line-numbered .hljs-function .hljs-title{color:var(--syntax-function)}
 body:not(.dark) .cardbody pre.line-numbered .hljs-string,
 body:not(.dark) .cardbody pre.line-numbered .hljs-attr,
-body:not(.dark) .cardbody pre.line-numbered .hljs-template-variable{color:#28743b}
+body:not(.dark) .cardbody pre.line-numbered .hljs-template-variable{color:var(--syntax-string)}
 body:not(.dark) .cardbody pre.line-numbered .hljs-number,
 body:not(.dark) .cardbody pre.line-numbered .hljs-regexp,
-body:not(.dark) .cardbody pre.line-numbered .hljs-symbol{color:#b45309}
+body:not(.dark) .cardbody pre.line-numbered .hljs-symbol{color:var(--syntax-number)}
 body:not(.dark) .cardbody pre.line-numbered .hljs-comment,
-body:not(.dark) .cardbody pre.line-numbered .hljs-quote{color:#68778c}
+body:not(.dark) .cardbody pre.line-numbered .hljs-quote{color:var(--syntax-comment)}
 body:not(.dark) .cardbody pre.line-numbered .hljs-type,
 body:not(.dark) .cardbody pre.line-numbered .hljs-params,
-body:not(.dark) .cardbody pre.line-numbered .hljs-variable{color:#087b8b}
+body:not(.dark) .cardbody pre.line-numbered .hljs-variable{color:var(--syntax-type)}
 body:not(.dark) .cardbody pre.line-numbered .hljs-meta,
-body:not(.dark) .cardbody pre.line-numbered .hljs-section{color:#a35b00}
+body:not(.dark) .cardbody pre.line-numbered .hljs-section{color:var(--syntax-meta)}
