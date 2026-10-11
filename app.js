@@ -1254,10 +1254,10 @@ function fit(widthOnly=false){
 function layoutCards(){
  if(!state.notes.length)return;
 
- // Preserve each card's width, including widths expanded for tables.
- const columns=10;
- const gapX=100;
- const gapY=120;
+ // Keep the preferred ten-card row while spacing actual card bounds evenly.
+ const columns=Math.min(10,state.notes.length);
+ const gapX=52;
+ const gapY=52;
 
  state.notes.forEach(n=>{
   const width=n.type==="map"?(n.mapWidth||n.width||n.el.offsetWidth):(n.width||n.el.offsetWidth);
@@ -1276,32 +1276,22 @@ function layoutCards(){
  });
 
  const rows=Math.ceil(state.notes.length/columns);
- const rowHeights=Array(rows).fill(0);
- const columnWidths=Array(columns).fill(0);
-
- state.notes.forEach((n,i)=>{
-  const row=Math.floor(i/columns);
-  const col=i%columns;
-  rowHeights[row]=Math.max(rowHeights[row],n.el.offsetHeight);
-  columnWidths[col]=Math.max(columnWidths[col],n.el.offsetWidth);
+ const rowHeights=Array.from({length:rows},(_,row)=>{
+  const start=row*columns;
+  return Math.max(...state.notes.slice(start,start+columns).map(n=>n.el.offsetHeight));
  });
-
- const totalWidth=columnWidths.reduce((sum,width)=>sum+width,0)+gapX*(columns-1);
- const left=-totalWidth/2;
  let rowTop=-900;
 
  for(let row=0;row<rows;row++){
-  let columnLeft=left;
-  for(let col=0;col<columns;col++){
-   const i=row*columns+col;
-   if(i>=state.notes.length)break;
-
-   const n=state.notes[i];
+  const rowCards=state.notes.slice(row*columns,(row+1)*columns);
+  const rowWidth=rowCards.reduce((width,n)=>width+n.el.offsetWidth,0)+gapX*(rowCards.length-1);
+  let columnLeft=-rowWidth/2;
+  for(const n of rowCards){
    n.x=columnLeft;
    n.y=rowTop;
    n.el.style.left=n.x+"px";
    n.el.style.top=n.y+"px";
-   columnLeft+=columnWidths[col]+gapX;
+   columnLeft+=n.el.offsetWidth+gapX;
   }
 
   rowTop+=rowHeights[row]+gapY;
@@ -1431,7 +1421,7 @@ $("#canvasFile").addEventListener("change",e=>{
  e.target.value="";
 })
 $("#full").onclick=toggleFull
-$("#edge").onclick=revealControls
+$("#edge").onclick=()=>{toggleToolbar(true);revealControls()}
 $("#minus").onclick=()=>zoom(.72);$("#plus").onclick=()=>zoom(1.38);$("#reset").onclick=()=>moveTo(innerWidth/2,innerHeight/2,1)
 $("#close").onclick=closeEditor;$("#cancel").onclick=closeEditor;$("#applyCard").onclick=()=>applyEditor("note");$("#applyMap").onclick=()=>applyEditor("map")
 $("#edit").onclick=()=>state.selected&&editNote(state.selected)
@@ -1658,6 +1648,7 @@ window.addEventListener("keydown",e=>{
      c:()=>$("#center").click(),
      a:()=>$("#arrange").click(),
      b:()=>toggleToolbar(),
+     f:()=>$("#full").click(),
      t:()=>$("#theme").click(),
      s:()=>cycleBackground(),
      "-":()=>$("#minus").click(),

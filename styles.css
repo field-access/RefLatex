@@ -459,6 +459,14 @@ body.fullscreen .toolbar{transform:translate(-12px,-50%)}
 body.fullscreen.controls .toolbar{transform:translateY(-50%)}
 body.fullscreen .edge{display:grid}
 body.fullscreen.controls .edge{display:none}
+body.fullscreen:not(.toolbar-hidden) .toolbar,
+body.fullscreen:not(.toolbar-hidden) .zoom{
+ opacity:1;visibility:visible;pointer-events:auto
+}
+body.fullscreen:not(.toolbar-hidden) .toolbar{transform:translateY(-50%)}
+body.fullscreen:not(.toolbar-hidden) .zoom{transform:none}
+body.fullscreen:not(.toolbar-hidden) .edge{display:none}
+body.fullscreen.toolbar-hidden .edge{display:grid;pointer-events:auto}
 @media(max-width:700px){
  .toolbar{
   left:8px;top:50%;right:auto;
