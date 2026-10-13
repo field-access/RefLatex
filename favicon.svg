@@ -1,5 +1,62 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <title>Original RefLatex favicon</title>
-  <rect width="512" height="512" fill="#1c1c1c"/>
-  <path d="M 199 336 L 194 342 L 194 382 L 198 387 L 201 388 L 239 388 L 242 387 L 242 386 L 246 383 L 246 341 L 245 339 L 241 336 L 238 336 L 237 335 L 203 335 L 202 336 Z M 268 266 L 265 271 L 265 311 L 266 313 L 267 313 L 269 316 L 272 317 L 311 317 L 313 316 L 317 311 L 317 270 L 316 268 L 309 264 L 273 264 Z M 339 195 L 336 200 L 336 239 L 337 242 L 338 242 L 340 245 L 343 246 L 381 246 L 387 242 L 388 240 L 388 199 L 383 194 L 380 193 L 344 193 Z M 199 194 L 194 200 L 194 240 L 195 242 L 196 242 L 198 245 L 201 246 L 239 246 L 242 245 L 246 240 L 246 199 L 239 193 L 202 193 Z M 268 124 L 265 128 L 265 169 L 266 171 L 272 175 L 310 175 L 313 174 L 317 169 L 317 128 L 312 123 L 270 123 Z M 199 123 L 194 128 L 194 170 L 193 172 L 191 173 L 188 177 L 170 194 L 167 193 L 131 193 L 128 194 L 123 199 L 123 240 L 124 242 L 130 246 L 168 246 L 171 245 L 175 240 L 175 198 L 177 197 L 177 196 L 182 192 L 182 191 L 187 187 L 187 186 L 192 182 L 192 181 L 197 177 L 199 174 L 201 175 L 239 175 L 241 174 L 243 177 L 244 177 L 248 182 L 249 182 L 253 187 L 254 187 L 258 192 L 259 192 L 263 197 L 265 198 L 265 241 L 241 265 L 238 264 L 202 264 L 195 268 L 194 271 L 194 311 L 195 313 L 200 317 L 239 317 L 241 316 L 265 340 L 265 382 L 269 387 L 272 388 L 310 388 L 313 387 L 317 382 L 317 341 L 316 339 L 312 336 L 309 336 L 308 335 L 273 335 L 270 336 L 246 312 L 246 269 L 270 245 L 272 246 L 310 246 L 313 245 L 317 240 L 317 198 L 341 174 L 343 175 L 381 175 L 387 171 L 388 169 L 388 128 L 383 123 L 341 123 L 339 124 L 338 127 L 336 129 L 336 170 L 312 194 L 309 193 L 272 193 L 270 194 L 268 193 L 267 191 L 263 188 L 246 170 L 246 128 L 241 123 Z M 273 342 L 309 342 L 311 344 L 311 379 L 309 381 L 273 381 L 271 378 L 271 344 Z M 202 271 L 238 271 L 240 273 L 240 308 L 238 310 L 202 310 L 200 308 L 200 273 Z M 273 200 L 309 200 L 311 202 L 311 237 L 309 239 L 274 239 L 273 240 L 271 237 L 271 202 Z M 131 200 L 167 200 L 169 202 L 169 237 L 167 239 L 131 239 L 129 237 L 129 202 Z M 344 129 L 380 129 L 382 131 L 382 167 L 381 168 L 343 168 L 342 167 L 342 132 Z M 200 131 L 202 129 L 238 129 L 240 131 L 240 167 L 239 168 L 201 168 L 200 167 Z M 128 123 L 123 128 L 123 169 L 124 171 L 130 175 L 168 175 L 171 174 L 175 169 L 175 128 L 172 124 L 170 123 Z" fill="#fff" fill-rule="evenodd" clip-rule="evenodd"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="55" y1="30" x2="450" y2="490" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1B2738"/>
+      <stop offset="1" stop-color="#080D15"/>
+    </linearGradient>
+    <linearGradient id="frame" x1="95" y1="82" x2="430" y2="430" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset=".28" stop-color="#8CCBFF"/>
+      <stop offset=".58" stop-color="#D8E6FF"/>
+      <stop offset=".82" stop-color="#6DBBFF"/>
+      <stop offset="1" stop-color="#E5EDFF"/>
+    </linearGradient>
+    <linearGradient id="node" x1="170" y1="120" x2="350" y2="390" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E9F2FF"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="7"/>
+    </filter>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2.5" result="blur"/>
+      <feOffset dy="2" result="offset"/>
+      <feComposite in="offset" in2="SourceAlpha" operator="out" result="shadow"/>
+      <feColorMatrix in="shadow" type="matrix" values="0 0 0 0 0.01 0 0 0 0 0.08 0 0 0 0 0.18 0 0 0 .75 0"/>
+      <feBlend in="SourceGraphic"/>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="72" fill="url(#bg)"/>
+
+  <rect x="38" y="38" width="436" height="436" rx="91" stroke="#73B9FF" stroke-width="12" opacity=".45" filter="url(#glow)"/>
+  <rect x="42" y="42" width="428" height="428" rx="87" stroke="url(#frame)" stroke-width="7"/>
+  <rect x="49" y="49" width="414" height="414" rx="80" stroke="#D9E9FF" stroke-opacity=".16" stroke-width="1.5"/>
+
+  <g stroke="url(#node)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" filter="url(#shadow)">
+    <path d="M198 149 L175 172 L149 197"/>
+    <path d="M221 149 L245 173 L267 197"/>
+    <path d="M290 197 L315 197 L340 172"/>
+    <path d="M290 245 L267 268 L245 292"/>
+    <path d="M245 316 L267 340"/>
+    <path d="M221 340 L221 365"/>
+  </g>
+
+  <g stroke="url(#node)" stroke-width="9" stroke-linejoin="round" filter="url(#shadow)">
+    <rect x="123" y="123" width="53" height="53" rx="10" fill="url(#node)" stroke="url(#node)"/>
+    <rect x="194" y="123" width="53" height="53" rx="9" fill="url(#bg)"/>
+    <rect x="265" y="123" width="53" height="53" rx="10" fill="url(#node)" stroke="url(#node)"/>
+    <rect x="336" y="123" width="53" height="53" rx="9" fill="url(#bg)"/>
+
+    <rect x="123" y="194" width="53" height="53" rx="9" fill="url(#bg)"/>
+    <rect x="194" y="194" width="53" height="53" rx="10" fill="url(#node)" stroke="url(#node)"/>
+    <rect x="265" y="194" width="53" height="53" rx="9" fill="url(#bg)"/>
+    <rect x="336" y="194" width="53" height="53" rx="10" fill="url(#node)" stroke="url(#node)"/>
+
+    <rect x="194" y="265" width="53" height="53" rx="9" fill="url(#bg)"/>
+    <rect x="265" y="265" width="53" height="53" rx="10" fill="url(#node)" stroke="url(#node)"/>
+
+    <rect x="194" y="336" width="53" height="53" rx="10" fill="url(#node)" stroke="url(#node)"/>
+    <rect x="265" y="336" width="53" height="53" rx="9" fill="url(#bg)"/>
+  </g>
 </svg>
