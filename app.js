@@ -4,7 +4,28 @@
 const $=s=>document.querySelector(s);
 const canvas=$("#canvas"),world=$("#world"),editor=$("#editor"),source=$("#source"),context=$("#context");
 const MIN_SCALE=.01;
-const MAX_SCALE=4;
+const MAX_SCALE=8;
+const navigation={wheel:1,pinch:1,step:1.2};
+try{
+ const saved=JSON.parse(localStorage.getItem("reflatex-navigation")||"{}");
+ for(const key of ["wheel","pinch"])if(Number.isFinite(saved[key]))navigation[key]=Math.max(.25,Math.min(3,saved[key]));
+ if(Number.isFinite(saved.step))navigation.step=Math.max(1.05,Math.min(1.5,saved.step));
+}catch{}
+const zoomLabel=$("#zoomLabel");
+let lastZoomLabel="";
+let cameraInputFrame=0;
+// Skip offscreen paint but retain accurate layout for fit, arrange and editing.
+if(window.IntersectionObserver){
+ const visibility=new IntersectionObserver(entries=>{
+  for(const {target,isIntersecting} of entries)target.classList.toggle("offscreen",!isIntersecting);
+ },{root:canvas,rootMargin:"400px"});
+ new MutationObserver(records=>{
+  for(const record of records){
+   for(const el of record.addedNodes)if(el.nodeType===1)visibility.observe(el);
+   for(const el of record.removedNodes)if(el.nodeType===1)visibility.unobserve(el);
+  }
+ }).observe(world,{childList:true});
+}
 if(window.marked?.setOptions) marked.setOptions({gfm:true,breaks:true});
 
 const state={
@@ -328,6 +349,7 @@ function showControls(){
 }
 let lastPointerWake=0;
 function wakeControls(){
+ if(state.pan)return;
  const now=performance.now();
  if(state.controlsVisible&&now-lastPointerWake<500)return;
  lastPointerWake=now;showControls();
@@ -547,6 +569,37 @@ function renderMathBlockSource(code){
   return s;
 }
 
+// Split highlighted content into logical lines without losing nested token
+// styles. Each line owns its number, so wrapped lines keep the gutter aligned.
+function wrapCodeLines(code){
+ const fragment=document.createDocumentFragment();
+ let line,clones;
+ const nextLine=()=>{
+  if(line)fragment.appendChild(document.createTextNode("\n"));
+  line=document.createElement("span");line.className="code-line";
+  fragment.appendChild(line);clones=new Map();
+ };
+ nextLine();
+ function visit(node,ancestors){
+  if(node.nodeType===3){
+   node.textContent.split("\n").forEach((part,index)=>{
+    if(index)nextLine();
+    let parent=line;
+    for(const ancestor of ancestors){
+     if(!clones.has(ancestor)){
+      const clone=ancestor.cloneNode(false);parent.appendChild(clone);clones.set(ancestor,clone);
+     }
+     parent=clones.get(ancestor);
+    }
+    parent.appendChild(document.createTextNode(part));
+   });
+  }else if(node.nodeType===1){
+   for(const child of node.childNodes)visit(child,[...ancestors,node]);
+  }
+ }
+ for(const child of code.childNodes)visit(child,[]);
+ code.replaceChildren(fragment);
+}
 function render(md){
   let text=normalizeEscapedLatex(String(md));
   const blockCodes=[];
@@ -689,16 +742,7 @@ function render(md){
       if(language&&!hljs.getLanguage(language))code.classList.remove(languageClass);
       try{hljs.highlightElement(code)}catch{}
     }
-    const gutter=document.createElement("span");
-    gutter.className="code-gutter";
-    gutter.setAttribute("aria-hidden","true");
-    const lineCount=Math.max(1,Number(pre.dataset.lineCount)||1);
-    for(let line=1;line<=lineCount;line++){
-      const number=document.createElement("span");
-      number.textContent=String(line);
-      gutter.appendChild(number);
-    }
-    pre.insertBefore(gutter,code);
+    wrapCodeLines(code);
   });
 
   try{
@@ -727,6 +771,11 @@ function render(md){
     image.classList.add("card-image");
   });
 
+  box.querySelectorAll("table").forEach(table=>{
+   const scroll=document.createElement("div");scroll.className="table-scroll";
+   scroll.tabIndex=0;scroll.setAttribute("role","region");scroll.setAttribute("aria-label","Scrollable table");
+   table.replaceWith(scroll);scroll.appendChild(table);
+  });
   return box.innerHTML;
 }
 function cardMarkdownParts(md){
@@ -996,7 +1045,6 @@ function setCardType(n,type,record=true){
   n.mapReady=renderMap(n);
  }else{
   body.innerHTML=renderCardMarkdown(n.md);
-  widenCardForTables(n.el);
  }
  layoutCards();
  if(state.selected===n){
@@ -1015,12 +1063,19 @@ function setCardType(n,type,record=true){
  save();
 }
 function apply(){
+ if(state.pan){paintCanvasDrag();return}
  if(!Number.isFinite(state.x)||!Number.isFinite(state.y)||!Number.isFinite(state.scale)){
   state.x=innerWidth/2;state.y=innerHeight/2;state.scale=1;
   state.targetX=state.x;state.targetY=state.y;state.targetScale=state.scale;
  }
+ // Keep D3's gesture origin in sync after fit, touch, keyboard and drag input.
+ if(window.d3?.ZoomTransform&&!state.raf&&!cameraInputFrame)canvas.__zoom=new window.d3.ZoomTransform(state.scale,state.x,state.y);
  world.style.transform=`translate(${state.x}px,${state.y}px) scale(${state.scale})`;
- $("#zoomLabel").textContent=Math.round(state.scale*100)+"%";
+ const label=String(Math.round(state.scale*1000)/10);
+ if(label!==lastZoomLabel){
+  if(document.activeElement!==zoomLabel)zoomLabel.value=label;
+  lastZoomLabel=label;
+ }
 }
 function clampScale(scale){return Math.max(MIN_SCALE,Math.min(MAX_SCALE,scale))}
 function worldPointAt(x,y,cameraX=state.x,cameraY=state.y,cameraScale=state.scale){
@@ -1033,7 +1088,13 @@ function setCameraImmediate(x,y,s){
  apply();
 }
 
+function interruptCamera(){
+ if(cameraInputFrame){cancelAnimationFrame(cameraInputFrame);cameraInputFrame=0}
+ if(state.raf){cancelAnimationFrame(state.raf);state.raf=0}
+ sync();
+}
 function zoomPrecise(f,cx=innerWidth/2,cy=innerHeight/2){
+ interruptCamera();
  if(!Number.isFinite(f)||!Number.isFinite(state.scale)||state.scale<=0){
   setCameraImmediate(innerWidth/2,innerHeight/2,1);
   return;
@@ -1069,21 +1130,31 @@ function cardBounds(){
 
 function sync(){state.targetX=state.x;state.targetY=state.y;state.targetScale=state.scale}
 let motionHintTimer=0;
+// Cache only for an active gesture. Removing this hint at rest asks Chromium
+// to rasterize live HTML/SVG at the final scale instead of retaining stretched text.
+function beginCameraMotion(){
+ if(!document.body.classList.contains("camera-moving")){
+  world.style.willChange="transform";
+  document.body.classList.add("camera-moving");
+ }
+}
 function markCameraMoving(){
- document.body.classList.add("camera-moving");
+ beginCameraMotion();
  clearTimeout(motionHintTimer);
  motionHintTimer=setTimeout(()=>{
   motionHintTimer=0;
-  if(!state.raf)document.body.classList.remove("camera-moving");
+  if(!state.raf&&!cameraInputFrame)finishCameraMotion();
  },120);
 }
 function finishCameraMotion(){
- if(state.raf)return;
+ if(state.pan||state.raf||cameraInputFrame)return;
  clearTimeout(motionHintTimer);motionHintTimer=0;
  document.body.classList.remove("camera-moving");
+ world.style.willChange="";
+ save();
 }
 function animate(){
- document.body.classList.add("camera-moving");
+ beginCameraMotion();
  clearTimeout(motionHintTimer);motionHintTimer=0;
  if(state.raf)return;
  let lastFrame=0;
@@ -1097,11 +1168,35 @@ function animate(){
   state.scale+=(state.targetScale-state.scale)*response;
   apply();
   if(Math.abs(state.x-state.targetX)<.08&&Math.abs(state.y-state.targetY)<.08&&Math.abs(state.scale-state.targetScale)<.0005){
-   state.x=state.targetX;state.y=state.targetY;state.scale=state.targetScale;apply();state.raf=0;finishCameraMotion();return;
+   state.x=state.targetX;state.y=state.targetY;state.scale=state.targetScale;state.raf=0;apply();finishCameraMotion();return;
   }
   state.raf=requestAnimationFrame(tick);
  };
  state.raf=requestAnimationFrame(tick);
+}
+function queueCamera(x,y,scale,smooth=false){
+ state.targetX=x;state.targetY=y;state.targetScale=clampScale(scale);
+ if(smooth){
+  if(cameraInputFrame){cancelAnimationFrame(cameraInputFrame);cameraInputFrame=0}
+  animate();return
+ }
+ if(state.raf){cancelAnimationFrame(state.raf);state.raf=0}
+ if(cameraInputFrame)return;
+ cameraInputFrame=requestAnimationFrame(()=>{
+  cameraInputFrame=0;
+  state.x=state.targetX;state.y=state.targetY;state.scale=state.targetScale;
+  markCameraMoving();apply();
+ });
+}
+function queueWheelZoom(exponent,cx,cy,smooth){
+ const s=state.targetScale,scale=clampScale(s*2**exponent);
+ const wx=(cx-state.targetX)/s,wy=(cy-state.targetY)/s;
+ queueCamera(cx-wx*scale,cy-wy*scale,scale,smooth);
+}
+function canvasWheelExponent(e){
+ // Same logarithmic mapping as D3, with twice its default mouse gain.
+ const unit=e.deltaMode===1?.05:e.deltaMode===2?1:.002;
+ return Math.max(-2,Math.min(2,-e.deltaY*unit*(e.ctrlKey?10*navigation.pinch:2*navigation.wheel)));
 }
 function moveTo(x,y,s=state.targetScale){
  if(!Number.isFinite(x)||!Number.isFinite(y)||!Number.isFinite(s))return;
@@ -1119,7 +1214,7 @@ function history(){
 }
 function restore(s){
  const d=JSON.parse(s);state.historyLock=true;
- state.notes.forEach(n=>n.el.remove());state.notes=[];state.selected=null;
+ state.notes.forEach(disposeCard);state.notes=[];state.selected=null;
  (d.notes||[]).forEach(n=>n.type==="map"
   ? makeMap(n.md,n.x,n.y,n.w,n.h,false,n.id,n.mapColor,n.mapFont)
   : makeNote(n.md,n.x,n.y,n.w,false,n.id,n.font,n.size,n.mapColor,n.mapFont,n.mapWidth,n.mapHeight));
@@ -1143,35 +1238,11 @@ function flushSave(){
 }
 function empty(){$("#empty").style.display=state.notes.length?"none":"grid"}
 
-function widenCardForTables(el){
- const tables=[...el.querySelectorAll(".cardbody table")];
- if(!tables.length)return;
-
- const body=el.querySelector(".cardbody");
- const styles=getComputedStyle(body);
- const horizontalPadding=parseFloat(styles.paddingLeft)+parseFloat(styles.paddingRight);
- let requiredWidth=el.offsetWidth;
-
- tables.forEach(table=>{
-  const width=table.style.width;
-  const maxWidth=table.style.maxWidth;
-  table.style.width="max-content";
-  table.style.maxWidth="none";
-  requiredWidth=Math.max(requiredWidth,table.scrollWidth+horizontalPadding+2);
-  table.style.width=width;
-  table.style.maxWidth=maxWidth;
- });
-
- const width=Math.max(el.offsetWidth,Math.min(1200,requiredWidth));
- el.style.width=width+"px";
- const note=state.notes.find(item=>item.el===el);
- if(note)note.width=width;
-}
 
 function select(n){
  if(state.selected===n&&(!n||n.el.classList.contains("selected")))return;
  if(state.selected!==n)state.spaceFocusStep=0;
- state.notes.forEach(x=>x.el.classList.remove("selected"));
+ state.selected?.el.classList.remove("selected");
  state.selected=n;if(n)n.el.classList.add("selected");
  context.classList.remove("open");
 }
@@ -1235,7 +1306,7 @@ function openCanvasFile(file){
    }
 
    state.historyLock=true;
-   state.notes.forEach(n=>n.el.remove());
+   state.notes.forEach(disposeCard);
    state.notes=[];
    state.selected=null;
 
@@ -1307,7 +1378,6 @@ const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size,width,ty
  el.querySelector("[data-size]").value=el.dataset.fontSize;
  n.el=el;applyCardFont(n,n.font);updateCardHeading(n);
  enhanceCardSelects(el);world.appendChild(el);state.notes.push(n);
- widenCardForTables(el);
 
  el.addEventListener("pointerdown",e=>{
   if(e.target.closest(".cardactions"))return;
@@ -1330,11 +1400,11 @@ const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size,width,ty
   setCardColorTheme(n,e.target.value);
  };
  el.querySelector("[data-font]").onchange=e=>{
-  history();applyCardFont(n,e.target.value);widenCardForTables(el);save();
+  history();applyCardFont(n,e.target.value);save();
  };
  el.querySelector("[data-font]").onfocus=()=>select(n);
  el.querySelector("[data-size]").onchange=e=>{
-  history();n.size=e.target.value;el.dataset.fontSize=n.size;widenCardForTables(el);save();
+  history();n.size=e.target.value;el.dataset.fontSize=n.size;save();
  };
  el.querySelector("[data-size]").onfocus=()=>select(n);
  el.querySelectorAll(".resize").forEach(r=>r.onmousedown=e=>{
@@ -1404,32 +1474,57 @@ window.addEventListener("mousemove",e=>{
    else r.n.width=w;
    if(r.side==="left"){r.n.x=r.x+r.w-w;r.n.el.style.left=r.n.x+"px"}
   }
-  scheduleReflow();
+  // Reflow the board once on release; resize only this card during the drag.
  }
- if(state.pan&&state.pan.pointerId==null){
-  if(Math.hypot(e.clientX-state.pan.sx,e.clientY-state.pan.sy)>=5){
-   state.pan.moved=true;suppressCanvasClickUntil=performance.now()+500;
-  }
-  state.x=state.pan.x+e.clientX-state.pan.sx;state.y=state.pan.y+e.clientY-state.pan.sy;sync();
-  if(!panApplyFrame)panApplyFrame=requestAnimationFrame(()=>{panApplyFrame=0;apply()});
- }
+
 });
+// During a drag the scale/base transform stays fixed. Only this independent
+// screen-space translation changes, keeping zoom bookkeeping off the hot path.
+function paintCanvasDrag(){
+ panApplyFrame=0;
+ const pan=state.pan;
+ if(pan)world.style.translate=`${state.x-pan.x}px ${state.y-pan.y}px`;
+}
+function updateCanvasDrag(e){
+ const pan=state.pan;
+ if(!pan||pan.pointerId!==e.pointerId)return;
+ const gain=pan.gain||1;
+ state.x=pan.x+(e.clientX-pan.sx)*gain;
+ state.y=pan.y+(e.clientY-pan.sy)*gain;
+ if(!pan.moved&&Math.hypot(e.clientX-pan.sx,e.clientY-pan.sy)>=5){
+  pan.moved=true;suppressCanvasClickUntil=performance.now()+500;
+ }
+ if(!panApplyFrame)panApplyFrame=requestAnimationFrame(paintCanvasDrag);
+}
 function finishCanvasDrag(pointerId=null){
  if(pointerId!==null&&state.pan?.pointerId!==pointerId)return;
- const resized=state.resize;
- const panned=state.pan;
- if(state.resize?.n.type==="map")state.resize.n.mapInstance?.fit();
- if(panApplyFrame){cancelAnimationFrame(panApplyFrame);panApplyFrame=0;apply()}
- if(reflowFrame){cancelAnimationFrame(reflowFrame);reflowFrame=0}
+ const resized=state.resize,panned=state.pan;
+ if(!resized&&!panned)return;
+ if(resized?.n.type==="map")resized.n.mapInstance?.fit();
+ if(panApplyFrame){cancelAnimationFrame(panApplyFrame);panApplyFrame=0}
+ if(panned){
+  // Commit the final position and remove the temporary translation atomically.
+  state.pan=null;sync();apply();world.style.translate="";
+  if(panned.moved)suppressCanvasClickUntil=performance.now()+500;
+ }
  state.resize=null;state.pan=null;
+ if(panned&&canvas.hasPointerCapture?.(panned.pointerId))canvas.releasePointerCapture(panned.pointerId);
  canvas.style.cursor=state.hand?"grab":"default";
  document.body.classList.remove("canvas-panning");
- if(resized){layoutCards();flushSave()}
- else if(panned){flushSave();finishCameraMotion()}
+ if(resized){layoutCards();save()}
+ else finishCameraMotion();
 }
-window.addEventListener("mouseup",()=>{if(state.pan?.pointerId==null)finishCanvasDrag()});
-window.addEventListener("pointerup",e=>{if(state.pan?.pointerId===e.pointerId)finishCanvasDrag(e.pointerId)});
-window.addEventListener("pointercancel",e=>{if(state.pan?.pointerId===e.pointerId)finishCanvasDrag(e.pointerId)});
+window.addEventListener("mouseup",()=>{if(state.resize)finishCanvasDrag()});
+window.addEventListener("pointerup",e=>{
+ if(state.pan?.pointerId!==e.pointerId)return;
+ updateCanvasDrag(e);finishCanvasDrag(e.pointerId);
+});
+window.addEventListener("pointercancel",e=>finishCanvasDrag(e.pointerId));
+canvas.addEventListener("lostpointercapture",e=>finishCanvasDrag(e.pointerId));
+window.addEventListener("blur",()=>{
+ pendingPenCanvasPan=null;
+ finishCanvasDrag();
+});
 function startResize(e,n,side){
  e.preventDefault();e.stopPropagation();select(n);history();
  state.resize={n,side,sx:e.clientX,sy:e.clientY,w:n.el.offsetWidth,h:n.el.offsetHeight,x:n.x};
@@ -1440,11 +1535,17 @@ function startPan(e){
  e.preventDefault();
  e.stopPropagation();
  if(e.target===canvas||e.target===world)select(null);
- state.pan={sx:e.clientX,sy:e.clientY,x:state.x,y:state.y};
- document.body.classList.add("camera-moving","canvas-panning");
+ interruptCamera();
+ state.pan={sx:e.clientX,sy:e.clientY,x:state.x,y:state.y,pointerId:e.pointerId,gain:1};
+ clearTimeout(motionHintTimer);motionHintTimer=0;
+ clearTimeout(state.saveTimer);state.saveTimer=0;
+ if(wheelFrame){cancelAnimationFrame(wheelFrame);wheelFrame=0;panWheelX=panWheelY=0}
+ beginCameraMotion();document.body.classList.add("canvas-panning");
  canvas.style.cursor="grabbing";
+ try{canvas.setPointerCapture(e.pointerId)}catch{}
 }
 canvas.addEventListener("pointerdown",e=>{
+ if(e.pointerType==="mouse"){startPan(e);return}
  if(e.pointerType!=="pen")return;
  const rightButton=e.button===2||(e.buttons&2);
  const leftCanvasBackground=e.button===0&&e.target===canvas;
@@ -1461,8 +1562,12 @@ canvas.addEventListener("pointerdown",e=>{
  if(!rightButton&&!leftCanvasBackground)return;
  if(leftCanvasBackground)select(null);
  e.preventDefault();e.stopPropagation();
- state.pan={sx:e.clientX,sy:e.clientY,x:state.x,y:state.y,pointerId:e.pointerId};
- document.body.classList.add("camera-moving","canvas-panning");
+ interruptCamera();
+ state.pan={sx:e.clientX,sy:e.clientY,x:state.x,y:state.y,pointerId:e.pointerId,gain:PEN_PAN_GAIN};
+ clearTimeout(motionHintTimer);motionHintTimer=0;
+ clearTimeout(state.saveTimer);state.saveTimer=0;
+ if(wheelFrame){cancelAnimationFrame(wheelFrame);wheelFrame=0;panWheelX=panWheelY=0}
+ beginCameraMotion();document.body.classList.add("canvas-panning");
  canvas.style.cursor="grabbing";
  try{canvas.setPointerCapture(e.pointerId)}catch{}
 },true);
@@ -1473,9 +1578,13 @@ window.addEventListener("pointermove",e=>{
  e.preventDefault();
  pendingPenCanvasPan=null;
  window.getSelection()?.removeAllRanges();
- state.pan={sx:pending.x,sy:pending.y,x:state.x,y:state.y,pointerId:e.pointerId,moved:true};
+ interruptCamera();
+ state.pan={sx:pending.x,sy:pending.y,x:state.x,y:state.y,pointerId:e.pointerId,gain:PEN_PAN_GAIN,moved:true};
  suppressCanvasClickUntil=performance.now()+500;
- document.body.classList.add("camera-moving","canvas-panning");
+ clearTimeout(motionHintTimer);motionHintTimer=0;
+ clearTimeout(state.saveTimer);state.saveTimer=0;
+ if(wheelFrame){cancelAnimationFrame(wheelFrame);wheelFrame=0;panWheelX=panWheelY=0}
+ beginCameraMotion();document.body.classList.add("canvas-panning");
  canvas.style.cursor="grabbing";
 },{capture:true,passive:false});
 window.addEventListener("pointerup",e=>{
@@ -1487,16 +1596,14 @@ window.addEventListener("pointercancel",e=>{
 window.addEventListener("pointermove",e=>{
  if(state.pan?.pointerId!==e.pointerId)return;
  e.preventDefault();
- state.pan.moved=true;suppressCanvasClickUntil=performance.now()+500;
- state.x=state.pan.x+(e.clientX-state.pan.sx)*PEN_PAN_GAIN;state.y=state.pan.y+(e.clientY-state.pan.sy)*PEN_PAN_GAIN;sync();
- if(!panApplyFrame)panApplyFrame=requestAnimationFrame(()=>{panApplyFrame=0;apply()});
+ updateCanvasDrag(e);
 },{passive:false});
 canvas.addEventListener("click",e=>{
  if(e.target!==canvas&&e.target!==world)return;
  if(performance.now()<suppressCanvasClickUntil)return;
  select(null);
 });
-canvas.addEventListener("mousedown",startPan);
+
 canvas.addEventListener("contextmenu",e=>e.preventDefault());
 canvas.addEventListener("pointermove",wakeControls,{passive:true});
 canvas.addEventListener("wheel",wakeControls,{passive:true});
@@ -1512,45 +1619,17 @@ window.addEventListener("keydown",wakeControls);
  * Trackpads emit many small WheelEvents. Accumulate them per animation frame
  * and use the existing camera interpolator for smooth motion.
  */
-let wheelFrame=0;
-let panWheelX=0,panWheelY=0;
-let zoomWheelDelta=0;
-let wheelPointerX=0,wheelPointerY=0;
-let wheelIsPinch=false;
-
+let wheelFrame=0,panWheelX=0,panWheelY=0,fallbackWheelTimer=0;
 function wheelUnitDelta(e){
  const unit=e.deltaMode===1?16:e.deltaMode===2?innerHeight:1;
  return {x:e.deltaX*unit,y:e.deltaY*unit};
 }
-
 function scheduleWheelFrame(){
  if(wheelFrame)return;
  wheelFrame=requestAnimationFrame(()=>{
-  wheelFrame=0;
-
-  const dx=panWheelX,dy=panWheelY;
-  const zd=zoomWheelDelta;
-  const pinch=wheelIsPinch;
-
-  panWheelX=panWheelY=zoomWheelDelta=0;
-  wheelIsPinch=false;
-
-  if(pinch||state.hand){
-   if(Math.abs(zd)>0.001){
-    // Increased gain: normal trackpad pinch/wheel now reaches a useful
-    // zoom range in roughly the same physical gesture as PureRef.
-    const factor=Math.exp(-Math.max(-1000,Math.min(1000,zd))*0.003);
-    zoomPrecise(factor,wheelPointerX,wheelPointerY);
-   }
-  }else{
-   // Wheel scrolling is already frame-batched, so applying it directly
-   // avoids a second interpolation layer and removes noticeable lag.
-   state.x-=dx;
-   state.y-=dy;
-   sync();
-   markCameraMoving();
-   apply();
-  }
+  wheelFrame=0;interruptCamera();
+  state.x-=panWheelX;state.y-=panWheelY;panWheelX=panWheelY=0;
+  sync();markCameraMoving();apply();
  });
 }
 
@@ -1558,39 +1637,50 @@ function scheduleWheelFrame(){
 // Markmap's own zoom behavior or the canvas camera. Selected maps keep their
 // local wheel zoom; the canvas wheel handler below ignores them.
 canvas.addEventListener("wheel",e=>{
+ if(state.pan){e.preventDefault();return}
  const mapCard=e.target.closest?.(".map-card");
  if(!mapCard||mapCard.classList.contains("selected"))return;
  e.preventDefault();
  e.stopImmediatePropagation();
 },{capture:true,passive:false});
 
+// Use the same wheel/pinch engine as Markmap. Other input handlers retain
+// ownership of pen drag, one-finger pan and two-finger midpoint translation.
+if(window.d3?.zoom){
+ const cameraZoom=window.d3.zoom()
+  .scaleExtent([MIN_SCALE,MAX_SCALE])
+  .extent(()=>[[0,0],[innerWidth,innerHeight]])
+  .touchable(false)
+  .filter(e=>!state.pan&&e.type==="wheel"&&!e.target.closest?.(".map-card")&&(state.hand||e.ctrlKey))
+  .wheelDelta(canvasWheelExponent)
+  .on("start.camera",()=>interruptCamera())
+  .on("zoom.camera",e=>{
+   const input=e.sourceEvent;
+   const smooth=!input?.ctrlKey&&(input?.deltaMode!==0||Math.abs(input?.deltaY)>=40);
+   queueCamera(e.transform.x,e.transform.y,e.transform.k,smooth);
+  })
+  .on("end.camera",()=>finishCameraMotion());
+ window.d3.select(canvas).call(cameraZoom).on("dblclick.zoom",null);
+}
+
 canvas.addEventListener("wheel",e=>{
+ if(state.pan){e.preventDefault();return}
  const mapCard=e.target.closest?.(".map-card");
  if(mapCard?.classList.contains("selected"))return;
  e.preventDefault();
 
- const d=wheelUnitDelta(e);
- wheelPointerX=e.clientX;
- wheelPointerY=e.clientY;
-
- // Chrome/Edge precision touchpads expose two-finger pinch as ctrl+wheel.
  const pinch=e.ctrlKey&&e.deltaMode===0;
-
- if(pinch){
-  wheelIsPinch=true;
-  zoomWheelDelta+=d.y;
- }else if(state.hand){
-  // Hand ON: wheel / two-finger movement = zoom.
-  zoomWheelDelta+=d.y;
- }else{
-  // Hand OFF: ordinary two-finger scrolling = true 2D canvas panning.
-  let dx=d.x,dy=d.y;
-  if(e.shiftKey&&Math.abs(dx)<Math.abs(dy)){
-   dx+=dy;dy=0;
-  }
-  panWheelX+=dx;
-  panWheelY+=dy;
+ if(pinch||state.hand){
+  if(!fallbackWheelTimer)interruptCamera();
+  clearTimeout(fallbackWheelTimer);
+  fallbackWheelTimer=setTimeout(()=>{fallbackWheelTimer=0;finishCameraMotion()},160);
+  queueWheelZoom(canvasWheelExponent(e),e.clientX,e.clientY,!pinch&&(e.deltaMode!==0||Math.abs(e.deltaY)>=40));
+  return;
  }
+ const d=wheelUnitDelta(e);
+ let dx=d.x,dy=d.y;
+ if(e.shiftKey&&Math.abs(dx)<Math.abs(dy)){dx+=dy;dy=0}
+ panWheelX+=dx;panWheelY+=dy;
 
  scheduleWheelFrame();
 },{passive:false});
@@ -1605,35 +1695,47 @@ function updateHandUI(){
  canvas.style.cursor=state.hand?"grab":"default";
 }
 
-const touches=new Map();let gesture=null;
-canvas.addEventListener("pointerdown",e=>{
- if(e.pointerType!=="touch")return;
- touches.set(e.pointerId,{x:e.clientX,y:e.clientY});
- if(touches.size===1){let p=[...touches.values()][0];gesture={type:"pan",x:p.x,y:p.y,ox:state.x,oy:state.y}}
- if(touches.size===2){
-  const[a,b]=[...touches.values()],cx=(a.x+b.x)/2,cy=(a.y+b.y)/2;
-  gesture={type:"pinch",d:Math.hypot(a.x-b.x,a.y-b.y),s:state.scale,w:worldPoint(cx,cy)}
+const touches=new Map();let gesture=null,touchFrame=0;
+function beginTouchGesture(){
+ const points=[...touches.values()];
+ if(points.length===1){const p=points[0];gesture={type:"pan",x:p.x,y:p.y,ox:state.x,oy:state.y}}
+ else if(points.length>=2){
+  const[a,b]=points,cx=(a.x+b.x)/2,cy=(a.y+b.y)/2;
+  gesture={type:"pinch",d:Math.max(1,Math.hypot(a.x-b.x,a.y-b.y)),s:state.scale,w:worldPoint(cx,cy)};
+ }else gesture=null;
+}
+function flushTouch(){
+ touchFrame=0;
+ const points=[...touches.values()];
+ if(points.length===1&&gesture?.type==="pan"){
+  state.x=gesture.ox+points[0].x-gesture.x;state.y=gesture.oy+points[0].y-gesture.y;
+ }else if(points.length>=2&&gesture?.type==="pinch"){
+  const[a,b]=points,cx=(a.x+b.x)/2,cy=(a.y+b.y)/2;
+  state.scale=clampScale(gesture.s*(Math.hypot(a.x-b.x,a.y-b.y)/gesture.d)**navigation.pinch);
+  state.x=cx-gesture.w.x*state.scale;state.y=cy-gesture.w.y*state.scale;
  }
+ sync();markCameraMoving();apply();
+}
+function flushPendingTouch(){if(touchFrame){cancelAnimationFrame(touchFrame);flushTouch()}}
+canvas.addEventListener("pointerdown",e=>{
+ if(e.pointerType!=="touch"||e.target.closest(".cardactions,.resize,button,input,select,textarea"))return;
+ interruptCamera();flushPendingTouch();
+ touches.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ try{canvas.setPointerCapture(e.pointerId)}catch{}
+ beginTouchGesture();
 });
 canvas.addEventListener("pointermove",e=>{
  if(e.pointerType!=="touch"||!touches.has(e.pointerId))return;
  touches.set(e.pointerId,{x:e.clientX,y:e.clientY});
- if(touches.size===1&&gesture?.type==="pan"){
-  const p=[...touches.values()][0];state.x=gesture.ox+p.x-gesture.x;state.y=gesture.oy+p.y-gesture.y;sync();markCameraMoving();apply();
- }
- if(touches.size===2&&gesture?.type==="pinch"){
-  const[a,b]=[...touches.values()],cx=(a.x+b.x)/2,cy=(a.y+b.y)/2,d=Math.hypot(a.x-b.x,a.y-b.y);
-  const ns=Math.max(MIN_SCALE,Math.min(MAX_SCALE,gesture.s*d/gesture.d));
-  const nx=cx-gesture.w.x*ns,ny=cy-gesture.w.y*ns;
-  state.scale=ns;state.x=nx;state.y=ny;
-  sync();markCameraMoving();apply();
- }
+ if(!touchFrame)touchFrame=requestAnimationFrame(flushTouch);
 });
 function touchEnd(e){
- if(e.pointerType!=="touch")return;touches.delete(e.pointerId);
- if(!touches.size){gesture=null;save();finishCameraMotion()}
+ if(e.pointerType!=="touch"||!touches.has(e.pointerId))return;
+ flushPendingTouch();touches.delete(e.pointerId);beginTouchGesture();
+ if(!touches.size){save();finishCameraMotion()}
 }
 canvas.addEventListener("pointerup",touchEnd);canvas.addEventListener("pointercancel",touchEnd);
+canvas.addEventListener("lostpointercapture",touchEnd);
 
 function openEditor(mode="note",n=null){
  state.editId=n?.id??null;
@@ -1670,7 +1772,7 @@ function applyEditor(type=state.editorMode){
   updateCardHeading(n);
   n.el.dataset.mapColor=n.mapColor;
   applyMapFont(n);
-  if(type!=="map")widenCardForTables(n.el);
+
   select(n);
  }else{
   const p=worldPoint(innerWidth/2,innerHeight/2);
@@ -1688,19 +1790,16 @@ function openMapTab(n){
   const payload=JSON.stringify(prepareMarkmapMarkdown(n.md)).replace(/</g,"\\u003c");
   const title=escapeHtml((n.md.match(/^#\s+(.+)$/m)||[])[1]||"ConceptCards mind map");
   const fontStack=mapFontStack(n.mapFont);
+  const stylesheet=escapeHtml(new URL("styles.css",location.href).href);
+  const size=["70","80","90","100","110","125","140","160","180"].includes(String(n.size))?String(n.size):"100";
   const darkMode=document.body.classList.contains("dark");
   const theme=MAP_COLORS.includes(n.mapColor)?n.mapColor:"default";
-  const surfaces=darkMode
-   ?{default:"linear-gradient(135deg,#17181d,#242633)",purple:"linear-gradient(135deg,#1b1724,#30203b)",warm:"linear-gradient(135deg,#21191b,#422629)",ocean:"linear-gradient(135deg,#102126,#1c3940)",forest:"linear-gradient(135deg,#16231d,#2a3b2f)",sunset:"linear-gradient(135deg,#27191f,#462732)",slate:"linear-gradient(135deg,#1c222b,#303a49)"}
-   :{default:"#fbfaff",purple:"#fcf9ff",warm:"#fffaf3",ocean:"#f1fbfa",forest:"#f4faf2",sunset:"#fff8f4",slate:"#f5f7f8"};
-  const surface=surfaces[theme];
-  const textColor=darkMode?"#e7eaf1":"#272622";
   const fontStylesheet=googleFontStylesheetUrl(n.mapFont);
   const fontLink=fontStylesheet?`<link rel="stylesheet" href="${fontStylesheet}">`:"";
   const rainbow=["#e76f51","#f4a261","#e9c46a","#6b9b67","#299c97","#4e7bc5","#a16bb3","#d5668a"];
-  const colors=theme==="default"?rainbow:(MAP_PALETTES[theme]||rainbow);
+  const colors=(MAP_PALETTES[theme]||MAP_PALETTES.default);
   const colorPayload=JSON.stringify(colors);
-  const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>${fontLink}<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css"><style>html,body{height:100%;margin:0;background:${surface};color:${textColor};font:14px ${fontStack}}svg{width:100%;height:100%;font-family:${fontStack};font-weight:400}.markmap-node text{font-weight:400!important;fill:${textColor}!important}.markmap-node foreignObject,.markmap-node foreignObject>div,.markmap-foreign{font-family:${fontStack};font-weight:400!important;color:${textColor}!important}</style></head><body><svg id="map"></svg><script src="https://cdn.jsdelivr.net/npm/d3@7"><\/script><script src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18.12"><\/script><script>const md=${payload};const colors=${colorPayload};const root=new markmap.Transformer().transform(md).root;const depth=node=>node.state?.depth||0;const svg=document.querySelector("#map");svg.innerHTML='<defs><filter id="branch-wobble" x="-4%" y="-10%" width="108%" height="120%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency=".018 .035" numOctaves="1" seed="7" result="branchNoise"/><feDisplacementMap in="SourceGraphic" in2="branchNoise" scale="1.1" xChannelSelector="R" yChannelSelector="G"/></filter></defs>';markmap.Markmap.create(svg,{duration:350,maxWidth:300,spacingHorizontal:82,spacingVertical:15,color:node=>colors[depth(node)%colors.length],lineWidth:node=>depth(node)===1?3.6:depth(node)===2?2.25:1.55,style:id=>"#"+id+" .markmap-link{filter:url(#branch-wobble);stroke-linecap:round;stroke-linejoin:round}"},root);<\/script></body></html>`;
+  const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>${fontLink}<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css"><link rel="stylesheet" href="${stylesheet}"><style>html,body{height:100%;margin:0}.card.map-window{position:fixed;inset:0;width:100%;height:100%;min-width:0;max-width:none;min-height:0;border:0;border-radius:0}.map-window .cardbody{height:100%;padding:0}.map-window .map-pane{height:100%;background:transparent}.map-window .map-pane>svg{width:100%;height:100%}</style></head><body class="${darkMode?"dark":""}"><article class="card map-card map-window" data-map-color="${theme}" data-font="${normalizeCardFont(n.mapFont)}" data-font-size="${size}" style="--card-font-family:${escapeHtml(fontStack)};--map-font-family:${escapeHtml(fontStack)}"><div class="cardbody"><div class="map-pane"><svg id="map"></svg></div></div></article><script src="https://cdn.jsdelivr.net/npm/d3@7"><\/script><script src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18.12"><\/script><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/highlight.min.js"><\/script><script>const md=${payload};const colors=${colorPayload};const root=new markmap.Transformer().transform(md).root;const depth=node=>node.state?.depth||0;const svg=document.querySelector("#map");svg.innerHTML='<defs><filter id="branch-wobble" x="-4%" y="-10%" width="108%" height="120%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency=".018 .035" numOctaves="1" seed="7" result="branchNoise"/><feDisplacementMap in="SourceGraphic" in2="branchNoise" scale="1.1" xChannelSelector="R" yChannelSelector="G"/></filter></defs>';const map=markmap.Markmap.create(svg,{autoFit:false,duration:350,maxWidth:300,spacingHorizontal:82,spacingVertical:15,color:node=>colors[depth(node)%colors.length],lineWidth:node=>depth(node)===1?3.6:depth(node)===2?2.25:1.55,style:id=>"#"+id+" .markmap-link{filter:url(#branch-wobble);stroke-linecap:round;stroke-linejoin:round}"});(async()=>{await document.fonts.ready;await map.setData(root);svg.querySelectorAll("pre code").forEach(code=>{if(window.hljs){try{hljs.highlightElement(code)}catch{}}});await map.fit()})().catch(error=>{document.querySelector(".map-pane").textContent="Could not render this map: "+error.message});<\/script></body></html>`;
   const tab=window.open();if(!tab){alert("Allow pop-ups to open this mind map.");return}
   tab.document.write(html);tab.document.close();
 }
@@ -1716,7 +1815,12 @@ async function quickPaste(){
   editor.classList.add("open");source.value="";source.focus();
  }
 }
-function deleteNote(n){history();n.el.remove();state.notes=state.notes.filter(x=>x!==n);if(state.selected===n)state.selected=null;
+function disposeCard(n){
+ n.mapRenderId=(n.mapRenderId||0)+1;
+ try{n.mapInstance?.destroy?.()}catch{}
+ n.mapInstance=null;n.el.remove();
+}
+function deleteNote(n){history();disposeCard(n);state.notes=state.notes.filter(x=>x!==n);if(state.selected===n)state.selected=null;
  empty();save()}
 async function copyNote(){
  if(!state.selected)return;
@@ -1764,29 +1868,29 @@ function layoutCards(){
    // Arrange, making a selected map visibly resize.
    n.mapWidth=n.el.offsetWidth;
   }else{
-   widenCardForTables(n.el);
    n.width=n.el.offsetWidth;
   }
-  void n.el.offsetHeight;
+
  });
 
+ const dimensions=new Map(state.notes.map(n=>[n,{w:n.el.offsetWidth,h:n.el.offsetHeight}]));
  const rows=Math.ceil(state.notes.length/columns);
  const rowHeights=Array.from({length:rows},(_,row)=>{
   const start=row*columns;
-  return Math.max(...state.notes.slice(start,start+columns).map(n=>n.el.offsetHeight));
+  return Math.max(...state.notes.slice(start,start+columns).map(n=>dimensions.get(n).h));
  });
  let rowTop=-900;
 
  for(let row=0;row<rows;row++){
   const rowCards=state.notes.slice(row*columns,(row+1)*columns);
-  const rowWidth=rowCards.reduce((width,n)=>width+n.el.offsetWidth,0)+gapX*(rowCards.length-1);
+  const rowWidth=rowCards.reduce((width,n)=>width+dimensions.get(n).w,0)+gapX*(rowCards.length-1);
   let columnLeft=-rowWidth/2;
   for(const n of rowCards){
    n.x=columnLeft;
    n.y=rowTop;
    n.el.style.left=n.x+"px";
    n.el.style.top=n.y+"px";
-   columnLeft+=n.el.offsetWidth+gapX;
+   columnLeft+=dimensions.get(n).w+gapX;
   }
 
   rowTop+=rowHeights[row]+gapY;
@@ -1804,14 +1908,6 @@ function arrange(record=true){
   // preserve that view while arranging the cards around it.
   fit(false);
   save();
- });
-}
-let reflowFrame=0;
-function scheduleReflow(){
- if(reflowFrame)return;
- reflowFrame=requestAnimationFrame(()=>{
-  reflowFrame=0;
-  layoutCards();
  });
 }
 function scheduleArrange(){
@@ -1922,7 +2018,26 @@ $("#canvasFile").addEventListener("change",e=>{
 })
 $("#full").onclick=toggleFull
 $("#edge").onclick=()=>{toggleToolbar(true);revealControls()}
-$("#minus").onclick=()=>zoom(.72);$("#plus").onclick=()=>zoom(1.38)
+$("#minus").onclick=()=>zoom(1/navigation.step);$("#plus").onclick=()=>zoom(navigation.step);
+zoomLabel.addEventListener("change",()=>{
+ const percent=Number(zoomLabel.value);
+ if(Number.isFinite(percent)&&percent>0)zoom(clampScale(percent/100)/state.scale);
+ zoomLabel.value=String(Math.round(state.scale*1000)/10);
+});
+zoomLabel.addEventListener("blur",()=>{zoomLabel.value=String(Math.round(state.scale*1000)/10)});
+zoomLabel.addEventListener("keydown",e=>{if(e.key==="Enter")zoomLabel.blur();e.stopPropagation()});
+$("#actualSize").onclick=()=>zoom(1/state.scale);
+$("#fitView").onclick=()=>fit(false);
+for(const key of ["wheel","pinch","step"]){
+ const input=$("#nav-"+key),output=$("#nav-"+key+"-value");
+ input.value=navigation[key];
+ const refresh=()=>{output.textContent=key==="step"?Math.round((navigation[key]-1)*100)+"%":navigation[key]+"×"};
+ refresh();
+ input.addEventListener("input",()=>{
+  navigation[key]=Number(input.value);refresh();
+  try{localStorage.setItem("reflatex-navigation",JSON.stringify(navigation))}catch{}
+ });
+}
 $("#close").onclick=closeEditor;$("#cancel").onclick=closeEditor;$("#applyCard").onclick=()=>applyEditor("note");$("#applyMap").onclick=()=>applyEditor("map")
 $("#edit").onclick=()=>state.selected&&editNote(state.selected)
 $("#duplicate").onclick=duplicate
@@ -2029,11 +2144,11 @@ function openCardTab(n){
  const size=["70","80","90","100","110","125","140","160","180"].includes(String(n.size))?String(n.size):"100";
  const stylesheet=escapeHtml(new URL("styles.css",location.href).href);
  const supportingStyles=[...document.querySelectorAll('link[rel="stylesheet"]')]
-  .filter(link=>link.dataset.uiFonts==="true"||link.href.includes("katex.min.css"))
+  .filter(link=>link.hasAttribute("data-ui-fonts")||link.href.includes("katex.min.css"))
   .map(link=>`<link rel="stylesheet" href="${escapeHtml(link.href)}">`).join("");
  const dark=document.body.classList.contains("dark");
  const width=Math.max(300,Math.min(1600,n.el.offsetWidth||600));
- const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="stylesheet" href="${stylesheet}">${supportingStyles}${fontLink}<style>html,body{min-height:100%;margin:0}body{min-height:100vh;display:grid;place-items:center;padding:24px;box-sizing:border-box;background:var(--canvas);color:var(--ink)}.card.card-window{position:relative;left:auto;top:auto;width:min(${width}px,calc(100vw - 48px));max-width:100%;max-height:calc(100vh - 48px);overflow:hidden;box-sizing:border-box}.card-window .cardbar{cursor:default}.card-window .cardactions,.card-window .resize{display:none!important}.card-window .cardbody{max-height:calc(100vh - 112px);overflow:auto}@media(max-width:600px){body{padding:12px}.card.card-window{width:100%;max-height:calc(100vh - 24px)}.card-window .cardbody{max-height:calc(100vh - 88px)}}</style></head><body class="${dark?"dark":""}"><article class="card card-window${heading?" has-title":""}" data-map-color="${theme}" data-font="${font}" data-font-size="${size}" style="--card-font-family:${escapeHtml(fontStack)}">${titleHtml}<div class="cardbody">${renderCardMarkdown(n.md)}</div></article></body></html>`;
+ const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="stylesheet" href="${stylesheet}">${supportingStyles}${fontLink}<style>html,body{min-height:100%;margin:0}body{min-height:100vh;display:grid;place-items:center;padding:24px;box-sizing:border-box;background:var(--canvas);color:var(--ink)}.card.card-window{min-width:0;position:relative;left:auto;top:auto;width:min(${width}px,calc(100vw - 48px));max-width:100%;max-height:calc(100vh - 48px);overflow:hidden;box-sizing:border-box}.card-window .cardbar{cursor:default}.card-window .cardactions,.card-window .resize{display:none!important}.card-window .cardbody{max-height:calc(100vh - 112px);overflow:auto}@media(max-width:600px){body{padding:12px}.card.card-window{width:100%;max-height:calc(100vh - 24px)}.card-window .cardbody{max-height:calc(100vh - 88px)}}</style></head><body class="${dark?"dark":""}"><article class="card card-window${heading?" has-title":""}" data-map-color="${theme}" data-font="${font}" data-font-size="${size}" style="--card-font-family:${escapeHtml(fontStack)}">${titleHtml}<div class="cardbody">${renderCardMarkdown(n.md)}</div></article></body></html>`;
  const tab=window.open();
  if(!tab){alert("Allow pop-ups to open this card.");return}
  tab.document.write(html);tab.document.close();

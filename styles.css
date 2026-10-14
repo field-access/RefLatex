@@ -43,7 +43,8 @@ body.canvas-panning,body.canvas-panning *{user-select:none!important;-webkit-use
  background-position:center;background-repeat:no-repeat;background-size:cover;
 }
 #world{position:absolute;left:0;top:0;width:1px;height:1px;transform-origin:0 0}
-body.camera-moving #world{will-change:transform}
+/* Hide offscreen paint while retaining dimensions for navigation and layout. */
+.card.offscreen{visibility:hidden;pointer-events:none}
 .card{
  position:absolute;width:500px;min-width:300px;max-width:1200px;
  background:var(--paper);border:1px solid #cbc7be;border-radius:34px;
@@ -64,7 +65,7 @@ body.camera-moving #world{will-change:transform}
 .map-card .markmap-node text{font-size:calc(14px * var(--card-font-scale,1))!important;font-weight:400!important;fill:var(--ink)}
 .map-card .markmap-node foreignObject>div,
 .map-card .markmap-node .markmap-foreign{font-family:var(--map-font-family,"Inter",ui-sans-serif,system-ui,sans-serif);font-size:calc(14px * var(--card-font-scale,1))!important;font-weight:400!important;line-height:1.4;color:var(--ink)}
-.map-card .markmap-node pre.map-codeblock{
+.map-card .markmap-node pre{
  --code-accent:var(--card-accent,#7669d3);
  --code-keyword:color-mix(in srgb,#7441b8 78%,var(--code-accent) 22%);
  --code-function:color-mix(in srgb,#2459a6 78%,var(--code-accent) 22%);
@@ -75,17 +76,17 @@ body.camera-moving #world{will-change:transform}
  background:color-mix(in srgb,var(--map-surface,#fbfaff) 88%,var(--code-accent) 12%);
  color:var(--ink);font:calc(11px * var(--card-font-scale,1))/1.5 ui-monospace,SFMono-Regular,Consolas,monospace
 }
-.map-card .markmap-node pre.map-codeblock code{font:inherit;color:inherit;white-space:inherit}
-.map-card .markmap-node pre.map-codeblock .hljs-keyword,
-.map-card .markmap-node pre.map-codeblock .hljs-selector-tag,
-.map-card .markmap-node pre.map-codeblock .hljs-literal,
-.map-card .markmap-node pre.map-codeblock .hljs-built_in{color:var(--code-keyword)}
-.map-card .markmap-node pre.map-codeblock .hljs-title.function_,
-.map-card .markmap-node pre.map-codeblock .hljs-title.class_,
-.map-card .markmap-node pre.map-codeblock .hljs-function .hljs-title{color:var(--code-function)}
-.map-card .markmap-node pre.map-codeblock .hljs-string,
-.map-card .markmap-node pre.map-codeblock .hljs-attr{color:var(--code-string)}
-body.dark .map-card .markmap-node pre.map-codeblock{
+.map-card .markmap-node pre code{font:inherit;color:inherit;white-space:inherit}
+.map-card .markmap-node pre .hljs-keyword,
+.map-card .markmap-node pre .hljs-selector-tag,
+.map-card .markmap-node pre .hljs-literal,
+.map-card .markmap-node pre .hljs-built_in{color:var(--code-keyword)}
+.map-card .markmap-node pre .hljs-title.function_,
+.map-card .markmap-node pre .hljs-title.class_,
+.map-card .markmap-node pre .hljs-function .hljs-title{color:var(--code-function)}
+.map-card .markmap-node pre .hljs-string,
+.map-card .markmap-node pre .hljs-attr{color:var(--code-string)}
+body.dark .map-card .markmap-node pre{
  --code-accent:var(--card-accent-dark,var(--card-accent,#7669d3));
  --code-keyword:color-mix(in srgb,#c792ea 76%,var(--code-accent) 24%);
  --code-function:color-mix(in srgb,#82aaff 78%,var(--code-accent) 22%);
@@ -1041,3 +1042,43 @@ body:not(.dark) .cardbody pre.line-numbered .hljs-params,
 body:not(.dark) .cardbody pre.line-numbered .hljs-variable{color:var(--syntax-type)}
 body:not(.dark) .cardbody pre.line-numbered .hljs-meta,
 body:not(.dark) .cardbody pre.line-numbered .hljs-section{color:var(--syntax-meta)}
+
+.cardbody pre,.cardbody code{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.zoom input.zlabel{width:60px;border:0;background:transparent;color:inherit;text-align:right;font:inherit;padding:4px 0}
+.zoom input.zlabel::-webkit-inner-spin-button{appearance:none}
+.zoom-settings{position:relative;font-size:12px}
+.zoom-settings summary{cursor:pointer;padding:7px;list-style:none}
+.zoom-settings-panel{position:absolute;bottom:42px;right:0;width:245px;padding:16px;background:var(--paper);color:var(--ink);border:1px solid var(--border);border-radius:12px;box-shadow:0 6px 24px #0002}
+.zoom-settings-panel label{display:grid;grid-template-columns:1fr auto;gap:6px;margin-bottom:14px}
+.zoom-settings-panel input{grid-column:1/-1;width:100%;accent-color:#7669d3}
+.zoom-settings-panel p{font-size:11px;line-height:1.5;color:var(--muted);margin:12px 0 0}
+.zoom:focus-within,.zoom:has(details[open]){opacity:1!important;pointer-events:auto!important;transform:none!important}
+
+/* Broad blurred shadows on every code block multiply raster work on a board.
+   Keep the existing colored surfaces, borders, syntax colors and text. */
+.cardbody pre.line-numbered,body.dark .cardbody pre.line-numbered{box-shadow:none}
+
+/* Content never changes the user's card width. */
+.cardbody{min-width:0}
+.table-scroll{width:100%;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;margin:20px 0}
+.cardbody .table-scroll table{margin:0;min-width:100%}
+.cardbody pre,.cardbody pre code{box-sizing:border-box;max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal}
+.cardbody pre.line-numbered{display:block;overflow:hidden;white-space:normal}
+.cardbody pre.line-numbered code{display:block;width:100%;min-width:0;white-space:normal;counter-reset:code-line}
+.cardbody pre.line-numbered .code-line{display:block;position:relative;padding-left:3.6em;min-height:1.6em;white-space:pre-wrap;overflow-wrap:anywhere;counter-increment:code-line}
+.cardbody pre.line-numbered .code-line::before{content:counter(code-line);position:absolute;left:0;top:0;width:2.7em;margin:0;line-height:inherit;color:var(--syntax-comment);text-align:right;user-select:none;font-size:inherit}
+.map-card .markmap-node pre{width:100%;max-width:300px;white-space:pre-wrap;overflow-wrap:anywhere}
+.map-card .markmap-node pre code{min-width:0;width:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:inherit!important;line-height:inherit;color:inherit;background:transparent!important}
+body.dark .map-card[data-map-color="purple"]{--map-surface:#241c30}
+body.dark .map-card[data-map-color="warm"]{--map-surface:#302023}
+body.dark .map-card[data-map-color="ocean"]{--map-surface:#172f35}
+body.dark .map-card[data-map-color="forest"]{--map-surface:#203027}
+body.dark .map-card[data-map-color="sunset"]{--map-surface:#35212a}
+body.dark .map-card[data-map-color="slate"]{--map-surface:#252e3a}
+body.dark .map-card .markmap-node pre,.map-card[data-map-color="default"] .markmap-node pre{
+ --code-keyword:#c792ea;--code-function:#82aaff;--code-string:#c3e88d;
+ color:#e4eaf3;background:color-mix(in srgb,#111720 94%,var(--card-accent-dark,#7669d3) 6%);border-color:#465064
+}
+.map-card .markmap-node pre .hljs-comment{color:#78879b}
+body.dark .map-card .markmap-node pre .hljs-comment,.map-card[data-map-color="default"] .markmap-node pre .hljs-comment{color:#a2aec0}
+.card-window .table-scroll{max-width:100%}
