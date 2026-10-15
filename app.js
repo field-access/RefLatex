@@ -85,6 +85,13 @@ function setCardActionIcons(el,type){
  setButtonIcon(mapOpen,"mapOpen","Open Markmap in new window (M)");
  mapOpen?.classList.remove("map-only");
  setButtonIcon(el.querySelector("[data-card-open]"),"cardOpen","Open card in new window (O)");
+ let pdfButton=el.querySelector("[data-card-pdf]");
+ if(!pdfButton){
+  pdfButton=document.createElement("button");pdfButton.type="button";pdfButton.dataset.cardPdf="";
+  el.querySelector("[data-edit]").before(pdfButton);
+  pdfButton.onclick=()=>downloadCardPdf(state.notes.find(n=>n.el===el));
+ }
+ setButtonIcon(pdfButton,"save","Save card as PDF");
  setButtonIcon(el.querySelector("[data-edit]"),"edit","Edit card");
  setButtonIcon(el.querySelector("[data-delete]"),"delete",type==="map"?"Delete map":"Delete card");
 }
@@ -2403,7 +2410,36 @@ document.querySelectorAll("[data-background-choice]").forEach(button=>{
  };
 });
 $("#theme").onclick=toggleTheme
-$("#saveCanvas").onclick=downloadCanvas
+$("#saveCanvas").onclick=downloadCanvas;
+let pdfExportLoader;
+async function downloadCardPdf(n){
+ if(!n)return;
+ const pdfWindow=window.open("","_blank");
+ if(!pdfWindow){alert("Allow pop-ups to save this card as PDF.");return}
+ pdfWindow.document.title="Preparing PDF…";
+ const button=n.el.querySelector("[data-card-pdf]");button.disabled=true;
+ try{
+  pdfExportLoader ||= new Promise((resolve,reject)=>{
+   const script=document.createElement("script");script.src="./card-pdf.js?v=3";
+   script.onload=resolve;script.onerror=()=>{pdfExportLoader=null;reject(new Error("Could not load PDF export"))};document.head.append(script);
+  });
+  await pdfExportLoader;
+  await window.downloadConceptCardPdf({
+   window:pdfWindow,baseURL:location.href,
+   css:[...document.styleSheets].flatMap(sheet=>{try{return [...sheet.cssRules].map(rule=>rule.cssText)}catch{return []}}).join("\n"),
+   stylesheets:[...new Set([
+    new URL("styles.css",location.href).href,
+    ...[...document.querySelectorAll('link[rel="stylesheet"]')].filter(link=>link.hasAttribute("data-ui-fonts")||link.href.includes("katex.min.css")).map(link=>link.href),
+    googleFontStylesheetUrl(n.type==="map"?n.mapFont:n.font)
+   ].filter(Boolean))],
+   title:cardMarkdownParts(n.md).title||"ConceptCards card",html:renderCardMarkdown(n.md),
+   width:Math.max(300,Math.min(1600,n.el.offsetWidth||600)),
+   font:normalizeCardFont(n.type==="map"?n.mapFont:n.font),fontStack:mapFontStack(n.type==="map"?n.mapFont:n.font),
+   size:String(n.size||"100"),theme:n.mapColor||"default",dark:document.body.classList.contains("dark")
+  });
+ }catch(error){pdfWindow.close();alert("Could not export this card: "+error.message)}
+ finally{button.disabled=false}
+}
 $("#openCanvas").onclick=()=>$("#canvasFile").click()
 $("#canvasFile").addEventListener("change",e=>{
  const file=e.target.files?.[0];

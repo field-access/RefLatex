@@ -431,6 +431,7 @@ body.controls .hint{opacity:1;pointer-events:auto}
 .help-group>div{display:flex;align-items:center;gap:10px;min-height:29px;font-size:12px}
 .help-group kbd{flex:none;min-width:30px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:color-mix(in srgb,var(--panel) 75%,var(--canvas));color:var(--ink);font:10px ui-monospace,SFMono-Regular,Consolas,monospace;text-align:center;box-shadow:0 1px 0 var(--border)}
 .help-group span{color:var(--ink)}
+.help-group p{margin:10px 0 0;font-size:12px;line-height:1.5;color:var(--muted)}
 .empty{
  position:fixed;inset:0;display:grid;place-items:center;z-index:1;pointer-events:none;
  color:#827e76;text-align:center
