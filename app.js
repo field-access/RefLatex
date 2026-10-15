@@ -2677,6 +2677,13 @@ window.addEventListener("keydown",e=>{
   * These mirror the visible buttons without interfering with card text input.
  */
  const key=e.key.toLowerCase();
+ if(key==="p"&&!mod&&!e.altKey&&!document.activeElement?.isContentEditable&&document.activeElement?.tagName!=="SELECT"){
+  const pauseButton=$("#pauseBackground");
+  if(pauseButton&&!pauseButton.disabled){
+   e.preventDefault();if(!e.repeat)pauseButton.click();
+  }
+  return;
+ }
  if(key==="tab"&&!mod&&!e.altKey&&!e.shiftKey&&!document.activeElement?.isContentEditable){
   e.preventDefault();
   if(!e.repeat){
