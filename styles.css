@@ -1122,6 +1122,22 @@ body.dark .map-card .markmap-node pre .hljs-comment,.map-card[data-map-color="de
 .index-subtopics[hidden]{display:none}
 .card-index nav .index-subtopic{display:block;width:100%;padding:6px 8px;text-align:left;font-size:11px;overflow-wrap:anywhere}
 .card-index nav .index-subtopic:hover{background:color-mix(in srgb,var(--ink) 6%,transparent)}
+.index-entry{position:relative}
+.index-entry.index-dragging{opacity:.4}
+.index-entry.index-drop-before::before,.index-entry.index-drop-after::after{content:"";position:absolute;left:4px;right:4px;height:2px;background:var(--accent);border-radius:2px;z-index:2}
+.index-entry.index-drop-before::before{top:-1px}.index-entry.index-drop-after::after{bottom:-1px}
+.card-index nav .index-reorder{display:grid;place-items:center;flex:0 0 18px;width:18px;height:28px;padding:0;color:var(--muted);opacity:.35;cursor:grab}
+.index-reorder:active{cursor:grabbing}
+.index-row:hover .index-reorder,.index-reorder:focus-visible{opacity:1}
+.index-reorder .icon{width:14px;height:14px;stroke-width:3}
+.index-topic-row{display:flex;align-items:center;min-width:0}
+.index-topic-row.index-topic-leaf{padding-left:20px}
+.card-index nav .index-topic-row>.index-subtopic{flex:1;min-width:0;width:auto;padding:6px 5px}
+.card-index nav .index-topic-expand{display:grid;place-items:center;flex:0 0 20px;width:20px;height:28px;padding:0;color:var(--muted)}
+.index-topic-expand .icon{width:12px;height:12px;transition:transform .12s ease}
+.index-topic-expand[aria-expanded="true"] .icon{transform:rotate(90deg)}
+.index-topic-children{margin-left:14px;border-left:1px solid color-mix(in srgb,var(--ink) 10%,transparent)}
+.index-topic-children[hidden]{display:none}
 .index-target{outline:2px solid var(--accent);outline-offset:5px;border-radius:3px}
 .index-row:has([aria-current="true"]){background:color-mix(in srgb,var(--ink) 8%,transparent)}
 .card-index nav button{border:0;background:transparent;color:inherit;font:inherit;cursor:pointer;border-radius:5px}

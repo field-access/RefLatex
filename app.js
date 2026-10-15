@@ -64,7 +64,8 @@ const ICON_PATHS={
  collapse:'<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 4v16m7-11-3 3 3 3"/>',
  help:'<circle cx="12" cy="12" r="8"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 2-2.5 2-2.5 4m0 3h.01"/>',
  settings:'<path d="M4 7h3m4 0h9M4 17h9m4 0h3"/><circle cx="9" cy="7" r="2"/><circle cx="15" cy="17" r="2"/>',
- chevron:'<path d="m9 6 6 6-6 6"/>'
+ chevron:'<path d="m9 6 6 6-6 6"/>',
+ grip:'<path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01"/>'
 };
 const ICONS=Object.fromEntries(Object.entries(ICON_PATHS).map(([name,paths])=>[name,`<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${paths}</svg>`]));
 // Static controls and generated card controls use the same local icon set.
@@ -1410,6 +1411,44 @@ async function focusIndexSubtopic(n,topic){
  el.classList.remove("index-target");void el.offsetWidth;el.classList.add("index-target");
  setTimeout(()=>el.classList.remove("index-target"),1800);
 }
+function renderIndexTopics(n,topics,container){
+ const roots=[],stack=[];
+ for(const [i,topic] of topics.entries()){
+  const item={topic,key:String(topic.node?.state?.path||i),children:[]};
+  while(stack.length&&stack.at(-1).topic.depth>=topic.depth)stack.pop();
+  (stack.length?stack.at(-1).children:roots).push(item);stack.push(item);
+ }
+ n.indexTopicExpanded??=new Set();
+ let count=0;
+ const append=(items,parent)=>{
+  for(const item of items){
+   const {topic,key}=item;
+   const group=document.createElement("div"),row=document.createElement("div");row.className="index-topic-row";
+   const link=document.createElement("button");link.type="button";link.className="index-subtopic";link.textContent=topic.label;link.title=topic.label;
+   link.onclick=()=>{if(innerWidth<700)setIndexOpen(false);focusIndexSubtopic(n,topic)};
+   row.append(link);group.append(row);parent.append(group);
+   if(item.children.length){
+    const toggle=document.createElement("button");toggle.type="button";toggle.className="index-topic-expand";toggle.innerHTML=ICONS.chevron;
+    toggle.setAttribute("aria-label",`Subtopics: ${topic.label}`);
+    const children=document.createElement("div");children.className="index-topic-children";children.id=`index-topic-${n.id}-${count++}`;children.hidden=!n.indexTopicExpanded.has(key);
+    toggle.setAttribute("aria-controls",children.id);toggle.setAttribute("aria-expanded",String(!children.hidden));
+    toggle.onclick=()=>{children.hidden=!children.hidden;if(children.hidden)n.indexTopicExpanded.delete(key);else n.indexTopicExpanded.add(key);toggle.setAttribute("aria-expanded",String(!children.hidden))};
+    row.prepend(toggle);group.append(children);append(item.children,children);
+   }else row.classList.add("index-topic-leaf");
+  }
+ };
+ append(roots,container);
+}
+function reorderIndexCard(id,targetId,after=false){
+ const source=state.notes.find(n=>String(n.id)===String(id)),target=state.notes.find(n=>String(n.id)===String(targetId));
+ if(!source||!target||source===target)return;
+ const notes=state.notes.filter(n=>n!==source),position=notes.indexOf(target)+(after?1:0);
+ notes.splice(position,0,source);
+ if(notes.every((n,i)=>n===state.notes[i]))return;
+ history();state.notes=notes;layoutCards();save();
+ if(indexFrame){cancelAnimationFrame(indexFrame);indexFrame=0}
+ renderCardIndex();
+}
 function renderCardIndex(){
  const list=$("#indexEntries"),fragment=document.createDocumentFragment();
  for(const [i,n] of state.notes.entries()){
@@ -1421,12 +1460,15 @@ function renderCardIndex(){
   icon.setAttribute("viewBox","0 0 24 24");icon.setAttribute("aria-hidden","true");icon.classList.add("index-icon");
   icon.innerHTML=ICON_PATHS[n.type==="map"?"map":"file"];
   button.append(icon,label,detail);button.setAttribute("aria-current",String(state.selected===n));
-  const row=document.createElement("div");row.className="index-row";
+  const row=document.createElement("div");row.className="index-row";row.draggable=true;
   const edit=document.createElement("button");edit.type="button";edit.className="index-rename";
   edit.innerHTML=ICONS.edit;edit.title="Edit heading";edit.setAttribute("aria-label",`Edit heading: ${n.indexTitle}`);
   edit.onclick=()=>editIndexHeading(n);
   row.append(button,edit);
-  const entry=document.createElement("div");entry.append(row);
+  const entry=document.createElement("div");entry.className="index-entry";entry.dataset.indexCardId=n.id;entry.append(row);
+  const grip=document.createElement("button");grip.type="button";grip.className="index-reorder";grip.draggable=true;grip.innerHTML=ICONS.grip;
+  grip.setAttribute("aria-label",`Reorder: ${n.indexTitle}`);grip.title="Drag to reorder · Alt + ↑ / ↓";
+  row.append(grip);
   const topics=indexSubtopics(n);
   if(topics.length){
    const toggle=document.createElement("button");toggle.type="button";toggle.className="index-expand";
@@ -1434,10 +1476,7 @@ function renderCardIndex(){
    const children=document.createElement("div");children.className="index-subtopics";children.id=`index-topics-${n.id}`;children.hidden=!n.indexExpanded;
    toggle.setAttribute("aria-controls",children.id);toggle.setAttribute("aria-expanded",String(Boolean(n.indexExpanded)));
    toggle.onclick=()=>{n.indexExpanded=!n.indexExpanded;children.hidden=!n.indexExpanded;toggle.setAttribute("aria-expanded",String(n.indexExpanded))};
-   for(const topic of topics){
-    const link=document.createElement("button");link.type="button";link.className="index-subtopic";link.textContent=topic.label;link.title=topic.label;link.style.paddingLeft=`${12+Math.min(topic.depth,5)*10}px`;
-    link.onclick=()=>{if(innerWidth<700)setIndexOpen(false);focusIndexSubtopic(n,topic)};children.append(link);
-   }
+   renderIndexTopics(n,topics,children);
    row.prepend(toggle);entry.append(children);
   }
   fragment.appendChild(entry);
@@ -1446,6 +1485,36 @@ function renderCardIndex(){
  $("#indexEmpty").hidden=state.notes.length>0;
  revealIndexSelection();
 }
+let indexDragId=null,indexDropTarget=null,indexDropAfter=false;
+function clearIndexDrop(){
+ indexDropTarget?.classList.remove("index-drop-before","index-drop-after");indexDropTarget=null;
+}
+$("#indexEntries").addEventListener("dragstart",e=>{
+ const entry=e.target.closest(".index-entry");
+ if(!entry||e.target.closest(".index-edit,.index-subtopics")){e.preventDefault();return}
+ indexDragId=entry.dataset.indexCardId;e.dataTransfer.effectAllowed="move";
+ e.dataTransfer.setData("text/plain",indexDragId);entry.classList.add("index-dragging");
+});
+$("#indexEntries").addEventListener("dragover",e=>{
+ if(indexDragId===null)return;
+ const entry=e.target.closest(".index-entry");
+ if(!entry||entry.dataset.indexCardId===indexDragId){clearIndexDrop();return}
+ e.preventDefault();e.dataTransfer.dropEffect="move";clearIndexDrop();
+ const rect=entry.querySelector(".index-row").getBoundingClientRect();
+ indexDropAfter=e.clientY>rect.top+rect.height/2;indexDropTarget=entry;
+ entry.classList.add(indexDropAfter?"index-drop-after":"index-drop-before");
+});
+$("#indexEntries").addEventListener("drop",e=>{
+ if(indexDragId===null||!indexDropTarget)return;
+ e.preventDefault();const target=indexDropTarget.dataset.indexCardId,after=indexDropAfter,id=indexDragId;
+ clearIndexDrop();indexDragId=null;reorderIndexCard(id,target,after);
+});
+$("#indexEntries").addEventListener("dragend",()=>{
+ indexDragId=null;clearIndexDrop();$("#indexEntries .index-dragging")?.classList.remove("index-dragging");
+});
+$("#indexEntries").addEventListener("dragleave",e=>{
+ if(!e.currentTarget.contains(e.relatedTarget))clearIndexDrop();
+});
 function revealIndexSelection(){
  if(!$("#cardIndex").hidden)$("#indexEntries [aria-current='true']")?.scrollIntoView({block:"nearest"});
 }
@@ -1458,6 +1527,24 @@ $("#toggleIndex").onclick=()=>setIndexOpen($("#cardIndex").hidden);
 $("#closeIndex").onclick=()=>{setIndexOpen(false);$("#toggleIndex").focus()};
 $("#cardIndex").addEventListener("keydown",e=>{
  e.stopPropagation();
+ const grip=e.target.closest(".index-reorder");
+ if(grip&&e.altKey&&(e.key==="ArrowUp"||e.key==="ArrowDown")){
+  e.preventDefault();const id=grip.closest(".index-entry").dataset.indexCardId;
+  const i=state.notes.findIndex(n=>String(n.id)===id),direction=e.key==="ArrowUp"?-1:1;
+  const target=state.notes[i+direction];if(target){reorderIndexCard(id,target.id,direction>0);$("#indexEntries").querySelector(`[data-index-card-id="${id}"] .index-reorder`)?.focus()}
+  return;
+ }
+ if(!e.altKey&&(e.key==="ArrowRight"||e.key==="ArrowLeft")&&e.target.matches("[data-card-id],.index-subtopic")){
+  e.preventDefault();
+  const row=e.target.closest(".index-row,.index-topic-row"),toggle=row.querySelector(".index-expand,.index-topic-expand");
+  if(toggle&&toggle.getAttribute("aria-expanded")!==(e.key==="ArrowRight"?"true":"false"))toggle.click();
+  else if(e.key==="ArrowRight")row.parentElement.querySelector(".index-subtopics .index-subtopic,.index-topic-children .index-subtopic")?.focus();
+  else{
+   const parent=e.target.closest(".index-topic-children,.index-subtopics");
+   parent?.parentElement.querySelector(":scope > .index-topic-row > .index-subtopic,:scope > .index-row > [data-card-id]")?.focus();
+  }
+  return;
+ }
  if(e.key.toLowerCase()==="b"&&!e.ctrlKey&&!e.metaKey&&!e.altKey){
   e.preventDefault();if(!e.repeat)toggleToolbar();return;
  }
