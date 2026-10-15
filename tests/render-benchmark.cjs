@@ -42,11 +42,12 @@ Use **clear headings**, short paragraphs, and meaningful labels. Revisit the boa
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
  const browser=await chromium.launch({channel:'msedge',headless:true});
  try{
- for(const layers of [false,true]){
+ for(const cardCount of [10,150])for(const layers of [false,true]){
  const page=await browser.newPage({viewport:{width:1440,height:900}});
  await page.route('https://**/*',r=>r.request().url().includes('/marked@')?r.fulfill({path:markedPath,contentType:'text/javascript'}):r.abort());
- await page.addInitScript(({md})=>localStorage.setItem('reflatex',JSON.stringify({x:100,y:70,scale:.36,notes:Array.from({length:10},(_,i)=>({id:i+1,md,x:(i%5)*680,y:Math.floor(i/5)*1120,w:600,font:'sans'}))})),{md});
- await page.goto(`http://127.0.0.1:${server.address().port}`,{waitUntil:'networkidle'});
+ await page.addInitScript(({md,cardCount})=>localStorage.setItem('reflatex',JSON.stringify({x:100,y:70,scale:.36,notes:Array.from({length:cardCount},(_,i)=>({id:i+1,md,x:(i%5)*680,y:Math.floor(i/5)*1120,w:600,font:'sans'}))})),{md,cardCount});
+ await page.addInitScript(()=>localStorage.setItem('reflatex-index-open','false'));
+  await page.goto(`http://127.0.0.1:${server.address().port}`,{waitUntil:'networkidle'});
  if(!layers)await page.addStyleTag({content:'#world{will-change:auto!important}'});
  const cdp=await page.context().newCDPSession(page);await cdp.send('Performance.enable');
  const metric=async()=>Object.fromEntries((await cdp.send('Performance.getMetrics')).metrics.map(m=>[m.name,m.value]));

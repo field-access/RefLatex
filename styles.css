@@ -1,6 +1,7 @@
 :root{
  --canvas:#d9d6cf;--paper:#fffdf8;--ink:#272622;--muted:#77736b;
  --panel:#f7f5f0e8;--border:#c8c4bb;--accent:#5b57b7;
+ --ui-font:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
 }
 *{box-sizing:border-box}
 html,body{width:100%;height:100%;margin:0;overflow:hidden}
@@ -17,7 +18,8 @@ body.dark ::selection,body.dark ::-moz-selection{background:color-mix(in srgb,va
 body.hand-mode #canvas{cursor:grab}
 body.hand-mode #canvas:active,body.canvas-panning #canvas{cursor:grabbing}
 body :is(button,a,select,[role="button"]){cursor:pointer}
-body.canvas-panning,body.canvas-panning *{user-select:none!important;-webkit-user-select:none!important}
+/* Prevent selection without restyling every card descendant on pan start. */
+body.canvas-panning{user-select:none;-webkit-user-select:none}
 #canvas[data-background="light"]{
  background-color:#d9d6cf;
  background-image:none;
@@ -42,7 +44,8 @@ body.canvas-panning,body.canvas-panning *{user-select:none!important;-webkit-use
  background-image:url("./assets/backgrounds/ocean.webp");
  background-position:center;background-repeat:no-repeat;background-size:cover;
 }
-#world{position:absolute;left:0;top:0;width:1px;height:1px;transform-origin:0 0}
+/* Prepare translation before input arrives; scale caching remains temporary. */
+#world{position:absolute;left:0;top:0;width:1px;height:1px;transform-origin:0 0;will-change:translate}
 /* Hide offscreen paint while retaining dimensions for navigation and layout. */
 .card.offscreen{visibility:hidden;pointer-events:none}
 .card{
@@ -61,7 +64,7 @@ body.canvas-panning,body.canvas-panning *{user-select:none!important;-webkit-use
 .map-pane.pen-panning{cursor:grabbing}
 .map-pane svg{display:block;width:100%;height:100%;font-family:var(--map-font-family,"Inter",ui-sans-serif,system-ui,sans-serif)}
 .map-card .markmap-link{stroke-linecap:round;opacity:.86}
-.map-card .markmap-node circle{stroke:var(--paper);stroke-width:2px;filter:drop-shadow(0 1px 2px #0002)}
+.map-card .markmap-node circle{stroke:var(--paper);stroke-width:2px}
 .map-card .markmap-node text{font-size:calc(14px * var(--card-font-scale,1))!important;font-weight:400!important;fill:var(--ink)}
 .map-card .markmap-node foreignObject>div,
 .map-card .markmap-node .markmap-foreign{font-family:var(--map-font-family,"Inter",ui-sans-serif,system-ui,sans-serif);font-size:calc(14px * var(--card-font-scale,1))!important;font-weight:400!important;line-height:1.4;color:var(--ink)}
@@ -77,6 +80,13 @@ body.canvas-panning,body.canvas-panning *{user-select:none!important;-webkit-use
  color:var(--ink);font:calc(11px * var(--card-font-scale,1))/1.5 ui-monospace,SFMono-Regular,Consolas,monospace
 }
 .map-card .markmap-node pre code{font:inherit;color:inherit;white-space:inherit}
+/* Markmap measures the inner div to size its SVG node. Expand the width
+   allowance before that measurement, rather than overflowing a 300px node. */
+.map-card .markmap-node foreignObject:has(table){--markmap-max-width:1200px}
+.map-card .markmap-node foreignObject>div>div:has(table){min-width:520px;max-width:1200px}
+.map-card .markmap-node table{width:auto;min-width:100%;max-width:none;table-layout:auto;margin:8px 0;font:inherit;line-height:1.5}
+.map-card .markmap-node :is(th,td){min-width:120px;padding:8px 12px;vertical-align:top;word-break:normal;overflow-wrap:break-word}
+.map-card .markmap-node th{font-weight:600}
 .map-card .markmap-node pre .hljs-keyword,
 .map-card .markmap-node pre .hljs-selector-tag,
 .map-card .markmap-node pre .hljs-literal,
@@ -131,10 +141,9 @@ body.dark .map-card .markmap-node pre{
 .card:not(.map-card)[data-map-color="slate"] .cardbar{background:linear-gradient(90deg,#e2e8ee,#f5f7f9);border-bottom-color:#d6dce2}
 .card.selected{
  z-index:9;
- outline:2px solid var(--card-accent,#7669d3);
- outline-offset:3px;
- box-shadow:0 0 0 4px color-mix(in srgb,var(--card-accent,#7669d3) 18%,transparent),
- 0 0 18px color-mix(in srgb,var(--card-accent,#7669d3) 32%,transparent);
+ outline:1px solid color-mix(in srgb,var(--ink) 35%,transparent);
+ outline-offset:2px;
+ box-shadow:none;
 }
 .cardbar{
  height:32px;cursor:default;position:relative;border-bottom:1px solid transparent;border-radius:34px 34px 0 0;
@@ -157,6 +166,16 @@ body.dark .map-card .markmap-node pre{
 .cardbody h1{font-size:calc(31px * var(--card-font-scale));margin:0 0 18px}
 .cardbody h2{font-size:calc(24px * var(--card-font-scale));margin:30px 0 12px}
 .cardbody h3{font-size:calc(19px * var(--card-font-scale));margin:25px 0 9px}
+/* Markdown headings retain a clear hierarchy in every card font and size. */
+.card:not(.map-card) .cardbody :is(h1,h2,h3,h4,h5,h6){font-family:var(--card-font-family);font-weight:700;line-height:1.25;letter-spacing:-.02em;margin:1.25em 0 .5em}
+.card:not(.map-card) .cardbody h1{font-size:calc(36px * var(--card-font-scale))}
+.card:not(.map-card) .cardbody h2{font-size:calc(29px * var(--card-font-scale))}
+.card:not(.map-card) .cardbody h3{font-size:calc(25px * var(--card-font-scale))}
+.card:not(.map-card) .cardbody h4{font-size:calc(22px * var(--card-font-scale))}
+.card:not(.map-card) .cardbody h5{font-size:calc(20px * var(--card-font-scale))}
+.card:not(.map-card) .cardbody h6{font-size:calc(19px * var(--card-font-scale))}
+.card:not(.map-card) .cardbody :is(h1,h2,h3,h4,h5,h6):first-child{margin-top:0}
+.card:not(.map-card) .cardbody :is(h1,h2,h3,h4,h5,h6) code{font-size:.85em;line-height:inherit}
 .cardbody p,.cardbody li{
  font:calc(18px * var(--card-font-scale))/1.78 Georgia,"Times New Roman",serif;
 }
@@ -247,7 +266,7 @@ body.dark .map-card .markmap-node pre{
  transition:opacity .28s ease,transform .28s ease,filter .2s ease;
 }
 .toolbar{
- left:14px;top:50%;transform:translateY(-50%);
+ right:14px;left:auto;top:50%;transform:translateY(-50%);
  flex-direction:column;width:54px;
 }
 .toolbar .tool{
@@ -266,7 +285,7 @@ body.dark .map-card .markmap-node pre{
 }
 .toolbar .tool:hover{background:var(--panel);border-color:var(--border)}
 .toolbar .tool:active{transform:scale(.92)}
-.icon{display:block;width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.icon{display:block;width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}
 .toolbar .tool .icon{width:20px;height:20px}
 .toolbar .tool.active{
  background:var(--accent);
@@ -280,7 +299,7 @@ body.dark .map-card .markmap-node pre{
 }
 .toolbar .background-select:hover,.toolbar .background-select[aria-expanded="true"]{background:var(--panel);border-color:var(--border)}
 .background-menu{
- position:absolute;left:48px;top:0;display:none;width:150px;max-height:min(72vh,340px);overflow-y:auto;padding:5px;
+ position:absolute;right:48px;left:auto;top:0;display:none;width:150px;max-height:min(72vh,340px);overflow-y:auto;padding:5px;
  background:#faf9f6;border:1px solid #00000018;border-radius:9px;z-index:50;
 }
 .background-menu.open{display:grid;gap:2px}
@@ -297,8 +316,8 @@ body.dark .background-menu button[data-background-choice="sun"] .moon-preview{di
 .toolbar .tool[title]::after{
  content:attr(title);
  position:absolute;
- left:50px;top:50%;
- transform:translateY(-50%) translateX(-5px);
+ right:50px;left:auto;top:50%;
+ transform:translateY(-50%) translateX(5px);
  opacity:0;
  pointer-events:none;
  white-space:nowrap;
@@ -338,14 +357,20 @@ button.tool.active{background:#e8e6ff;color:var(--accent)}
 
 body.controls-hidden .toolbar{
  opacity:0;
- transform:translate(-18px,-50%);
+ transform:translate(18px,-50%);
  pointer-events:auto;
 }
 body.toolbar-hidden .toolbar{
  opacity:0;
  visibility:hidden;
  pointer-events:none;
- transform:translate(-18px,-50%);
+ transform:translate(18px,-50%);
+}
+body.toolbar-hidden .zoom,
+body.toolbar-hidden .hint,
+body.toolbar-hidden .cardactions,
+body.toolbar-hidden #edge{
+ visibility:hidden!important;opacity:0!important;pointer-events:none!important;
 }
 body.controls-hidden .zoom{
  opacity:0;
@@ -414,8 +439,8 @@ body.controls .hint{opacity:1;pointer-events:auto}
 .context button{display:flex;align-items:center;gap:9px;width:100%;border:0;background:transparent;text-align:left;padding:8px;border-radius:7px;font-size:11px}
 .context button .icon{width:15px;height:15px;color:var(--muted)}
 .context button:hover{background:#ebe9e3}
-.edge{position:fixed;z-index:40;left:0;top:50%;transform:translateY(-50%);width:20px;height:74px;
- border-radius:0 9px 9px 0;background:var(--panel);border:1px solid #0001;display:none;place-items:center}
+.edge{position:fixed;z-index:40;right:0;left:auto;top:50%;transform:translateY(-50%);width:20px;height:74px;
+ border-radius:9px 0 0 9px;background:var(--panel);border:1px solid #0001;display:none;place-items:center}
 .edge .icon{width:13px;height:13px}
 body.dark{
  --canvas:#171716;--paper:#242321;--ink:#e9e6df;--muted:#9d9990;
@@ -480,9 +505,8 @@ body.dark .map-card .cardactions button:hover{
  color:#fff;
 }
 body.dark .card.selected{
- outline-color:var(--card-accent-dark,var(--card-accent,#aaa));
- box-shadow:0 0 0 4px color-mix(in srgb,var(--card-accent-dark,var(--card-accent,#aaa)) 20%,transparent),
- 0 0 20px color-mix(in srgb,var(--card-accent-dark,var(--card-accent,#aaa)) 38%,transparent);
+ outline-color:color-mix(in srgb,var(--ink) 35%,transparent);
+ box-shadow:none;
 }
 body.dark .map-card[data-map-color="warm"] .cardbar{background:linear-gradient(90deg,#493a29,#302a20)}
 body.dark .map-options select{background:#292824}
@@ -495,7 +519,7 @@ body.dark .help-group kbd{background:#302f2b}
 body.fullscreen .toolbar,body.fullscreen .zoom,body.fullscreen .hint{opacity:0;pointer-events:none}
 body.fullscreen .hint{display:none}
 body.fullscreen.controls .toolbar,body.fullscreen.controls .zoom{opacity:1;pointer-events:auto}
-body.fullscreen .toolbar{transform:translate(-12px,-50%)}
+body.fullscreen .toolbar{transform:translate(12px,-50%)}
 body.fullscreen.controls .toolbar{transform:translateY(-50%)}
 body.fullscreen .edge{display:grid}
 body.fullscreen.controls .edge{display:none}
@@ -509,7 +533,7 @@ body.fullscreen:not(.toolbar-hidden) .edge{display:none}
 body.fullscreen.toolbar-hidden .edge{display:grid;pointer-events:auto}
 @media(max-width:700px){
  .toolbar{
-  left:8px;top:50%;right:auto;
+  right:8px;top:50%;left:auto;
   transform:translateY(-50%);
   overflow:visible;
 }
@@ -1082,3 +1106,87 @@ body.dark .map-card .markmap-node pre,.map-card[data-map-color="default"] .markm
 .map-card .markmap-node pre .hljs-comment{color:#78879b}
 body.dark .map-card .markmap-node pre .hljs-comment,.map-card[data-map-color="default"] .markmap-node pre .hljs-comment{color:#a2aec0}
 .card-window .table-scroll{max-width:100%}
+
+.card-index{position:fixed;z-index:25;left:14px;right:auto;top:14px;bottom:auto;height:auto;max-height:calc(100dvh - 28px);width:260px;box-sizing:border-box;display:flex;flex-direction:column;background:color-mix(in srgb,var(--paper) 97%,var(--ink) 3%);color:var(--ink);border:1px solid color-mix(in srgb,var(--ink) 10%,transparent);border-radius:12px;box-shadow:0 8px 32px #0000000a;overflow:hidden;font:13px/1.45 Inter,system-ui,sans-serif}
+.card-index[hidden]{display:none}
+.card-index header{display:flex;align-items:center;justify-content:space-between;flex-shrink:0;padding:12px 12px 10px}
+.card-index h2{display:flex;align-items:center;gap:8px;margin:0;font-size:12px;font-weight:600;letter-spacing:.01em;color:var(--ink)}
+.card-index h2 span{padding:1px 6px;border-radius:5px;background:color-mix(in srgb,var(--ink) 5%,transparent);font-size:11px;font-weight:500;font-variant-numeric:tabular-nums}
+.card-index header button{display:grid;place-items:center;width:26px;height:26px;border:0;border-radius:5px;background:transparent;color:var(--muted);cursor:pointer}
+.index-icon{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.card-index nav{overflow-y:auto;overscroll-behavior:contain;flex:0 1 auto;min-height:0;padding:0 8px 8px;scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--ink) 16%,transparent) transparent}
+.index-row{display:flex;align-items:center;gap:0;border-radius:6px;margin:2px 0;transition:background .12s ease}
+.index-row:hover{background:color-mix(in srgb,var(--ink) 4%,transparent)}
+.card-index nav .index-expand{flex-shrink:0;width:22px;padding:8px 2px;color:var(--muted)}
+.index-subtopics{margin:0 5px 8px 20px;border-left:1px solid var(--border)}
+.index-subtopics[hidden]{display:none}
+.card-index nav .index-subtopic{display:block;width:100%;padding:6px 8px;text-align:left;font-size:11px;overflow-wrap:anywhere}
+.card-index nav .index-subtopic:hover{background:color-mix(in srgb,var(--ink) 6%,transparent)}
+.index-target{outline:2px solid var(--accent);outline-offset:5px;border-radius:3px}
+.index-row:has([aria-current="true"]){background:color-mix(in srgb,var(--ink) 8%,transparent)}
+.card-index nav button{border:0;background:transparent;color:inherit;font:inherit;cursor:pointer;border-radius:5px}
+.index-row>button[data-card-id]{display:grid;grid-template-columns:18px minmax(0,1fr);column-gap:9px;row-gap:2px;flex:1;min-width:0;width:100%;text-align:left;padding:9px 8px}
+.index-row>button>.index-icon{grid-row:1 / 3;margin-top:2px;color:var(--muted)}
+.card-index nav button span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;font-size:12px;line-height:1.5}
+.card-index nav button small{grid-column:2;color:var(--muted);font-size:10px;line-height:1.4}
+.card-index nav button[aria-current="true"] span{font-weight:600}
+.card-index button:focus-visible,.index-edit input:focus-visible{outline:2px solid color-mix(in srgb,var(--ink) 50%,transparent);outline-offset:-2px}
+.card-index>p{padding:14px;color:var(--muted);margin:0;font-size:12px}
+.card-index nav .index-rename{display:none;align-items:center;justify-content:center;width:28px;height:28px;flex-shrink:0;margin-right:5px;padding:5px;color:var(--muted)}
+.card-index nav [data-card-id][aria-current="true"] + .index-rename{display:flex}
+.card-index .index-rename:hover,.card-index header button:hover{background:color-mix(in srgb,var(--ink) 8%,transparent);color:var(--ink)}
+.index-edit{display:flex;flex-wrap:wrap;gap:6px;padding:8px;width:100%}
+.index-edit input{box-sizing:border-box;width:100%;min-width:0;padding:8px;border:1px solid var(--border);border-radius:5px;background:var(--paper);color:var(--ink);font:inherit}
+.card-index nav .index-edit button{width:auto;padding:5px 9px;border:1px solid var(--border);font-size:11px}
+.card-index nav .index-edit button[type="submit"]{background:var(--ink);color:var(--paper);border-color:transparent}
+@media(prefers-reduced-motion:reduce){.index-row{transition:none}}
+@media(max-width:700px){.card-index{width:min(260px,calc(100vw - 90px))}}
+
+/* Shared interface typography and a consistent two-row card header. */
+body,.toolbar,.zoom,.editor,.context,.help,.card-index,.custom-select-menu{font-family:var(--ui-font)}
+button,input,select,textarea{font-family:inherit}
+.card{--header-height:40px;container-type:inline-size}
+.card,.card[data-map-color="default"]{border-radius:16px}
+.card.selected.has-title{--header-height:80px}
+.card:not(.has-title){--header-height:12px}
+.card.selected:not(.has-title){--header-height:44px}
+.card .cardbar,.card.selected.has-title .cardbar,.card.selected:not(.has-title) .cardbar{height:var(--header-height);border-radius:16px 16px 0 0}
+.card.has-title .map-title{left:20px;right:20px;top:10px;font:600 14px/20px var(--ui-font);letter-spacing:-.01em}
+.card.has-title .map-title::after{display:none}
+.card .cardactions{top:40px;left:16px;right:16px;height:28px;gap:3px;justify-content:flex-start;flex-wrap:nowrap}
+.card:not(.has-title) .cardactions{top:8px}
+.card .cardactions>.custom-select{height:28px}
+.card .cardactions .custom-select[data-control="view"]{width:96px}
+.card .cardactions .custom-select[data-control="theme"]{width:86px}
+.card .cardactions .custom-select[data-control="font"],.card .cardactions .custom-select[data-control="map-font"]{width:108px}
+.card .cardactions .custom-select[data-control="size"]{width:64px;margin-right:auto}
+.custom-select-trigger{height:28px!important;border-radius:6px!important;box-shadow:none;font:500 12px/1.2 var(--ui-font)!important}
+.card .cardactions>button{flex:0 0 28px;width:28px;height:28px;border-radius:6px;color:var(--ink)}
+.card .cardactions>button:hover{background:color-mix(in srgb,var(--ink) 9%,transparent);color:var(--ink)}
+.map-card .cardbody,.map-card.selected.has-title .cardbody,.map-card.selected:not(.has-title) .cardbody{height:calc(100% - var(--header-height))}
+.card .resize.left,.card .resize.right{top:16px;bottom:16px;width:14px;touch-action:none;z-index:9}
+.card .resize.left{left:0}.card .resize.right{right:0}
+.card .resize:hover::after,.card.selected .resize::after{background:color-mix(in srgb,var(--ink) 24%,transparent)}
+/* Quiet icon buttons with a single optical size across the interface. */
+.toolbar,.zoom{border-radius:10px}
+.toolbar .tool,.toolbar .background-select{border:0;border-radius:6px;background:transparent;color:var(--muted)}
+.toolbar .tool .icon{width:19px;height:19px}
+.toolbar .tool:hover,.toolbar .background-select:hover{background:color-mix(in srgb,var(--ink) 7%,transparent);color:var(--ink)}
+.toolbar .tool.active,.toolbar .tool.primary{background:color-mix(in srgb,var(--ink) 10%,transparent)!important;color:var(--ink)!important;border-color:transparent}
+.toolbar .divider{width:24px;background:color-mix(in srgb,var(--ink) 12%,transparent)}
+.index-icon{stroke-width:1.65}
+.card-index header .icon{width:17px;height:17px;color:var(--muted)}
+.card-index .index-rename .icon,.card .cardactions>button .icon{width:16px;height:16px}
+.card-index nav .index-expand{display:grid;place-items:center}
+.index-expand .icon{width:12px;height:12px;transition:transform .12s ease}
+.index-expand[aria-expanded="true"] .icon{transform:rotate(90deg)}
+.zoom-settings summary{display:grid;place-items:center;border-radius:5px;color:var(--muted)}
+.zoom-settings summary .icon{width:16px;height:16px}
+.zoom-settings summary:hover{background:color-mix(in srgb,var(--ink) 7%,transparent);color:var(--ink)}
+@container(max-width:490px){
+ .card.selected.has-title .cardbar{height:112px}
+ .card.selected:not(.has-title) .cardbar{height:76px}
+ .card .cardactions{flex-wrap:wrap;height:auto;row-gap:6px;left:12px;right:12px}
+ .map-card.selected.has-title .cardbody{height:calc(100% - 112px)}
+ .map-card.selected:not(.has-title) .cardbody{height:calc(100% - 76px)}
+}

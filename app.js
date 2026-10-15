@@ -13,7 +13,7 @@ try{
 }catch{}
 const zoomLabel=$("#zoomLabel");
 let lastZoomLabel="";
-let cameraInputFrame=0;
+let cameraInputFrame=0,indexFrame=0;
 // Skip offscreen paint but retain accurate layout for fit, arrange and editing.
 if(window.IntersectionObserver){
  const visibility=new IntersectionObserver(entries=>{
@@ -38,27 +38,42 @@ const state={
 };
 const MAP_COLORS=["default","purple","warm","ocean","forest","sunset","slate"];
 function randomCardTheme(){return MAP_COLORS[1+Math.floor(Math.random()*(MAP_COLORS.length-1))]}
-const ICONS={
- zoom:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.4 15.4 5 5M8.3 10.8h5M10.8 8.3v5"/></svg>',
- pan:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v20M2 12h20M12 2l-3 3M12 2l3 3M12 22l-3-3M12 22l3-3M2 12l3-3M2 12l3 3M22 12l-3-3M22 12l-3 3"/></svg>',
- plus:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
- center:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>',
- arrange:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>',
- background:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 1.25 4.75L18 8l-4.75 1.25L12 14l-1.25-4.75L6 8l4.75-1.25L12 2Z"/><path d="m19 14 .75 2.25L22 17l-2.25.75L19 20l-.75-2.25L16 17l2.25-.75L19 14ZM5 14l.7 2.3L8 17l-2.3.7L5 20l-.7-2.3L2 17l2.3-.7L5 14Z"/></svg>',
- moon:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.4 15.1A8.7 8.7 0 0 1 8.9 3.6 8.8 8.8 0 1 0 20.4 15.1Z"/></svg>',
- sun:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
- save:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg>',
- open:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h6l2 2H20v10H4z"/><path d="M12 15V4m-4 4 4-4 4 4"/></svg>',
- fullscreen:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg>',
- close:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>',
- minus:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg>',
- mapOpen:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2"/><circle cx="13" cy="6" r="2"/><circle cx="13" cy="18" r="2"/><path d="M8 11l3-4M8 13l3 4M15 6h5v5m0-5-6 6"/></svg>',
- cardOpen:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="14" height="16" rx="2"/><path d="M8 8h5M8 12h5M14 3h6v6m0-6-8 8"/></svg>',
- edit:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16.5-.8 4.3 4.3-.8L19 8.5 15.5 5 4 16.5Z"/><path d="m13.8 6.7 3.5 3.5M4 21h16"/></svg>',
- duplicate:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h2"/></svg>',
- copy:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h2"/></svg>',
- delete:'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3"/></svg>'
+const ICON_PATHS={
+ zoom:'<circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5 5M8 10.5h5m-2.5-2.5v5"/>',
+ pan:'<path d="M12 4v16M4 12h16m-11-5 3-3 3 3m-6 10 3 3 3-3M7 9l-3 3 3 3m10-6 3 3-3 3"/>',
+ plus:'<path d="M12 5v14M5 12h14"/>',
+ minus:'<path d="M5 12h14"/>',
+ center:'<path d="M8 4H4v4m12-4h4v4M4 16v4h4m12-4v4h-4"/><rect x="8" y="8" width="8" height="8" rx="1"/>',
+ arrange:'<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/>',
+ background:'<rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="9" cy="9" r="1.5"/><path d="m4 17 5-5 4 4 3-3 4 4"/>',
+ moon:'<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"/>',
+ sun:'<circle cx="12" cy="12" r="3.5"/><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4M5.6 18.4 7 17m10-10 1.4-1.4"/>',
+ save:'<path d="M12 4v11m-4-4 4 4 4-4M5 16v4h14v-4"/>',
+ open:'<path d="M4 8V5h6l2 3h7a1 1 0 0 1 1 1v2M4 20l2-9h15l-2 9H4Z"/>',
+ fullscreen:'<path d="M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5"/>',
+ close:'<path d="m6 6 12 12M18 6 6 18"/>',
+ map:'<rect x="4" y="9" width="5" height="6" rx="1"/><path d="M9 12h4M13 6v12m0-12h3m-3 12h3"/><rect x="16" y="4" width="4" height="4" rx="1"/><rect x="16" y="16" width="4" height="4" rx="1"/>',
+ file:'<path d="M14 4H6v16h12V8l-4-4Zm0 0v4h4M9 12h6m-6 4h6"/>',
+ mapOpen:'<path d="M4 6v12m0-12h6M4 12h6m-6 6h6M14 4h6v6m0-6-8 8"/>',
+ cardOpen:'<path d="M10 5H5v14h14v-5M14 4h6v6m0-6-9 9"/>',
+ edit:'<path d="m15 5 4 4M5 15l-1 5 5-1L20 8a2.8 2.8 0 0 0-4-4L5 15Z"/>',
+ duplicate:'<rect x="8" y="8" width="12" height="12" rx="1.5"/><path d="M16 8V4H4v12h4"/>',
+ copy:'<rect x="8" y="8" width="12" height="12" rx="1.5"/><path d="M16 8V4H4v12h4"/>',
+ delete:'<path d="M5 7h14M9 7V4h6v3M7 7v13h10V7m-7 4v5m4-5v5"/>',
+ sidebar:'<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 4v16m4-11h3m-3 6h3"/>',
+ collapse:'<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 4v16m7-11-3 3 3 3"/>',
+ help:'<circle cx="12" cy="12" r="8"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 2-2.5 2-2.5 4m0 3h.01"/>',
+ settings:'<path d="M4 7h3m4 0h9M4 17h9m4 0h3"/><circle cx="9" cy="7" r="2"/><circle cx="15" cy="17" r="2"/>',
+ chevron:'<path d="m9 6 6 6-6 6"/>'
 };
+const ICONS=Object.fromEntries(Object.entries(ICON_PATHS).map(([name,paths])=>[name,`<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${paths}</svg>`]));
+// Static controls and generated card controls use the same local icon set.
+for(const [id,name] of Object.entries({new:'plus',hand:'zoom',center:'center',arrange:'arrange',background:'background',theme:'moon',saveCanvas:'save',openCanvas:'open',full:'fullscreen',toggleIndex:'sidebar',help:'help',closeIndex:'collapse',minus:'minus',plus:'plus',close:'close',edit:'edit',duplicate:'duplicate',copy:'copy',remove:'delete',edge:'sidebar'})){
+ const svg=document.getElementById(id)?.querySelector('svg');
+ if(svg)svg.outerHTML=ICONS[name];
+}
+const navigationSettings=document.querySelector('.zoom-settings summary');
+if(navigationSettings)navigationSettings.innerHTML=ICONS.settings;
 function setButtonIcon(button,name,label){
  if(!button)return;
  button.innerHTML=ICONS[name];
@@ -108,7 +123,10 @@ const CARD_FONT_GROUPS=[
 ];
 const CARD_FONTS=CARD_FONT_GROUPS.flatMap(([,fonts])=>fonts);
 const MAP_FONTS=CARD_FONTS.map(([value])=>value);
-function randomCardFont(){return CARD_FONTS[Math.floor(Math.random()*CARD_FONTS.length)][0]}
+const readyCardFonts=new Set(["mono","sans","editorial-serif"]);
+function randomCardFont(){
+ const ready=[...readyCardFonts];return ready[Math.floor(Math.random()*ready.length)];
+}
 const LEGACY_CARD_FONTS={
  hand:"hand-patrick",caveat:"hand-patrick","hand-caveat":"hand-patrick","hand-script":"dancing-script",
  "hand-soft":"hand-patrick","hand-bold":"hand-kalam","hand-marker":"hand-kalam",
@@ -139,12 +157,27 @@ function googleFontStylesheetUrl(font){
  const key=normalizeCardFont(font),spec=GOOGLE_FONT_SPECS[key];
  return spec?`https://fonts.googleapis.com/css2?family=${spec[0]}:${spec[1]}&display=swap`:"";
 }
+const cardFontLoads=new Map();
 function ensureFontLoaded(font){
  const key=normalizeCardFont(font),href=googleFontStylesheetUrl(key);
- if(!href||document.getElementById(`card-font-${key}`))return;
+ if(!href)return Promise.resolve();
+ if(cardFontLoads.has(key))return cardFontLoads.get(key);
  const link=document.createElement("link");
  link.id=`card-font-${key}`;link.rel="stylesheet";link.dataset.cardFont=key;link.href=href;
+ const loaded=new Promise(resolve=>{
+  link.onload=async()=>{
+   try{
+    const family=mapFontStack(key).split(",")[0];
+    const faces=await Promise.all([document.fonts.load(`400 18px ${family}`),document.fonts.load(`700 28px ${family}`)]);
+    if(faces.some(fonts=>fonts.length))readyCardFonts.add(key);
+   }catch{}
+   resolve();
+  };
+  link.onerror=()=>resolve();
+ });
+ cardFontLoads.set(key,loaded);
  document.head.appendChild(link);
+ return loaded;
 }
 
 function normalizeCardFont(font){
@@ -232,6 +265,7 @@ function syncCardSelect(select){
 function closeCardMenu(restoreFocus=false){
  if(!activeCardMenu)return;
  const {wrap,trigger}=activeCardMenu;
+ activeCardMenu.fontObserver?.disconnect();
  activeCardMenu.menu.remove();
  trigger.setAttribute("aria-expanded","false");
  wrap.classList.remove("menu-open");
@@ -274,6 +308,11 @@ function openCardMenu(wrap){
   const item=document.createElement("button");
   item.type="button";item.className="custom-select-option";item.setAttribute("role","option");
   item.dataset.value=option.value;item.textContent=option.textContent;
+  if(select.matches("[data-font],#mapFont")){
+   const warm=()=>ensureFontLoaded(option.value);
+   item.addEventListener("pointerenter",warm,{once:true});
+   item.addEventListener("focus",warm,{once:true});
+  }
   item.setAttribute("aria-selected",String(option.value===select.value));
   item.classList.toggle("is-selected",option.value===select.value);
   item.addEventListener("click",()=>{
@@ -291,6 +330,13 @@ function openCardMenu(wrap){
  const current=menu.querySelector('[aria-selected="true"]')||menu.firstElementChild;
  current?.focus({preventScroll:true});
  current?.scrollIntoView({block:"nearest"});
+ if(select.matches("[data-font],#mapFont")&&window.IntersectionObserver){
+  const observer=new IntersectionObserver(entries=>{
+   for(const entry of entries)if(entry.isIntersecting){ensureFontLoaded(entry.target.dataset.value);observer.unobserve(entry.target)}
+  },{root:menu});
+  for(const item of menu.querySelectorAll(".custom-select-option"))observer.observe(item);
+  activeCardMenu.fontObserver=observer;
+ }
  menu.addEventListener("keydown",e=>{
   const options=[...menu.querySelectorAll(".custom-select-option")];
   const index=options.indexOf(document.activeElement);
@@ -795,21 +841,19 @@ function updateCardHeading(n){
   title.innerHTML=parsed.querySelector("h1")?.innerHTML||escapeHtml(heading);
  }else title.textContent="";
  n.el.classList.toggle("has-title",Boolean(heading));
+ scheduleCardIndex();
 }
 function renderCardMarkdown(md){
- return render(cardMarkdownParts(md).body);
+ return render(String(md));
 }
 function markmapOptions(n){
  const colors=MAP_PALETTES[n.mapColor]||MAP_PALETTES.default;
  const depth=node=>node.state?.depth||0;
- const branchFilter=`markmap-branch-${String(n.id).replace(/[^a-zA-Z0-9_-]/g,"-")}`;
  return {
   color:node=>colors[depth(node)%colors.length],
   // Give the main limbs more weight, then let child branches taper naturally.
   lineWidth:node=>depth(node)===1?3.6:depth(node)===2?2.25:1.55,
-  // A tiny displacement adds a hand-drawn quality to Markmap's existing curves.
-  // Keep it scoped to the branch paths so labels stay crisp and readable.
-  style:id=>`#${id} .markmap-link{filter:url(#${branchFilter});stroke-linecap:round;stroke-linejoin:round}`,
+  style:id=>`#${id} .markmap-link{stroke-linecap:round;stroke-linejoin:round}`,
   duration:350,maxWidth:300,spacingVertical:15,spacingHorizontal:82
  };
 }
@@ -823,6 +867,23 @@ function mapViewportSize(){
  };
 }
 const PEN_PAN_GAIN=1.7;
+// Keep D3 gesture bookkeeping immediate, but paint the latest SVG transform
+// once per frame instead of redrawing rich map content for every input event.
+function enableMapCameraFrames(svg,map){
+ const zoom=map.zoom,paint=zoom?.on("zoom");
+ if(!paint)return;
+ let frame=0,pending=null;
+ const flush=()=>{
+  frame=0;
+  const next=pending;pending=null;
+  if(next&&svg.isConnected)paint.apply(next.context,next.args);
+ };
+ zoom.on("zoom",function(...args){
+  pending={context:this,args};
+  if(!frame)frame=requestAnimationFrame(flush);
+ });
+ return()=>{if(frame)cancelAnimationFrame(frame);frame=0;pending=null};
+}
 function enablePenMapWheel(pane,svg,map){
  let lastPointer=null;
  const rememberPointer=e=>{
@@ -955,6 +1016,7 @@ async function renderMap(n){
  if(!body)return;
  const renderId=(n.mapRenderId||0)+1;
  n.mapRenderId=renderId;
+ n.mapCameraCleanup?.();n.mapCameraCleanup=null;
  try{n.mapInstance?.destroy?.()}catch{}
  n.mapInstance=null;
  applyMapFont(n);
@@ -968,20 +1030,6 @@ async function renderMap(n){
   body.innerHTML='<div class="map-pane"></div>';
   const pane=body.querySelector(".map-pane");
   const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
-  const filterId=`markmap-branch-${String(n.id).replace(/[^a-zA-Z0-9_-]/g,"-")}`;
-  const defs=document.createElementNS("http://www.w3.org/2000/svg","defs");
-  const filter=document.createElementNS("http://www.w3.org/2000/svg","filter");
-  filter.setAttribute("id",filterId);
-  filter.setAttribute("x","-4%");filter.setAttribute("y","-10%");
-  filter.setAttribute("width","108%");filter.setAttribute("height","120%");
-  filter.setAttribute("color-interpolation-filters","sRGB");
-  const turbulence=document.createElementNS("http://www.w3.org/2000/svg","feTurbulence");
-  turbulence.setAttribute("type","fractalNoise");turbulence.setAttribute("baseFrequency",".018 .035");
-  turbulence.setAttribute("numOctaves","1");turbulence.setAttribute("seed","7");turbulence.setAttribute("result","branchNoise");
-  const displacement=document.createElementNS("http://www.w3.org/2000/svg","feDisplacementMap");
-  displacement.setAttribute("in","SourceGraphic");displacement.setAttribute("in2","branchNoise");
-  displacement.setAttribute("scale","1.1");displacement.setAttribute("xChannelSelector","R");displacement.setAttribute("yChannelSelector","G");
-  filter.append(turbulence,displacement);defs.appendChild(filter);svg.appendChild(defs);
   pane.appendChild(svg);
   const options=markmapOptions(n);
   options.initialExpandLevel=6;
@@ -989,6 +1037,7 @@ async function renderMap(n){
   // Disable Markmap's implicit setData fit so there is only one initial transform.
   options.autoFit=false;
   const map=window.markmap.Markmap.create(svg,options);
+  n.mapCameraCleanup=enableMapCameraFrames(svg,map);
   const defaultZoomFilter=map.zoom?.filter?.();
   if(defaultZoomFilter)map.zoom.filter(function(event){
    return n.el.classList.contains("selected")&&defaultZoomFilter.call(this,event);
@@ -998,6 +1047,7 @@ async function renderMap(n){
   n.mapInstance=map;
   await map.setData(root);
   if(n.mapRenderId!==renderId||n.type!=="map")return;
+  n.mapIndexRoot=root;scheduleCardIndex();
   pane.querySelectorAll(".markmap-node pre").forEach(pre=>{
    pre.classList.add("map-codeblock");
    const code=pre.querySelector("code");
@@ -1133,8 +1183,8 @@ let motionHintTimer=0;
 // Cache only for an active gesture. Removing this hint at rest asks Chromium
 // to rasterize live HTML/SVG at the final scale instead of retaining stretched text.
 function beginCameraMotion(){
+ world.style.willChange=state.pan?"translate":"transform";
  if(!document.body.classList.contains("camera-moving")){
-  world.style.willChange="transform";
   document.body.classList.add("camera-moving");
  }
 }
@@ -1236,14 +1286,207 @@ function flushSave(){
  clearTimeout(state.saveTimer);
  try{localStorage.setItem("reflatex",snapshot())}catch{}
 }
-function empty(){$("#empty").style.display=state.notes.length?"none":"grid"}
+function empty(){$("#empty").style.display=state.notes.length?"none":"grid";scheduleCardIndex()}
 
+
+function indexHeading(md,id){
+ // Use the same Markdown parser as the cards, including Setext headings.
+ // A template keeps images and other embedded content inert during indexing.
+ if(window.marked){
+  const content=document.createElement("template");
+  content.innerHTML=safeMarkdown(String(md));
+  for(const heading of content.content.querySelectorAll("h1,h2")){
+   const label=heading.textContent.trim();
+   if(label)return label;
+  }
+  return `Card ${id}`;
+ }
+ let fence=null;
+ for(const line of String(md).split(/\r?\n/)){
+  const delimiter=/^ {0,3}(`{3,}|~{3,})/.exec(line);
+  if(delimiter){
+   const run=delimiter[1];
+   if(!fence)fence=run;
+   else if(run[0]===fence[0]&&run.length>=fence.length)fence=null;
+   continue;
+  }
+  if(fence)continue;
+  const heading=/^ {0,3}#{1,2}\s+(.+?)(?:\s+#+)?\s*$/.exec(line);
+  if(heading){
+   const text=document.createElement("div");text.innerHTML=safeMarkdown(heading[1]);
+   return text.textContent.trim()||`Card ${id}`;
+  }
+ }
+ return `Card ${id}`;
+}
+function scheduleCardIndex(){
+ if(indexFrame)return;
+ indexFrame=requestAnimationFrame(()=>{indexFrame=0;renderCardIndex()});
+}
+function editIndexHeading(n){
+ const row=[...$("#indexEntries").children].find(row=>row.querySelector("[data-card-id]")?.dataset.cardId===String(n.id));
+ if(!row)return;
+ const tokens=window.marked?.lexer(String(n.md))||[];
+ let offset=0,range=null;
+ for(const token of tokens){
+  if(token.type==="heading"&&token.depth<=2&&token.text.trim()){
+   range={start:offset,end:offset+token.raw.length,depth:token.depth,ending:token.raw.match(/(?:\r?\n)+$/)?.[0]||""};break;
+  }
+  offset+=token.raw.length;
+ }
+ // Nested or HTML headings are best edited with their surrounding source.
+ if(!range&&indexHeading(n.md,n.id)!==`Card ${n.id}`){editNote(n);return}
+ const input=document.createElement("input");input.type="text";
+ input.setAttribute("aria-label","Edit card heading");
+ input.value=range?n.indexTitle:"";input.placeholder="Card heading";
+ const form=document.createElement("form");form.className="index-edit";
+ const saveButton=document.createElement("button");saveButton.type="submit";saveButton.textContent="Save";
+ const cancel=document.createElement("button");cancel.type="button";cancel.textContent="Cancel";
+ const finish=()=>{
+  renderCardIndex();
+  [...$("#indexEntries [data-card-id]")].find(button=>button.dataset.cardId===String(n.id))?.focus();
+ };
+ cancel.onclick=finish;
+ form.onkeydown=e=>{e.stopPropagation();if(e.key==="Escape"){e.preventDefault();finish()}};
+ form.onsubmit=e=>{
+  e.preventDefault();const title=input.value.trim();
+  if(!title){input.setCustomValidity("Enter a heading.");input.reportValidity();return}
+  if(!range||title!==n.indexTitle){
+   history();
+   const heading=`${"#".repeat(range?.depth||1)} ${title}${range?range.ending:"\n"}`;
+   n.md=range?n.md.slice(0,range.start)+heading+n.md.slice(range.end):heading+"\n"+n.md;
+   if(n.type==="map")n.mapReady=renderMap(n);
+   else n.el.querySelector(".cardbody").innerHTML=renderCardMarkdown(n.md);
+   updateCardHeading(n);layoutCards();save();
+  }
+  if(indexFrame){cancelAnimationFrame(indexFrame);indexFrame=0}
+  finish();
+ };
+ input.oninput=()=>input.setCustomValidity("");
+ form.append(input,saveButton,cancel);row.replaceChildren(form);input.focus();input.select();
+}
+function indexSubtopics(n){
+ if(n.type!=="map")return [...n.el.querySelectorAll(".cardbody h1,.cardbody h2,.cardbody h3,.cardbody h4,.cardbody h5,.cardbody h6")].filter(el=>!(n.el.classList.contains("has-title")&&el===n.el.querySelector(".cardbody").firstElementChild&&el.tagName==="H1")).map(el=>({label:el.textContent.trim(),depth:Number(el.tagName.slice(1))-1,el}));
+ if(!n.mapInstance||!n.mapIndexRoot)return [];
+ const topics=[];
+ const visit=(node,ancestors)=>{
+  const text=document.createElement("div");text.innerHTML=node.content||"";
+  if(ancestors.length&&text.textContent.trim())topics.push({label:text.textContent.trim(),depth:ancestors.length-1,node,ancestors});
+  for(const child of node.children||[])visit(child,[...ancestors,node]);
+ };
+ visit(n.mapIndexRoot,[]);return topics;
+}
+async function focusIndexSubtopic(n,topic){
+ select(n);
+ if(n.type==="map"){
+  const map=n.mapInstance;
+  if(!map)return;
+  for(const ancestor of topic.ancestors)if(ancestor.payload)ancestor.payload.fold=0;
+  await map.setData();
+  if(state.selected!==n||n.mapInstance!==map)return;
+  const svg=n.el.querySelector(".map-pane svg");
+  const target=[...svg.querySelectorAll(".markmap-node")].find(el=>el.__data__===topic.node||(topic.node.state?.id!==undefined&&el.__data__?.state?.id===topic.node.state.id));
+  if(!target)return;
+  const r=target.getBoundingClientRect(),pane=svg.getBoundingClientRect();
+  const transform=d3.zoomTransform(svg);
+  const center=transform.invert([(r.left+r.width/2-pane.left)/state.scale,(r.top+r.height/2-pane.top)/state.scale]);
+  const width=r.width/(state.scale*transform.k),height=r.height/(state.scale*transform.k);
+  await focusSelected("readable");
+  if(state.selected!==n||n.mapInstance!==map)return;
+  // Compensate for the board's final zoom so branch text remains readable.
+  // Fit the chosen label, rather than retaining the whole-map overview scale.
+  const paneWidth=svg.clientWidth,paneHeight=svg.clientHeight;
+  const zoomScale=Math.min(1.5/state.targetScale,paneWidth*.85/Math.max(1,width),paneHeight*.75/Math.max(1,height));
+  const focused=d3.zoomIdentity.translate(paneWidth/2,paneHeight/2).scale(zoomScale).translate(-center[0],-center[1]);
+  d3.select(svg).call(map.zoom.transform,focused);
+  return;
+ }
+ const el=topic.el;if(!el?.isConnected)return;
+ const rect=el.getBoundingClientRect();
+ const point=worldPoint(rect.left,rect.top);
+ const viewportWidth=innerWidth-($("#cardIndex").hidden?0:$("#cardIndex").offsetWidth+28);
+ const scale=clampScale(Math.max(.5,Math.min(1.5,(viewportWidth-80)/n.el.offsetWidth)));
+ moveTo(innerWidth-viewportWidth/2-(n.x+n.el.offsetWidth/2)*scale,110-point.y*scale,scale);
+ el.classList.remove("index-target");void el.offsetWidth;el.classList.add("index-target");
+ setTimeout(()=>el.classList.remove("index-target"),1800);
+}
+function renderCardIndex(){
+ const list=$("#indexEntries"),fragment=document.createDocumentFragment();
+ for(const [i,n] of state.notes.entries()){
+  if(n.indexSource!==n.md){n.indexSource=n.md;n.indexTitle=indexHeading(n.md,n.id)}
+  const button=document.createElement("button");button.type="button";button.dataset.cardId=n.id;
+  const label=document.createElement("span");label.textContent=n.indexTitle;button.title=n.indexTitle;
+  const detail=document.createElement("small");detail.textContent=`${i+1} · ${n.type==="map"?"Markmap":"Markdown"}`;
+  const icon=document.createElementNS("http://www.w3.org/2000/svg","svg");
+  icon.setAttribute("viewBox","0 0 24 24");icon.setAttribute("aria-hidden","true");icon.classList.add("index-icon");
+  icon.innerHTML=ICON_PATHS[n.type==="map"?"map":"file"];
+  button.append(icon,label,detail);button.setAttribute("aria-current",String(state.selected===n));
+  const row=document.createElement("div");row.className="index-row";
+  const edit=document.createElement("button");edit.type="button";edit.className="index-rename";
+  edit.innerHTML=ICONS.edit;edit.title="Edit heading";edit.setAttribute("aria-label",`Edit heading: ${n.indexTitle}`);
+  edit.onclick=()=>editIndexHeading(n);
+  row.append(button,edit);
+  const entry=document.createElement("div");entry.append(row);
+  const topics=indexSubtopics(n);
+  if(topics.length){
+   const toggle=document.createElement("button");toggle.type="button";toggle.className="index-expand";
+   toggle.innerHTML=ICONS.chevron;toggle.setAttribute("aria-label",`Subtopics: ${n.indexTitle}`);
+   const children=document.createElement("div");children.className="index-subtopics";children.id=`index-topics-${n.id}`;children.hidden=!n.indexExpanded;
+   toggle.setAttribute("aria-controls",children.id);toggle.setAttribute("aria-expanded",String(Boolean(n.indexExpanded)));
+   toggle.onclick=()=>{n.indexExpanded=!n.indexExpanded;children.hidden=!n.indexExpanded;toggle.setAttribute("aria-expanded",String(n.indexExpanded))};
+   for(const topic of topics){
+    const link=document.createElement("button");link.type="button";link.className="index-subtopic";link.textContent=topic.label;link.title=topic.label;link.style.paddingLeft=`${12+Math.min(topic.depth,5)*10}px`;
+    link.onclick=()=>{if(innerWidth<700)setIndexOpen(false);focusIndexSubtopic(n,topic)};children.append(link);
+   }
+   row.prepend(toggle);entry.append(children);
+  }
+  fragment.appendChild(entry);
+ }
+ list.replaceChildren(fragment);$("#indexCount").textContent=state.notes.length;
+ $("#indexEmpty").hidden=state.notes.length>0;
+ revealIndexSelection();
+}
+function revealIndexSelection(){
+ if(!$("#cardIndex").hidden)$("#indexEntries [aria-current='true']")?.scrollIntoView({block:"nearest"});
+}
+function setIndexOpen(open){
+ $("#cardIndex").hidden=!open;$("#toggleIndex").setAttribute("aria-expanded",String(open));
+ if(open)revealIndexSelection();
+ try{localStorage.setItem("reflatex-index-open",String(open))}catch{}
+}
+$("#toggleIndex").onclick=()=>setIndexOpen($("#cardIndex").hidden);
+$("#closeIndex").onclick=()=>{setIndexOpen(false);$("#toggleIndex").focus()};
+$("#cardIndex").addEventListener("keydown",e=>{
+ e.stopPropagation();
+ if(e.key.toLowerCase()==="b"&&!e.ctrlKey&&!e.metaKey&&!e.altKey){
+  e.preventDefault();if(!e.repeat)toggleToolbar();return;
+ }
+ if(e.key==="Escape"||(!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.shiftKey&&e.key==="Tab")){
+  e.preventDefault();if(!e.repeat)$("#closeIndex").click();return;
+ }
+ const entries=[...$("#indexEntries").querySelectorAll("button[data-card-id],.index-subtopic")].filter(button=>!button.closest("[hidden]"));
+ const current=entries.indexOf(document.activeElement);
+ const next=e.key==="ArrowDown"?Math.min(entries.length-1,current+1):
+  e.key==="ArrowUp"?Math.max(0,current-1):e.key==="Home"?0:e.key==="End"?entries.length-1:null;
+ if(next!==null){e.preventDefault();entries[next]?.focus()}
+});
+$("#indexEntries").addEventListener("click",e=>{
+ const button=e.target.closest("button[data-card-id]");if(!button)return;
+ const n=state.notes.find(note=>String(note.id)===button.dataset.cardId);if(!n)return;
+ if(innerWidth<700)setIndexOpen(false);
+ select(n);focusSelected("readable");
+});
+try{$("#cardIndex").hidden=localStorage.getItem("reflatex-index-open")==="false"}catch{}
+$("#toggleIndex").setAttribute("aria-expanded",String(!$("#cardIndex").hidden));
 
 function select(n){
  if(state.selected===n&&(!n||n.el.classList.contains("selected")))return;
  if(state.selected!==n)state.spaceFocusStep=0;
  state.selected?.el.classList.remove("selected");
  state.selected=n;if(n)n.el.classList.add("selected");
+ const current=$("#indexEntries [aria-current='true']");current?.setAttribute("aria-current","false");
+ if(n)for(const button of $("#indexEntries").querySelectorAll("[data-card-id]")){if(button.dataset.cardId===String(n.id)){button.setAttribute("aria-current","true");break}}
+ revealIndexSelection();
  context.classList.remove("open");
 }
 
@@ -1407,7 +1650,7 @@ const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size,width,ty
   history();n.size=e.target.value;el.dataset.fontSize=n.size;save();
  };
  el.querySelector("[data-size]").onfocus=()=>select(n);
- el.querySelectorAll(".resize").forEach(r=>r.onmousedown=e=>{
+ el.querySelectorAll(".resize").forEach(r=>r.onpointerdown=e=>{
   if(e.button!==0)return;
   startResize(e,n,r.dataset.side);
  });
@@ -1455,11 +1698,11 @@ const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type
  };
  el.querySelector("[data-font]").onchange=e=>{history();applyCardFont(n,e.target.value);save()};
  el.querySelector("[data-size]").onchange=e=>{history();n.size=e.target.value;el.dataset.fontSize=n.size;el.querySelector(".cardbody").style.setProperty("--card-font-scale",String(Number(n.size)/100));save()};
- el.querySelectorAll(".resize").forEach(r=>r.onmousedown=e=>{if(e.button===0)startResize(e,n,r.dataset.side)});
+ el.querySelectorAll(".resize").forEach(r=>r.onpointerdown=e=>{if(e.button===0)startResize(e,n,r.dataset.side)});
  n.mapReady=renderMap(n);empty();return n;
 }
 let panApplyFrame=0,pendingPenCanvasPan=null,suppressCanvasClickUntil=0;
-window.addEventListener("mousemove",e=>{
+window.addEventListener("pointermove",e=>{
  if(state.resize){
   const r=state.resize,dx=(e.clientX-r.sx)/state.scale;
   if(r.side==="bottom"){
@@ -1497,7 +1740,7 @@ function updateCanvasDrag(e){
  if(!panApplyFrame)panApplyFrame=requestAnimationFrame(paintCanvasDrag);
 }
 function finishCanvasDrag(pointerId=null){
- if(pointerId!==null&&state.pan?.pointerId!==pointerId)return;
+ if(pointerId!==null&&(state.pan||state.resize)?.pointerId!==pointerId)return;
  const resized=state.resize,panned=state.pan;
  if(!resized&&!panned)return;
  if(resized?.n.type==="map")resized.n.mapInstance?.fit();
@@ -1509,13 +1752,21 @@ function finishCanvasDrag(pointerId=null){
  }
  state.resize=null;state.pan=null;
  if(panned&&canvas.hasPointerCapture?.(panned.pointerId))canvas.releasePointerCapture(panned.pointerId);
+ if(resized&&canvas.hasPointerCapture?.(resized.pointerId))canvas.releasePointerCapture(resized.pointerId);
  canvas.style.cursor=state.hand?"grab":"default";
  document.body.classList.remove("canvas-panning");
- if(resized){layoutCards();save()}
+ if(resized){
+  suppressCanvasClickUntil=performance.now()+500;
+  const x=resized.n.x,y=resized.n.y;
+  layoutCards();
+  state.x+=(x-resized.n.x)*state.scale;state.y+=(y-resized.n.y)*state.scale;
+  sync();apply();save();
+ }
  else finishCameraMotion();
 }
 window.addEventListener("mouseup",()=>{if(state.resize)finishCanvasDrag()});
 window.addEventListener("pointerup",e=>{
+ if(state.resize?.pointerId===e.pointerId){finishCanvasDrag(e.pointerId);return}
  if(state.pan?.pointerId!==e.pointerId)return;
  updateCanvasDrag(e);finishCanvasDrag(e.pointerId);
 });
@@ -1527,7 +1778,9 @@ window.addEventListener("blur",()=>{
 });
 function startResize(e,n,side){
  e.preventDefault();e.stopPropagation();select(n);history();
- state.resize={n,side,sx:e.clientX,sy:e.clientY,w:n.el.offsetWidth,h:n.el.offsetHeight,x:n.x};
+ interruptCamera();
+ state.resize={n,side,sx:e.clientX,sy:e.clientY,w:n.el.offsetWidth,h:n.el.offsetHeight,x:n.x,pointerId:e.pointerId};
+ try{canvas.setPointerCapture(e.pointerId)}catch{}
  canvas.style.cursor=side==="bottom"?"ns-resize":"ew-resize";
 }
 function startPan(e){
@@ -1799,7 +2052,7 @@ function openMapTab(n){
   const rainbow=["#e76f51","#f4a261","#e9c46a","#6b9b67","#299c97","#4e7bc5","#a16bb3","#d5668a"];
   const colors=(MAP_PALETTES[theme]||MAP_PALETTES.default);
   const colorPayload=JSON.stringify(colors);
-  const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>${fontLink}<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css"><link rel="stylesheet" href="${stylesheet}"><style>html,body{height:100%;margin:0}.card.map-window{position:fixed;inset:0;width:100%;height:100%;min-width:0;max-width:none;min-height:0;border:0;border-radius:0}.map-window .cardbody{height:100%;padding:0}.map-window .map-pane{height:100%;background:transparent}.map-window .map-pane>svg{width:100%;height:100%}</style></head><body class="${darkMode?"dark":""}"><article class="card map-card map-window" data-map-color="${theme}" data-font="${normalizeCardFont(n.mapFont)}" data-font-size="${size}" style="--card-font-family:${escapeHtml(fontStack)};--map-font-family:${escapeHtml(fontStack)}"><div class="cardbody"><div class="map-pane"><svg id="map"></svg></div></div></article><script src="https://cdn.jsdelivr.net/npm/d3@7"><\/script><script src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18.12"><\/script><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/highlight.min.js"><\/script><script>const md=${payload};const colors=${colorPayload};const root=new markmap.Transformer().transform(md).root;const depth=node=>node.state?.depth||0;const svg=document.querySelector("#map");svg.innerHTML='<defs><filter id="branch-wobble" x="-4%" y="-10%" width="108%" height="120%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency=".018 .035" numOctaves="1" seed="7" result="branchNoise"/><feDisplacementMap in="SourceGraphic" in2="branchNoise" scale="1.1" xChannelSelector="R" yChannelSelector="G"/></filter></defs>';const map=markmap.Markmap.create(svg,{autoFit:false,duration:350,maxWidth:300,spacingHorizontal:82,spacingVertical:15,color:node=>colors[depth(node)%colors.length],lineWidth:node=>depth(node)===1?3.6:depth(node)===2?2.25:1.55,style:id=>"#"+id+" .markmap-link{filter:url(#branch-wobble);stroke-linecap:round;stroke-linejoin:round}"});(async()=>{await document.fonts.ready;await map.setData(root);svg.querySelectorAll("pre code").forEach(code=>{if(window.hljs){try{hljs.highlightElement(code)}catch{}}});await map.fit()})().catch(error=>{document.querySelector(".map-pane").textContent="Could not render this map: "+error.message});<\/script></body></html>`;
+  const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>${fontLink}<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css"><link rel="stylesheet" href="${stylesheet}"><style>html,body{height:100%;margin:0}.card.map-window{position:fixed;inset:0;width:100%;height:100%;min-width:0;max-width:none;min-height:0;border:0;border-radius:0}.map-window .cardbody{height:100%;padding:0}.map-window .map-pane{height:100%;background:transparent}.map-window .map-pane>svg{width:100%;height:100%}</style></head><body class="${darkMode?"dark":""}"><article class="card map-card map-window" data-map-color="${theme}" data-font="${normalizeCardFont(n.mapFont)}" data-font-size="${size}" style="--card-font-family:${escapeHtml(fontStack)};--map-font-family:${escapeHtml(fontStack)}"><div class="cardbody"><div class="map-pane"><svg id="map"></svg></div></div></article><script src="https://cdn.jsdelivr.net/npm/d3@7"><\/script><script src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18.12"><\/script><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/highlight.min.js"><\/script><script>const md=${payload};const colors=${colorPayload};const root=new markmap.Transformer().transform(md).root;const depth=node=>node.state?.depth||0;const svg=document.querySelector("#map");const map=markmap.Markmap.create(svg,{autoFit:false,duration:350,maxWidth:300,spacingHorizontal:82,spacingVertical:15,color:node=>colors[depth(node)%colors.length],lineWidth:node=>depth(node)===1?3.6:depth(node)===2?2.25:1.55,style:id=>"#"+id+" .markmap-link{stroke-linecap:round;stroke-linejoin:round}"});${enableMapCameraFrames.toString()};enableMapCameraFrames(svg,map);(async()=>{await document.fonts.ready;await map.setData(root);svg.querySelectorAll("pre code").forEach(code=>{if(window.hljs){try{hljs.highlightElement(code)}catch{}}});await map.fit()})().catch(error=>{document.querySelector(".map-pane").textContent="Could not render this map: "+error.message});<\/script></body></html>`;
   const tab=window.open();if(!tab){alert("Allow pop-ups to open this mind map.");return}
   tab.document.write(html);tab.document.close();
 }
@@ -1816,6 +2069,7 @@ async function quickPaste(){
  }
 }
 function disposeCard(n){
+ n.mapCameraCleanup?.();n.mapCameraCleanup=null;
  n.mapRenderId=(n.mapRenderId||0)+1;
  try{n.mapInstance?.destroy?.()}catch{}
  n.mapInstance=null;n.el.remove();
@@ -1849,8 +2103,8 @@ function layoutCards(){
 
  // Keep the preferred ten-card row while spacing actual card bounds evenly.
  const columns=Math.min(10,state.notes.length);
- const gapX=80;
- const gapY=80;
+ const minimumGap=120;
+ const viewportWidth=innerWidth-($("#cardIndex").hidden?0:$("#cardIndex").offsetWidth+28);
 
  state.notes.forEach(n=>{
   const width=n.type==="map"?(n.mapWidth||n.width||n.el.offsetWidth):(n.width||n.el.offsetWidth);
@@ -1874,6 +2128,21 @@ function layoutCards(){
  });
 
  const dimensions=new Map(state.notes.map(n=>[n,{w:n.el.offsetWidth,h:n.el.offsetHeight}]));
+ // Reserve both focus viewports, including the zoomed-out fit of tall cards.
+ // Keep an additional screen-space margin so neighboring shadows stay outside.
+ for(const [n,d] of dimensions){
+  const top=n.type==="map"?24:88;
+  const availableWidth=Math.max(240,viewportWidth-(n.type==="map"?48:180));
+  const availableHeight=Math.max(240,innerHeight-top-(n.type==="map"?24:40));
+  const scale=clampScale(Math.min(1.2,availableWidth/d.w,n.type==="map"?availableHeight/d.h:Infinity));
+  const fitScale=clampScale(Math.min(availableWidth/d.w,availableHeight/d.h));
+  const margin=96;
+  const widestScale=Math.min(scale,fitScale);
+  d.beforeX=Math.max(0,(innerWidth-viewportWidth/2+margin)/widestScale-d.w/2);
+  d.afterX=Math.max(0,(viewportWidth/2+margin)/widestScale-d.w/2);
+  d.beforeY=Math.max((top+margin)/scale,(innerHeight/2+margin)/fitScale-d.h/2);
+  d.afterY=Math.max(0,(innerHeight-top+margin)/scale-d.h,(innerHeight/2+margin)/fitScale-d.h/2);
+ }
  const rows=Math.ceil(state.notes.length/columns);
  const rowHeights=Array.from({length:rows},(_,row)=>{
   const start=row*columns;
@@ -1883,16 +2152,20 @@ function layoutCards(){
 
  for(let row=0;row<rows;row++){
   const rowCards=state.notes.slice(row*columns,(row+1)*columns);
-  const rowWidth=rowCards.reduce((width,n)=>width+dimensions.get(n).w,0)+gapX*(rowCards.length-1);
+  const gaps=rowCards.map((n,i)=>i===rowCards.length-1?0:
+   Math.max(minimumGap,dimensions.get(n).afterX,dimensions.get(rowCards[i+1]).beforeX)+64);
+  const rowWidth=rowCards.reduce((width,n,i)=>width+dimensions.get(n).w+gaps[i],0);
   let columnLeft=-rowWidth/2;
-  for(const n of rowCards){
+  for(const [i,n] of rowCards.entries()){
    n.x=columnLeft;
    n.y=rowTop;
    n.el.style.left=n.x+"px";
    n.el.style.top=n.y+"px";
-   columnLeft+=dimensions.get(n).w+gapX;
+   columnLeft+=dimensions.get(n).w+gaps[i];
   }
 
+  const nextRow=state.notes.slice((row+1)*columns,(row+2)*columns);
+  const gapY=Math.max(minimumGap,...rowCards.map(n=>dimensions.get(n).afterY),...nextRow.map(n=>dimensions.get(n).beforeY))+64;
   rowTop+=rowHeights[row]+gapY;
  }
 
@@ -1946,6 +2219,11 @@ function toggleToolbar(force){
  document.body.classList.toggle("toolbar-hidden",hidden);
  localStorage.setItem("reflatex-toolbar-hidden",hidden?"1":"0");
  $("#toolbar").setAttribute("aria-hidden",String(hidden));
+ setIndexOpen(!hidden);
+ if(hidden){
+  closeCardMenu();toggleBackgroundMenu(false);
+  if(document.activeElement?.closest(".toolbar,.zoom,.card-index,.cardactions"))document.activeElement.blur();
+ }
 }
 function toggleBackgroundMenu(force){
  const menu=$("#backgroundMenu");
@@ -1968,7 +2246,7 @@ async function toggleFull(){
   else await document.documentElement.requestFullscreen();
  }catch{}
 }
-document.addEventListener("mousemove",e=>{if(document.body.classList.contains("fullscreen")&&(e.clientY<80||e.clientX<25))revealControls()});
+document.addEventListener("mousemove",e=>{if(document.body.classList.contains("fullscreen")&&(e.clientY<80||e.clientX>innerWidth-25))revealControls()});
 document.addEventListener("fullscreenchange",()=>{
  const active=!!document.fullscreenElement;
  document.body.classList.toggle("fullscreen",active);
@@ -2057,9 +2335,19 @@ document.addEventListener("paste",e=>{
  scheduleArrange();
 });
 
+function focusViewport(){
+ const margin=24;
+ const index=$("#cardIndex"),tray=$(".toolbar");
+ const left=index.hidden?margin:index.getBoundingClientRect().right+margin;
+ const trayVisible=!document.body.classList.contains("toolbar-hidden")&&!document.body.classList.contains("controls-hidden");
+ const trayInset=parseFloat(getComputedStyle(tray).right)||0;
+ const right=trayVisible?innerWidth-trayInset-tray.offsetWidth-margin:innerWidth-margin;
+ return {left,top:margin,width:Math.max(1,right-left),height:Math.max(1,innerHeight-margin*2)};
+}
 async function focusSelected(mode="readable"){
   const n=state.selected;
   if(!n)return;
+  layoutCards();
   state.spaceFocusStep=mode==="fit"?1:2;
   const fitMap=n.type==="map"&&mode==="fit";
 
@@ -2095,14 +2383,16 @@ async function focusSelected(mode="readable"){
   const worldTop=n.y;
   const worldCenterX=worldLeft+r.w/2;
   const worldCenterY=worldTop+r.h/2;
-  const titleOffset=n.type==="map"?24:88;
-  const availableWidth=Math.max(240,innerWidth-(n.type==="map"?48:180));
-  const availableHeight=Math.max(240,innerHeight-titleOffset-(n.type==="map"?24:40));
+  const viewport=focusViewport();
+  const availableWidth=viewport.width;
+  const availableHeight=viewport.height;
+  const centerX=viewport.left+availableWidth/2;
+  const centerY=viewport.top+availableHeight/2;
   const widthScale=availableWidth/r.w;
   if(mode==="fit"){
     const fitScale=clampScale(Math.min(widthScale,availableHeight/r.h));
-    const cameraX=innerWidth/2-worldCenterX*fitScale;
-    const cameraY=innerHeight/2-worldCenterY*fitScale;
+    const cameraX=centerX-worldCenterX*fitScale;
+    const cameraY=centerY-worldCenterY*fitScale;
     if(fitMap){
       // Markmap.fit() measures the SVG's client rect. Center and size the
       // card first so that measurement uses the final canvas zoom; fitting
@@ -2126,8 +2416,8 @@ async function focusSelected(mode="readable"){
   const targetScale=clampScale(Math.min(1.2,fitScale));
 
   moveTo(
-    innerWidth/2-worldCenterX*targetScale,
-    titleOffset-worldTop*targetScale,
+    centerX-worldCenterX*targetScale,
+    r.h*targetScale<=availableHeight?centerY-worldCenterY*targetScale:viewport.top-worldTop*targetScale,
     targetScale
   );
 }
@@ -2221,6 +2511,12 @@ window.addEventListener("keydown",e=>{
    if(e.key==="Escape"){e.preventDefault();closeHelp()}
    return;
  }
+ const settings=$(".zoom-settings");
+ if(e.key==="Escape"&&settings.open){
+  e.preventDefault();settings.open=false;
+  settings.querySelector("summary").focus({preventScroll:true});
+  return;
+ }
  const mod=e.ctrlKey||e.metaKey;
  const editing=document.activeElement===source ||
    document.activeElement?.tagName==="INPUT" ||
@@ -2265,6 +2561,15 @@ window.addEventListener("keydown",e=>{
   * These mirror the visible buttons without interfering with card text input.
  */
  const key=e.key.toLowerCase();
+ if(key==="tab"&&!mod&&!e.altKey&&!e.shiftKey&&!document.activeElement?.isContentEditable){
+  e.preventDefault();
+  if(!e.repeat){
+   const open=$("#cardIndex").hidden;setIndexOpen(open);
+   if(open)($("#indexEntries [aria-current='true']")||$("#indexEntries button")||$("#closeIndex")).focus({preventScroll:true});
+   else $("#toggleIndex").focus();
+  }
+  return;
+ }
  if(/^[1-9]$/.test(key)&&!mod&&!e.altKey&&!e.shiftKey&&state.selected){
    const sizeSelect=state.selected.el.querySelector("[data-size]");
    const active=document.activeElement;

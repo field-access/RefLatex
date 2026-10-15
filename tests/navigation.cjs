@@ -24,6 +24,7 @@ const root=path.resolve(__dirname,'..');
    ?route.fulfill({path:path.join(path.dirname(require.resolve('marked')),'marked.umd.js'),contentType:'text/javascript'})
    :route.abort());
   await page.addInitScript(()=>localStorage.setItem('reflatex',JSON.stringify({x:640,y:400,scale:1,notes:Array.from({length:150},(_,i)=>({id:i+1,md:'# Card '+i+'\n\nReadable text '.repeat(20),x:(i%10)*700,y:Math.floor(i/10)*500,w:600,font:'sans'}))})));
+  await page.addInitScript(()=>localStorage.setItem('reflatex-index-open','false'));
   await page.goto(`http://127.0.0.1:${server.address().port}`,{waitUntil:'networkidle'});
   await page.waitForFunction(()=>window.__test);
   const result=await page.evaluate(()=>{
@@ -85,13 +86,13 @@ const root=path.resolve(__dirname,'..');
   await page.waitForTimeout(240);
   const drag=await page.evaluate(()=>({x:__test.state.x,y:__test.state.y,scale:__test.state.scale,cache:document.querySelector('#world').style.willChange,translate:document.querySelector('#world').style.translate,left:document.querySelector('#world').getBoundingClientRect().left,saves:window.__dragSaves}));
   assert.ok(captured);assert.ok(Math.abs(drag.x-dragStart.x-340)<1e-8);assert.ok(Math.abs(drag.y-dragStart.y-180)<1e-8);
-  assert.equal(drag.scale,.75);assert.equal(drag.cache,'transform');assert.equal(drag.saves,0);
+  assert.equal(drag.scale,.75);assert.equal(drag.cache,'translate');assert.equal(drag.saves,0);
   assert.ok(Math.abs(drag.left-drag.x)<.001);
   await page.mouse.up({button:'right'});
   const released=await page.evaluate(()=>({pan:__test.state.pan,translate:document.querySelector('#world').style.translate,left:document.querySelector('#world').getBoundingClientRect().left,x:__test.state.x}));
   assert.equal(released.pan,null);assert.equal(released.translate,'');assert.ok(Math.abs(released.left-released.x)<.001);
   // Losing capture must not leave a stuck drag or a retained texture.
-  await page.mouse.down({button:'right'});await page.mouse.move(1080,540);
+  await page.mouse.move(700,350);await page.mouse.down({button:'right'});await page.mouse.move(1080,540);
   await page.evaluate(()=>document.querySelector('#canvas').releasePointerCapture(__test.state.pan.pointerId));
   await page.mouse.move(1090,540);
   assert.equal(await page.evaluate(()=>__test.state.pan),null);
@@ -114,6 +115,9 @@ const root=path.resolve(__dirname,'..');
   await page.locator('.zoom-settings summary').click();
   await page.locator('#nav-wheel').fill('1.5');
   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('reflatex-navigation')).wheel),1.5);
+  await page.locator('#nav-wheel').focus();await page.keyboard.press('Escape');
+  assert.equal(await page.locator('.zoom-settings').evaluate(el=>el.open),false);
+  assert.ok(await page.locator('.zoom-settings summary').evaluate(el=>el===document.activeElement));
   if(process.env.TEST_ONLINE){
    assert.ok(await page.evaluate(()=>!!window.d3?.zoom),'D3 must load for the integration test');
    const before=await page.evaluate(()=>({p:__test.worldPoint(800,300),scale:__test.state.scale}));
