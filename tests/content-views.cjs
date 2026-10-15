@@ -48,6 +48,18 @@ const root=path.resolve(__dirname,'..');
   assert.ok(typography.sizes.every(size=>size>typography.body));
   assert.ok(typography.weights.every(weight=>weight==='700'));
   assert.ok(typography.shared);assert.equal(typography.links,1);assert.equal(typography.requests.length,2);
+  for(const count of [7,13]){
+   const board=await page.evaluate(count=>{
+    const notes=Array.from({length:count},(_,i)=>__content.makeNote(`# Card ${i}\n\n${'Readable content. '.repeat(12+i%3)}`,0,0,520+(i%3)*80,false,null,'sans'));
+    __content.layoutCards();
+    const rows=new Map();for(const n of notes){if(!rows.has(n.y))rows.set(n.y,[]);rows.get(n.y).push(n)}
+    const result=[...rows.values()].map(cards=>({count:cards.length,center:(cards[0].x+cards.at(-1).x+cards.at(-1).el.offsetWidth)/2,overlap:cards.some((n,i)=>i&&n.x<cards[i-1].x+cards[i-1].el.offsetWidth)}));
+    for(const n of notes)__content.deleteNote(n);return result;
+   },count);
+   assert.ok(board.length>1,'Larger boards use multiple rows');
+   assert.ok(Math.max(...board.map(row=>row.count))-Math.min(...board.map(row=>row.count))<=1,'Cards are distributed evenly');
+   assert.ok(board.every(row=>Math.abs(row.center)<.01&&!row.overlap),'Rows stay centered and separated');
+  }
   const topicId=await page.evaluate(()=>__content.makeNote('# Topics\n\n## First\n\nText\n\n### Repeated\n\nText\n\n## Repeated\n\n```text\n## Not a topic\n```',0,0,600,false).id);
   const expand=page.getByRole('button',{name:'Subtopics: Topics',exact:true});
   await expand.click();
@@ -189,7 +201,7 @@ const root=path.resolve(__dirname,'..');
    for(const script of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))new vm.Script(script[1]);
    assert.ok(html.includes('data-font-size="125"'));assert.ok(html.includes('styles.css'));
    assert.ok(!html.includes('feTurbulence')&&!html.includes('feDisplacementMap'));
-   if(html.includes('Markmap.create'))assert.ok(html.includes('enableMapCameraFrames(svg,map)'));
+   if(html.includes('Markmap.create'))assert.ok(html.includes('enableMapCameraFrames(svg,map'));
   }
   const preview=await browser.newPage({viewport:{width:390,height:844}});
   await preview.route('https://**/*',r=>r.abort());

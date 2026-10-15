@@ -5,15 +5,15 @@ const $=s=>document.querySelector(s);
 const canvas=$("#canvas"),world=$("#world"),editor=$("#editor"),source=$("#source"),context=$("#context");
 const MIN_SCALE=.01;
 const MAX_SCALE=8;
-const navigation={wheel:1,pinch:1,step:1.2};
+const navigation={wheel:1,scroll:1,pinch:1,drag:1,step:1.2};
 try{
  const saved=JSON.parse(localStorage.getItem("reflatex-navigation")||"{}");
- for(const key of ["wheel","pinch"])if(Number.isFinite(saved[key]))navigation[key]=Math.max(.25,Math.min(3,saved[key]));
- if(Number.isFinite(saved.step))navigation.step=Math.max(1.05,Math.min(1.5,saved.step));
+ for(const key of ["wheel","scroll","pinch","drag"])if(Number.isFinite(saved[key]))navigation[key]=saved[key]>1.5?1:Math.max(.5,saved[key]);
+ if(Number.isFinite(saved.step))navigation.step=saved.step>1.35?1.2:Math.max(1.05,saved.step);
 }catch{}
 const zoomLabel=$("#zoomLabel");
 let lastZoomLabel="";
-let cameraInputFrame=0,indexFrame=0;
+let cameraInputFrame=0,indexFrame=0,wheelScrollTimer=0;
 // Skip offscreen paint but retain accurate layout for fit, arrange and editing.
 if(window.IntersectionObserver){
  const visibility=new IntersectionObserver(entries=>{
@@ -870,16 +870,26 @@ function mapViewportSize(){
 const PEN_PAN_GAIN=1.7;
 // Keep D3 gesture bookkeeping immediate, but paint the latest SVG transform
 // once per frame instead of redrawing rich map content for every input event.
-function enableMapCameraFrames(svg,map){
+function enableMapCameraFrames(svg,map,settings={drag:1}){
  const zoom=map.zoom,paint=zoom?.on("zoom");
  if(!paint)return;
- let frame=0,pending=null;
+ let frame=0,pending=null,dragOrigin=null;
+ zoom.on("start.drag-sensitivity",e=>{
+  dragOrigin=e.sourceEvent?.type==="mousedown"?{transform:window.d3.zoomTransform(svg),gain:Math.max(.5,Math.min(1.5,Number(settings.drag)||1))}:null;
+ });
+ zoom.on("end.drag-sensitivity",()=>{dragOrigin=null});
  const flush=()=>{
   frame=0;
   const next=pending;pending=null;
   if(next&&svg.isConnected)paint.apply(next.context,next.args);
  };
  zoom.on("zoom",function(...args){
+  const event=args[0];
+  if(dragOrigin&&event.sourceEvent?.type==="mousemove"){
+   const t=event.transform,origin=dragOrigin.transform,gain=dragOrigin.gain;
+   const transform=t.translate((t.x-origin.x)*(gain-1)/t.k,(t.y-origin.y)*(gain-1)/t.k);
+   svg.__zoom=transform;args[0]={...event,transform};
+  }
   pending={context:this,args};
   if(!frame)frame=requestAnimationFrame(flush);
  });
@@ -919,7 +929,7 @@ function enablePenMapWheel(pane,svg,map){
   }
   const point=window.d3?.pointer?.({clientX,clientY},svg)||[rect.width/2,rect.height/2];
   const unit=e.deltaMode===1?0.05:e.deltaMode===2?1:0.002;
-  const exponent=-e.deltaY*unit*(e.ctrlKey?10:1)*2.2;
+  const exponent=-e.deltaY*unit*(e.ctrlKey?10*navigation.pinch:navigation.wheel)*2.2;
   if(!Number.isFinite(exponent)||!window.d3||!map.zoom?.scaleBy)return;
   window.d3.select(svg).call(map.zoom.scaleBy,2**Math.max(-4,Math.min(4,exponent)),point);
  },{capture:true,passive:false});
@@ -929,7 +939,7 @@ function enablePenMapPan(pane,svg,map){
  let pendingX=0,pendingY=0,velocityX=0,velocityY=0;
  const translate=(dx,dy)=>{
   const scale=window.d3?.zoomTransform?.(svg)?.k||1;
-  if(window.d3&&map.zoom?.translateBy)window.d3.select(svg).call(map.zoom.translateBy,dx*PEN_PAN_GAIN/scale,dy*PEN_PAN_GAIN/scale);
+  if(window.d3&&map.zoom?.translateBy)window.d3.select(svg).call(map.zoom.translateBy,dx*PEN_PAN_GAIN*navigation.drag/scale,dy*PEN_PAN_GAIN*navigation.drag/scale);
  };
  const flush=()=>{
   panFrame=0;
@@ -1038,7 +1048,7 @@ async function renderMap(n){
   // Disable Markmap's implicit setData fit so there is only one initial transform.
   options.autoFit=false;
   const map=window.markmap.Markmap.create(svg,options);
-  n.mapCameraCleanup=enableMapCameraFrames(svg,map);
+  n.mapCameraCleanup=enableMapCameraFrames(svg,map,navigation);
   const defaultZoomFilter=map.zoom?.filter?.();
   if(defaultZoomFilter)map.zoom.filter(function(event){
    return n.el.classList.contains("selected")&&defaultZoomFilter.call(this,event);
@@ -1140,6 +1150,7 @@ function setCameraImmediate(x,y,s){
 }
 
 function interruptCamera(){
+ clearTimeout(wheelScrollTimer);wheelScrollTimer=0;
  if(cameraInputFrame){cancelAnimationFrame(cameraInputFrame);cameraInputFrame=0}
  if(state.raf){cancelAnimationFrame(state.raf);state.raf=0}
  sync();
@@ -1204,7 +1215,7 @@ function finishCameraMotion(){
  world.style.willChange="";
  save();
 }
-function animate(){
+function animate(responseMs=32){
  beginCameraMotion();
  clearTimeout(motionHintTimer);motionHintTimer=0;
  if(state.raf)return;
@@ -1213,7 +1224,7 @@ function animate(){
   const now=performance.now();
   const elapsed=lastFrame?Math.min(50,now-lastFrame):1000/60;
   lastFrame=now;
-  const response=1-Math.exp(-elapsed/32);
+  const response=1-Math.exp(-elapsed/responseMs);
   state.x+=(state.targetX-state.x)*response;
   state.y+=(state.targetY-state.y)*response;
   state.scale+=(state.targetScale-state.scale)*response;
@@ -1229,7 +1240,7 @@ function queueCamera(x,y,scale,smooth=false){
  state.targetX=x;state.targetY=y;state.targetScale=clampScale(scale);
  if(smooth){
   if(cameraInputFrame){cancelAnimationFrame(cameraInputFrame);cameraInputFrame=0}
-  animate();return
+  animate(typeof smooth==="number"?smooth:32);return
  }
  if(state.raf){cancelAnimationFrame(state.raf);state.raf=0}
  if(cameraInputFrame)return;
@@ -1876,7 +1887,7 @@ function startPan(e){
  e.stopPropagation();
  if(e.target===canvas||e.target===world)select(null);
  interruptCamera();
- state.pan={sx:e.clientX,sy:e.clientY,x:state.x,y:state.y,pointerId:e.pointerId,gain:1};
+ state.pan={sx:e.clientX,sy:e.clientY,x:state.x,y:state.y,pointerId:e.pointerId,gain:navigation.drag};
  clearTimeout(motionHintTimer);motionHintTimer=0;
  clearTimeout(state.saveTimer);state.saveTimer=0;
  if(wheelFrame){cancelAnimationFrame(wheelFrame);wheelFrame=0;panWheelX=panWheelY=0}
@@ -1903,7 +1914,7 @@ canvas.addEventListener("pointerdown",e=>{
  if(leftCanvasBackground)select(null);
  e.preventDefault();e.stopPropagation();
  interruptCamera();
- state.pan={sx:e.clientX,sy:e.clientY,x:state.x,y:state.y,pointerId:e.pointerId,gain:PEN_PAN_GAIN};
+ state.pan={sx:e.clientX,sy:e.clientY,x:state.x,y:state.y,pointerId:e.pointerId,gain:PEN_PAN_GAIN*navigation.drag};
  clearTimeout(motionHintTimer);motionHintTimer=0;
  clearTimeout(state.saveTimer);state.saveTimer=0;
  if(wheelFrame){cancelAnimationFrame(wheelFrame);wheelFrame=0;panWheelX=panWheelY=0}
@@ -1919,7 +1930,7 @@ window.addEventListener("pointermove",e=>{
  pendingPenCanvasPan=null;
  window.getSelection()?.removeAllRanges();
  interruptCamera();
- state.pan={sx:pending.x,sy:pending.y,x:state.x,y:state.y,pointerId:e.pointerId,gain:PEN_PAN_GAIN,moved:true};
+ state.pan={sx:pending.x,sy:pending.y,x:state.x,y:state.y,pointerId:e.pointerId,gain:PEN_PAN_GAIN*navigation.drag,moved:true};
  suppressCanvasClickUntil=performance.now()+500;
  clearTimeout(motionHintTimer);motionHintTimer=0;
  clearTimeout(state.saveTimer);state.saveTimer=0;
@@ -1967,9 +1978,10 @@ function wheelUnitDelta(e){
 function scheduleWheelFrame(){
  if(wheelFrame)return;
  wheelFrame=requestAnimationFrame(()=>{
-  wheelFrame=0;interruptCamera();
-  state.x-=panWheelX;state.y-=panWheelY;panWheelX=panWheelY=0;
-  sync();markCameraMoving();apply();
+  wheelFrame=0;
+  const x=state.targetX-panWheelX,y=state.targetY-panWheelY;
+  panWheelX=panWheelY=0;
+  queueCamera(x,y,state.targetScale,48);
  });
 }
 
@@ -2018,9 +2030,12 @@ canvas.addEventListener("wheel",e=>{
   return;
  }
  const d=wheelUnitDelta(e);
+ if(!wheelScrollTimer)interruptCamera();
+ clearTimeout(wheelScrollTimer);
+ wheelScrollTimer=setTimeout(()=>{wheelScrollTimer=0},240);
  let dx=d.x,dy=d.y;
  if(e.shiftKey&&Math.abs(dx)<Math.abs(dy)){dx+=dy;dy=0}
- panWheelX+=dx;panWheelY+=dy;
+ panWheelX+=dx*navigation.scroll;panWheelY+=dy*navigation.scroll;
 
  scheduleWheelFrame();
 },{passive:false});
@@ -2048,7 +2063,7 @@ function flushTouch(){
  touchFrame=0;
  const points=[...touches.values()];
  if(points.length===1&&gesture?.type==="pan"){
-  state.x=gesture.ox+points[0].x-gesture.x;state.y=gesture.oy+points[0].y-gesture.y;
+  state.x=gesture.ox+(points[0].x-gesture.x)*navigation.drag;state.y=gesture.oy+(points[0].y-gesture.y)*navigation.drag;
  }else if(points.length>=2&&gesture?.type==="pinch"){
   const[a,b]=points,cx=(a.x+b.x)/2,cy=(a.y+b.y)/2;
   state.scale=clampScale(gesture.s*(Math.hypot(a.x-b.x,a.y-b.y)/gesture.d)**navigation.pinch);
@@ -2139,7 +2154,7 @@ function openMapTab(n){
   const rainbow=["#e76f51","#f4a261","#e9c46a","#6b9b67","#299c97","#4e7bc5","#a16bb3","#d5668a"];
   const colors=(MAP_PALETTES[theme]||MAP_PALETTES.default);
   const colorPayload=JSON.stringify(colors);
-  const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>${fontLink}<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css"><link rel="stylesheet" href="${stylesheet}"><style>html,body{height:100%;margin:0}.card.map-window{position:fixed;inset:0;width:100%;height:100%;min-width:0;max-width:none;min-height:0;border:0;border-radius:0}.map-window .cardbody{height:100%;padding:0}.map-window .map-pane{height:100%;background:transparent}.map-window .map-pane>svg{width:100%;height:100%}</style></head><body class="${darkMode?"dark":""}"><article class="card map-card map-window" data-map-color="${theme}" data-font="${normalizeCardFont(n.mapFont)}" data-font-size="${size}" style="--card-font-family:${escapeHtml(fontStack)};--map-font-family:${escapeHtml(fontStack)}"><div class="cardbody"><div class="map-pane"><svg id="map"></svg></div></div></article><script src="https://cdn.jsdelivr.net/npm/d3@7"><\/script><script src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18.12"><\/script><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/highlight.min.js"><\/script><script>const md=${payload};const colors=${colorPayload};const root=new markmap.Transformer().transform(md).root;const depth=node=>node.state?.depth||0;const svg=document.querySelector("#map");const map=markmap.Markmap.create(svg,{autoFit:false,duration:350,maxWidth:300,spacingHorizontal:82,spacingVertical:15,color:node=>colors[depth(node)%colors.length],lineWidth:node=>depth(node)===1?3.6:depth(node)===2?2.25:1.55,style:id=>"#"+id+" .markmap-link{stroke-linecap:round;stroke-linejoin:round}"});${enableMapCameraFrames.toString()};enableMapCameraFrames(svg,map);(async()=>{await document.fonts.ready;await map.setData(root);svg.querySelectorAll("pre code").forEach(code=>{if(window.hljs){try{hljs.highlightElement(code)}catch{}}});await map.fit()})().catch(error=>{document.querySelector(".map-pane").textContent="Could not render this map: "+error.message});<\/script></body></html>`;
+  const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>${fontLink}<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css"><link rel="stylesheet" href="${stylesheet}"><style>html,body{height:100%;margin:0}.card.map-window{position:fixed;inset:0;width:100%;height:100%;min-width:0;max-width:none;min-height:0;border:0;border-radius:0}.map-window .cardbody{height:100%;padding:0}.map-window .map-pane{height:100%;background:transparent}.map-window .map-pane>svg{width:100%;height:100%}</style></head><body class="${darkMode?"dark":""}"><article class="card map-card map-window" data-map-color="${theme}" data-font="${normalizeCardFont(n.mapFont)}" data-font-size="${size}" style="--card-font-family:${escapeHtml(fontStack)};--map-font-family:${escapeHtml(fontStack)}"><div class="cardbody"><div class="map-pane"><svg id="map"></svg></div></div></article><script src="https://cdn.jsdelivr.net/npm/d3@7"><\/script><script src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18.12"><\/script><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/highlight.min.js"><\/script><script>const md=${payload};const colors=${colorPayload};const root=new markmap.Transformer().transform(md).root;const depth=node=>node.state?.depth||0;const svg=document.querySelector("#map");const map=markmap.Markmap.create(svg,{autoFit:false,duration:350,maxWidth:300,spacingHorizontal:82,spacingVertical:15,color:node=>colors[depth(node)%colors.length],lineWidth:node=>depth(node)===1?3.6:depth(node)===2?2.25:1.55,style:id=>"#"+id+" .markmap-link{stroke-linecap:round;stroke-linejoin:round}"});${enableMapCameraFrames.toString()};let mapNavigation={drag:1};try{mapNavigation=JSON.parse(localStorage.getItem("reflatex-navigation")||"{}")}catch{}enableMapCameraFrames(svg,map,mapNavigation);(async()=>{await document.fonts.ready;await map.setData(root);svg.querySelectorAll("pre code").forEach(code=>{if(window.hljs){try{hljs.highlightElement(code)}catch{}}});await map.fit()})().catch(error=>{document.querySelector(".map-pane").textContent="Could not render this map: "+error.message});<\/script></body></html>`;
   const tab=window.open();if(!tab){alert("Allow pop-ups to open this mind map.");return}
   tab.document.write(html);tab.document.close();
 }
@@ -2188,8 +2203,7 @@ function fit(widthOnly=false){
 function layoutCards(){
  if(!state.notes.length)return;
 
- // Keep the preferred ten-card row while spacing actual card bounds evenly.
- const columns=Math.min(10,state.notes.length);
+ // Balance the board's shape using real card dimensions and focus spacing.
  const minimumGap=120;
  const viewportWidth=innerWidth-($("#cardIndex").hidden?0:$("#cardIndex").offsetWidth+28);
 
@@ -2230,30 +2244,40 @@ function layoutCards(){
   d.beforeY=Math.max((top+margin)/scale,(innerHeight/2+margin)/fitScale-d.h/2);
   d.afterY=Math.max(0,(innerHeight-top+margin)/scale-d.h,(innerHeight/2+margin)/fitScale-d.h/2);
  }
- const rows=Math.ceil(state.notes.length/columns);
- const rowHeights=Array.from({length:rows},(_,row)=>{
-  const start=row*columns;
-  return Math.max(...state.notes.slice(start,start+columns).map(n=>dimensions.get(n).h));
- });
- let rowTop=-900;
-
- for(let row=0;row<rows;row++){
-  const rowCards=state.notes.slice(row*columns,(row+1)*columns);
-  const gaps=rowCards.map((n,i)=>i===rowCards.length-1?0:
-   Math.max(minimumGap,dimensions.get(n).afterX,dimensions.get(rowCards[i+1]).beforeX)+64);
-  const rowWidth=rowCards.reduce((width,n,i)=>width+dimensions.get(n).w+gaps[i],0);
-  let columnLeft=-rowWidth/2;
-  for(const [i,n] of rowCards.entries()){
+ const count=state.notes.length,viewport=focusViewport();
+ const aspect=Math.max(.6,Math.min(1.6,viewport.width/viewport.height));
+ const average=[...dimensions.values()].reduce((sum,d)=>({
+  w:sum.w+d.w+Math.max(minimumGap,d.beforeX,d.afterX)+64,
+  h:sum.h+d.h+Math.max(minimumGap,d.beforeY,d.afterY)+64
+ }),{w:0,h:0});
+ const idealRows=Math.sqrt(count*average.w/(aspect*average.h));
+ let best=null;
+ const candidates=new Set(Array.from({length:6},(_,i)=>Math.max(1,Math.min(count,Math.floor(idealRows)-2+i))));
+ for(const rowCount of candidates){
+  const base=Math.floor(count/rowCount),extra=count%rowCount;
+  let start=0;
+  const rows=Array.from({length:rowCount},(_,i)=>{
+   const cards=state.notes.slice(start,start+base+(i<extra?1:0));start+=cards.length;
+   const gaps=cards.map((n,j)=>j===cards.length-1?0:Math.max(minimumGap,dimensions.get(n).afterX,dimensions.get(cards[j+1]).beforeX)+64);
+   return {cards,gaps,width:cards.reduce((w,n,j)=>w+dimensions.get(n).w+gaps[j],0),height:Math.max(...cards.map(n=>dimensions.get(n).h))};
+  });
+  for(const [i,row] of rows.entries())row.gap=i===rows.length-1?0:Math.max(minimumGap,...row.cards.map(n=>dimensions.get(n).afterY),...rows[i+1].cards.map(n=>dimensions.get(n).beforeY))+64;
+  const width=Math.max(...rows.map(row=>row.width)),height=rows.reduce((h,row)=>h+row.height+row.gap,0);
+  const score=Math.abs(Math.log(width/height/aspect));
+  if(!best||score<best.score)best={rows,height,score};
+ }
+ let rowTop=-best.height/2;
+ for(const row of best.rows){
+  let columnLeft=-row.width/2;
+  for(const [i,n] of row.cards.entries()){
    n.x=columnLeft;
    n.y=rowTop;
    n.el.style.left=n.x+"px";
    n.el.style.top=n.y+"px";
-   columnLeft+=dimensions.get(n).w+gaps[i];
+   columnLeft+=dimensions.get(n).w+row.gaps[i];
   }
 
-  const nextRow=state.notes.slice((row+1)*columns,(row+2)*columns);
-  const gapY=Math.max(minimumGap,...rowCards.map(n=>dimensions.get(n).afterY),...nextRow.map(n=>dimensions.get(n).beforeY))+64;
-  rowTop+=rowHeights[row]+gapY;
+  rowTop+=row.height+row.gap;
  }
 
 }
@@ -2273,16 +2297,21 @@ function arrange(record=true){
 function scheduleArrange(){
  requestAnimationFrame(()=>arrange(false));
 }
-const backgrounds=["light","sun","ocean","stars","planets"];
+const backgrounds=["light","sun","ocean","stars","planets","village"];
 const backgroundLabels={
  light:"Light",
  stars:"Stars",
  sun:"Sun",
  planets:"Planets",
- ocean:"Ocean"
+ ocean:"Ocean",
+ village:"Village"
 };
+// CSS handles motion; hidden tabs retain their position without animating.
+document.addEventListener("visibilitychange",()=>{
+ canvas.classList.toggle("background-paused",document.hidden);
+});
 function setBackground(name){
- const background=name==="dots"?"stars":backgrounds.includes(name)?name:"stars";
+ const background=name==="dots"?"stars":backgrounds.includes(name)?name:"light";
  canvas.dataset.background=background;
  localStorage.setItem("reflatex-background",background);
  $("#background").title=`Background: ${backgroundLabels[background]} (S cycles backgrounds)`;
@@ -2291,7 +2320,7 @@ function setBackground(name){
  });
 }
 function cycleBackground(){
- const current=backgrounds.indexOf(canvas.dataset.background||"stars");
+ const current=backgrounds.indexOf(canvas.dataset.background||"light");
  setBackground(backgrounds[(current+1)%backgrounds.length]);
  showControls();
 }
@@ -2393,7 +2422,7 @@ zoomLabel.addEventListener("blur",()=>{zoomLabel.value=String(Math.round(state.s
 zoomLabel.addEventListener("keydown",e=>{if(e.key==="Enter")zoomLabel.blur();e.stopPropagation()});
 $("#actualSize").onclick=()=>zoom(1/state.scale);
 $("#fitView").onclick=()=>fit(false);
-for(const key of ["wheel","pinch","step"]){
+for(const key of ["wheel","scroll","pinch","drag","step"]){
  const input=$("#nav-"+key),output=$("#nav-"+key+"-value");
  input.value=navigation[key];
  const refresh=()=>{output.textContent=key==="step"?Math.round((navigation[key]-1)*100)+"%":navigation[key]+"×"};
@@ -2861,7 +2890,7 @@ function load(){
  const dark=localStorage.getItem("reflatex-theme")==="dark";
  if(dark)document.body.classList.add("dark");
  updateThemeIcon();
- setBackground(localStorage.getItem("reflatex-background")||"stars");
+ setBackground(localStorage.getItem("reflatex-background")||"light");
  toggleToolbar(localStorage.getItem("reflatex-toolbar-hidden")!=="1");
  state.hand=true;$("#hand").classList.add("active");document.body.classList.add("hand-mode");canvas.style.cursor="grab";
  sync();apply();empty()

@@ -44,6 +44,32 @@ body.canvas-panning{user-select:none;-webkit-user-select:none}
  background-image:url("./assets/backgrounds/ocean.webp");
  background-position:center;background-repeat:no-repeat;background-size:cover;
 }
+#canvas[data-background="village"]{background:#e8dfc9 url("./assets/backgrounds/village-paper.webp") repeat;isolation:isolate}
+#canvas[data-background="village"]::before,
+#canvas[data-background="village"]::after{
+ content:"";position:absolute;pointer-events:none;z-index:-1;
+}
+#canvas[data-background="village"]::before{
+ inset:-4%;
+}
+#canvas[data-background="village"]::after{
+ inset:0 -12%;opacity:.18;
+ background:radial-gradient(ellipse at 30% 60%,#fff8e7 0%,transparent 58%),
+  radial-gradient(ellipse at 80% 35%,#fff8e7 0%,transparent 48%);
+ animation:village-mist 32s ease-in-out infinite alternate;
+}
+@keyframes village-drift{from{transform:translateX(-1.5%)}to{transform:translateX(1.5%)}}
+.village-panorama{position:absolute;left:0;top:0;height:100%;max-width:none;pointer-events:none;z-index:-1;will-change:transform}
+#canvas:not([data-background="village"]) .village-panorama{display:none}
+#canvas.village-live::before{display:none}
+@keyframes village-mist{from{transform:translateX(-4%);opacity:.12}to{transform:translateX(4%);opacity:.3}}
+#canvas.background-paused::before,#canvas.background-paused::after,
+#canvas.background-user-paused::before,#canvas.background-user-paused::after,
+body.canvas-panning #canvas::before,body.canvas-panning #canvas::after{animation-play-state:paused}
+@media(prefers-reduced-motion:reduce){
+ #canvas[data-background="village"]::before,#canvas[data-background="village"]::after{animation:none}
+ #canvas[data-background="village"]::before{background:url("./assets/backgrounds/village.webp") center/cover no-repeat}
+}
 /* Prepare translation before input arrives; scale caching remains temporary. */
 #world{position:absolute;left:0;top:0;width:1px;height:1px;transform-origin:0 0;will-change:translate}
 /* Hide offscreen paint while retaining dimensions for navigation and layout. */

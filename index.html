@@ -21,7 +21,7 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<div id="canvas">
+<div id="canvas" data-background="light">
  <div id="world">
  </div>
  <div class="empty" id="empty"></div>
@@ -40,6 +40,7 @@
    <button type="button" data-background-choice="ocean" role="menuitem"><svg viewBox="0 0 32 22" aria-hidden="true"><image href="./assets/backgrounds/ocean.webp" width="32" height="22" preserveAspectRatio="xMidYMid slice"/></svg><span>Ocean</span></button>
    <button type="button" data-background-choice="stars" role="menuitem"><svg viewBox="0 0 32 22" aria-hidden="true"><image href="./assets/backgrounds/stars.webp" width="32" height="22" preserveAspectRatio="xMidYMid slice"/></svg><span>Stars</span></button>
    <button type="button" data-background-choice="planets" role="menuitem"><svg viewBox="0 0 32 22" aria-hidden="true"><image href="./assets/backgrounds/planets.webp" width="32" height="22" preserveAspectRatio="xMidYMid slice"/></svg><span>Planets</span></button>
+   <button type="button" data-background-choice="village" role="menuitem"><svg viewBox="0 0 32 22" aria-hidden="true"><image href="./assets/backgrounds/village.webp" width="32" height="22" preserveAspectRatio="xMidYMid slice"/></svg><span>Village</span></button>
   </div>
  </div>
  <span class="divider"></span>
@@ -64,10 +65,13 @@
  <button id="plus" title="Zoom in (+)" aria-label="Zoom in"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
  <details class="zoom-settings"><summary aria-label="Navigation settings" title="Navigation settings">⚙</summary>
   <div class="zoom-settings-panel">
-   <label>Wheel sensitivity <output id="nav-wheel-value"></output><input id="nav-wheel" type="range" min="0.25" max="3" step="0.05"></label>
-   <label>Pinch sensitivity <output id="nav-pinch-value"></output><input id="nav-pinch" type="range" min="0.25" max="3" step="0.05"></label>
-   <label>Button zoom step <output id="nav-step-value"></output><input id="nav-step" type="range" min="1.05" max="1.5" step="0.05"></label>
+   <label>Wheel zoom sensitivity <output id="nav-wheel-value"></output><input id="nav-wheel" type="range" min="0.5" max="1.5" step="0.05"></label>
+   <label>Scroll sensitivity <output id="nav-scroll-value"></output><input id="nav-scroll" type="range" min="0.5" max="1.5" step="0.05"></label>
+   <label>Drag sensitivity <output id="nav-drag-value"></output><input id="nav-drag" type="range" min="0.5" max="1.5" step="0.05"></label>
+   <label>Pinch sensitivity <output id="nav-pinch-value"></output><input id="nav-pinch" type="range" min="0.5" max="1.5" step="0.05"></label>
+   <label>Button zoom step <output id="nav-step-value"></output><input id="nav-step" type="range" min="1.05" max="1.35" step="0.05"></label>
    <button id="actualSize">100%</button><button id="fitView">Fit all</button>
+   <button id="pauseBackground" type="button" aria-pressed="false">Pause background</button>
    <p>H switches wheel zoom / pan. Pinch zooms the canvas outside maps. Space focuses the selected card; press again for reading.</p>
   </div>
  </details>
@@ -103,5 +107,6 @@
 </div>
 
 <script src="app.js" defer></script>
+<script src="village.js?v=8" defer></script>
 </body>
 </html>
