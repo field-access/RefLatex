@@ -432,6 +432,13 @@ body.controls .hint{opacity:1;pointer-events:auto}
 .help-group kbd{flex:none;min-width:30px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:color-mix(in srgb,var(--panel) 75%,var(--canvas));color:var(--ink);font:10px ui-monospace,SFMono-Regular,Consolas,monospace;text-align:center;box-shadow:0 1px 0 var(--border)}
 .help-group span{color:var(--ink)}
 .help-group p{margin:10px 0 0;font-size:12px;line-height:1.5;color:var(--muted)}
+.canvas-save-picker,.canvas-open-picker{position:relative}
+.canvas-save-menu{position:absolute;right:calc(100% + 12px);top:0;width:260px;max-height:min(440px,70vh);overflow:auto;padding:8px;background:var(--paper);border:1px solid var(--border);border-radius:10px;box-shadow:0 6px 24px #0002}
+.canvas-save-menu[hidden]{display:none}
+.canvas-save-menu p{margin:4px 8px 9px;font:12px/1.5 var(--ui-font);color:var(--muted);overflow-wrap:anywhere}
+.canvas-save-menu button{display:block;width:100%;padding:9px 10px;border:0;border-radius:5px;text-align:left;font:13px var(--ui-font);color:var(--ink);background:transparent;overflow-wrap:anywhere}
+.canvas-save-menu button:hover,.canvas-save-menu button:focus-visible{background:var(--panel)}
+#recentCanvasOpens:not(:empty){border-top:1px solid var(--border);margin-top:6px;padding-top:6px}
 .empty{
  position:fixed;inset:0;display:grid;place-items:center;z-index:1;pointer-events:none;
  color:#827e76;text-align:center
@@ -669,6 +676,11 @@ body.fullscreen.controls .toolbar{transform:translateY(-50%)}
 .cardbody .ref-math-block .katex-display{
   margin:0;
 }
+/* Keep display equations compact without changing KaTeX's internal layout. */
+.card:not(.map-card) .cardbody .katex-display{margin:.55em 0;padding:2px 2px}
+.card:not(.map-card) .cardbody .ref-math-block{margin:.55em 0;padding:0}
+.card:not(.map-card) .cardbody .ref-math-block .katex-display{margin:0}
+.card:not(.map-card) .cardbody p:has(> .katex-display){margin-bottom:.55em}
 
 
 .card[data-font] .cardbody,.card[data-font] .cardbody :is(p,li,table,th,td){font-family:var(--card-font-family,ui-monospace,SFMono-Regular,Consolas,monospace)}
@@ -1108,6 +1120,10 @@ body:not(.dark) .cardbody pre.line-numbered .hljs-section{color:var(--syntax-met
 /* Broad blurred shadows on every code block multiply raster work on a board.
    Keep the existing colored surfaces, borders, syntax colors and text. */
 .cardbody pre.line-numbered,body.dark .cardbody pre.line-numbered{box-shadow:none}
+.cardbody pre,body:not(.dark) .cardbody pre.line-numbered,body.dark .cardbody pre.line-numbered{box-shadow:none;text-shadow:none}
+.cardbody pre *{text-shadow:none}
+.card:not(.map-card) .cardbody pre code{font-size:calc(15px * var(--card-font-scale))!important}
+@media(max-width:700px){.card:not(.map-card) .cardbody pre code{font-size:calc(14px * var(--card-font-scale))!important}}
 
 /* Content never changes the user's card width. */
 .cardbody{min-width:0}
@@ -1142,6 +1158,21 @@ body.dark .map-card .markmap-node pre .hljs-comment,.map-card[data-map-color="de
 .card-index header button{display:grid;place-items:center;width:26px;height:26px;border:0;border-radius:5px;background:transparent;color:var(--muted);cursor:pointer}
 .index-icon{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
 .card-index nav{overflow-y:auto;overscroll-behavior:contain;flex:0 1 auto;min-height:0;padding:0 8px 8px;scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--ink) 16%,transparent) transparent}
+.index-view-switch{display:flex;flex-shrink:0;gap:2px;margin:0 12px 10px;padding:3px;border-radius:7px;background:color-mix(in srgb,var(--ink) 5%,transparent)}
+.index-view-switch button{display:flex;align-items:center;justify-content:center;gap:6px;flex:1;min-height:28px;padding:5px 8px;border:0;border-radius:5px;background:transparent;color:var(--muted);font:500 12px var(--ui-font);cursor:pointer}
+.index-view-switch button[aria-pressed="true"]{background:var(--paper);color:var(--ink);box-shadow:0 1px 3px #0001}
+.index-view-switch .icon{width:14px;height:14px}
+.card-index[data-view="palette"] nav{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;padding:6px 10px 10px;align-items:start;scroll-padding-block:8px}
+.card-index[data-view="palette"] .index-entry{min-width:0;border:1px solid color-mix(in srgb,var(--index-card-color) 24%,transparent);border-radius:11px;overflow:hidden;background:color-mix(in srgb,var(--index-card-color) 9%,var(--paper));scroll-margin-block:6px}
+.card-index[data-view="palette"] .index-entry:hover{box-shadow:0 2px 5px #00000012}
+.card-index[data-view="palette"] .index-entry:has([aria-current="true"]){border-color:var(--accent);outline:1px solid var(--accent);outline-offset:-1px}
+.card-index[data-view="palette"] .index-row{display:block;position:relative;margin:0;background:transparent;border-radius:0}
+.card-index[data-view="palette"] .index-row>button[data-card-id]{display:grid;grid-template-columns:1fr;grid-template-rows:1fr;gap:0;place-items:center;width:100%;aspect-ratio:1;min-width:0;padding:0;border-radius:0;background:transparent}
+.card-index[data-view="palette"] .index-row>button[data-card-id]::before{content:attr(data-index-number);font:600 13px/1 var(--ui-font);font-variant-numeric:tabular-nums;color:var(--index-card-color)}
+#cardIndex[data-view="palette"] nav :is(.index-expand,.index-subtopics,.index-rename,.index-reorder),
+#cardIndex[data-view="palette"] .index-row>button[data-card-id] :is(span,small,.index-icon){display:none}
+.palette-title-tooltip{position:fixed;z-index:1000;width:max-content;max-width:min(240px,calc(100vw - 16px));padding:8px 10px;border:1px solid var(--border);border-radius:7px;background:var(--paper);color:var(--ink);box-shadow:0 3px 12px #00000018;font:12px/1.4 var(--ui-font);overflow-wrap:anywhere;pointer-events:none}
+.palette-title-tooltip[hidden]{display:none}
 .index-row{display:flex;align-items:center;gap:0;border-radius:6px;margin:2px 0;transition:background .12s ease}
 .index-row:hover{background:color-mix(in srgb,var(--ink) 4%,transparent)}
 .card-index nav .index-expand{flex-shrink:0;width:22px;padding:8px 2px;color:var(--muted)}

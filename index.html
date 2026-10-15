@@ -46,8 +46,14 @@
  <span class="divider"></span>
  <button class="tool" id="theme" title="Toggle dark mode (T)" aria-label="Toggle dark mode"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.4 15.1A8.7 8.7 0 0 1 8.9 3.6 8.8 8.8 0 1 0 20.4 15.1Z"/></svg></button>
  <span class="divider"></span>
- <button class="tool" id="saveCanvas" title="Save canvas (Ctrl/Cmd+S)" aria-label="Save canvas"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg></button>
- <button class="tool" id="openCanvas" title="Open canvas (Ctrl/Cmd+O)" aria-label="Open canvas"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h6l2 2H20v10H4z"/><path d="M12 15V4m-4 4 4-4 4 4"/></svg></button>
+ <div class="canvas-save-picker">
+  <button class="tool" id="saveCanvas" title="Save canvas (Ctrl/Cmd+S)" aria-label="Save canvas" aria-expanded="false" aria-controls="canvasSaveMenu"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg></button>
+  <div class="canvas-save-menu" id="canvasSaveMenu" hidden><p id="canvasSaveStatus" role="status"></p><button type="button" id="saveCurrentCanvas">Save current canvas</button><button type="button" id="saveCanvasAs">Save as…</button></div>
+ </div>
+ <div class="canvas-open-picker">
+  <button class="tool" id="openCanvas" title="Open canvas (Ctrl/Cmd+O)" aria-label="Open canvas" aria-expanded="false" aria-controls="canvasOpenMenu"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h6l2 2H20v10H4z"/><path d="M12 15V4m-4 4 4-4 4 4"/></svg></button>
+  <div class="canvas-save-menu" id="canvasOpenMenu" hidden><button type="button" id="newBlankCanvas">New blank canvas</button><button type="button" id="openCanvasFile">Open canvas file…</button><div id="recentCanvasOpens" aria-label="Recent canvases"></div></div>
+ </div>
  <input id="canvasFile" type="file" accept=".json,application/json" hidden>
  <button class="tool" id="full" title="Fullscreen (F)" aria-label="Fullscreen"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
  <button class="tool" id="toggleIndex" title="Card index (Tab)" aria-label="Card index (Tab)" aria-keyshortcuts="Tab" aria-controls="cardIndex" aria-expanded="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
@@ -56,6 +62,10 @@
 
 <aside class="card-index" id="cardIndex" aria-label="Card index">
  <header><h2>Card index <span id="indexCount">0</span></h2><button id="closeIndex" aria-label="Close card index" title="Close index (Esc)"><svg class="index-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6M20 4v16"/></svg></button></header>
+ <div class="index-view-switch" role="group" aria-label="Card index view">
+  <button type="button" data-index-view="list" aria-pressed="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>List</button>
+  <button type="button" data-index-view="palette" aria-pressed="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg>Palette</button>
+ </div>
  <nav id="indexEntries" aria-label="Jump to card"></nav>
  <p id="indexEmpty">Add a card to see its heading here.</p>
 </aside>
@@ -91,8 +101,8 @@
     <div><kbd>Space</kbd><span>Fit card; press again to read. Maps always fit.</span></div><div><kbd>← / →</kbd><span>Select previous / next card</span></div><div><kbd>Page Up / Down</kbd><span>Select previous / next card</span></div><div><kbd>Home / End</kbd><span>Select first / last card</span></div><div><kbd>K</kbd><span>Switch Markdown / Markmap</span></div><div><kbd>M</kbd><span>Open Markmap in a new window</span></div><div><kbd>O</kbd><span>Open card in a new window</span></div><div><kbd>E</kbd><span>Edit card</span></div><div><kbd>1–9</kbd><span>Change text size</span></div><div><kbd>[ / ]</kbd><span>Decrease / increase card width</span></div><div><kbd>Shift + C</kbd><span>Cycle card theme</span></div><div><kbd>V / Shift + V</kbd><span>Cycle font forward / backward</span></div><div><kbd>Ctrl/⌘ + D</kbd><span>Duplicate card</span></div><div><kbd>Delete</kbd><span>Delete card</span></div>
    </div>
    <div class="help-group"><h3>Files and editing</h3>
-    <div><kbd>Ctrl/⌘ + Enter</kbd><span>Paste into editor / apply edited card</span></div><div><kbd>Ctrl/⌘ + S</kbd><span>Save canvas as JSON</span></div><div><kbd>Ctrl/⌘ + O</kbd><span>Open saved canvas</span></div><div><kbd>Ctrl/⌘ + Z</kbd><span>Undo</span></div><div><kbd>Ctrl/⌘ + Shift + Z</kbd><span>Redo</span></div><div><kbd>Ctrl/⌘ + Y</kbd><span>Redo</span></div><div><kbd>Esc</kbd><span>Close editor, menu, help or navigation settings</span></div>
-    <p>Use the download button inside a card to save it as PDF. Choose “Save as PDF” in the print dialog.</p>
+    <div><kbd>Ctrl/⌘ + Enter</kbd><span>Paste into editor / apply edited card</span></div><div><kbd>Ctrl/⌘ + S</kbd><span>Save current canvas file</span></div><div><kbd>Ctrl/⌘ + O</kbd><span>Open saved canvas</span></div><div><kbd>Ctrl/⌘ + Z</kbd><span>Undo</span></div><div><kbd>Ctrl/⌘ + Shift + Z</kbd><span>Redo</span></div><div><kbd>Ctrl/⌘ + Y</kbd><span>Redo</span></div><div><kbd>Esc</kbd><span>Close editor, menu, help or navigation settings</span></div>
+    <p>The Open menu has New blank canvas and recent subject canvases. A new canvas has no linked file; Save as enables file autosave. Use a card’s download button for PDF.</p>
    </div>
    <div class="help-group"><h3>Inside the card index</h3>
     <div><kbd>↑ / ↓</kbd><span>Move between visible entries</span></div><div><kbd>← / →</kbd><span>Collapse / expand subtopics</span></div><div><kbd>Home / End</kbd><span>Focus first / last visible entry</span></div><div><kbd>Alt + ↑ / ↓</kbd><span>Reorder card when its drag handle is focused</span></div><div><kbd>Tab / Esc</kbd><span>Close index</span></div>
@@ -117,6 +127,7 @@
  <button id="copy"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h2"/></svg><span>Copy Markdown</span></button><button id="remove"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3"/></svg><span>Delete</span></button>
 </div>
 
+<script src="canvas-files.js?v=3" defer></script>
 <script src="app.js" defer></script>
 <script src="village.js?v=8" defer></script>
 </body>

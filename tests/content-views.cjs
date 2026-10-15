@@ -29,6 +29,25 @@ const root=path.resolve(__dirname,'..');
    return {immediate,...committed,afterCleanup:paints};
   });
   assert.deepEqual(cameraFrames,{immediate:0,paints:1,last:119,afterCleanup:1});
+  const palette=await page.evaluate(async()=>{
+   const notes=Array.from({length:90},(_,i)=>__content.makeNote(`# Subject ${i+1}: a longer card title`,0,0,600,false,null,'sans'));
+   document.querySelector('[data-index-view="palette"]').click();
+   __content.select(notes.at(-1));
+   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+   const selected=document.querySelector('#indexEntries [aria-current="true"]'),tile=selected.getBoundingClientRect();
+   const list=document.querySelector('#indexEntries').getBoundingClientRect();
+   selected.dispatchEvent(new PointerEvent('pointerover',{bubbles:true}));
+   const tooltip=document.querySelector('#paletteTitleTooltip');
+   const result={title:tooltip.textContent,titleVisible:!tooltip.hidden,fullyVisible:tile.top>=list.top-1&&tile.bottom<=list.bottom+1,compact:Math.abs(tile.width-tile.height)<1&&!selected.style.position&&getComputedStyle(selected.querySelector('span')).display==='none'};
+   __content.select(notes[0]);
+   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+   const first=document.querySelector('#indexEntries [aria-current="true"]').getBoundingClientRect();
+   result.firstVisible=first.top>=document.querySelector('#indexEntries').getBoundingClientRect().top-1;
+   document.querySelector('[data-index-view="list"]').click();notes.forEach(__content.deleteNote);
+   return result;
+  });
+  assert.equal(palette.title,'Subject 90: a longer card title');
+  assert.ok(palette.titleVisible&&palette.fullyVisible&&palette.firstVisible&&palette.compact,'Numbered tiles stay square and reveal the title in a hover tooltip');
   const typography=await page.evaluate(async()=>{
    const n=__content.makeNote('# Main heading\n\nBody text\n\n## Section\n\n### Topic\n\n#### Detail\n\n##### Minor\n\n###### Note',0,0,600,false,null,'sans','125');
    const headings=[...n.el.querySelectorAll('.cardbody h1,.cardbody h2,.cardbody h3,.cardbody h4,.cardbody h5,.cardbody h6')];
@@ -113,6 +132,16 @@ const root=path.resolve(__dirname,'..');
    },frameId);
    assert.ok(Math.abs(frame.top-frame.bottom)<1.1,`${type} vertical fit is balanced: ${JSON.stringify(frame)}`);
    assert.ok(frame.top>=23.9&&frame.left>=frame.indexRight+23.9&&frame.right<=frame.trayLeft-23.9,`${type} fits between panels: ${JSON.stringify(frame)}`);
+   const previousWidth=await page.evaluate(id=>{document.activeElement?.blur();return __content.state.notes.find(n=>n.id===id).el.offsetWidth},frameId);
+   await page.keyboard.press(']');
+   await page.waitForTimeout(400);
+   const widened=await page.evaluate(id=>{
+    const n=__content.state.notes.find(n=>n.id===id),r=n.el.getBoundingClientRect();
+    return {width:n.el.offsetWidth,top:r.top,bottom:innerHeight-r.bottom,left:r.left,right:r.right,indexRight:document.querySelector('#cardIndex').getBoundingClientRect().right,trayLeft:document.querySelector('.toolbar').getBoundingClientRect().left,mode:__content.state.spaceFocusStep};
+   },frameId);
+   assert.equal(widened.width,previousWidth+40,`${type} keeps shortcut width after refocusing`);
+   assert.equal(widened.mode,1,'Shortcut preserves fit view');
+   assert.ok(Math.abs(widened.top-widened.bottom)<1.1&&widened.left>=widened.indexRight+23.9&&widened.right<=widened.trayLeft-23.9,`${type} stays fitted after width change`);
    if(type==='map')await page.evaluate(id=>__content.deleteNote(__content.state.notes.find(n=>n.id===id)),frameId);
   }
   const reorderIds=await page.evaluate(()=>['Second card','Third card'].map(title=>__content.makeNote('# '+title,0,0,600,false).id));
