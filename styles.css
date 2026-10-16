@@ -689,8 +689,8 @@ body.fullscreen.controls .toolbar{transform:translateY(-50%)}
 .card[data-font-size="70"] .cardbody{--card-font-scale:.7}
 .card[data-font-size="80"] .cardbody{--card-font-scale:.8}
 .card[data-font-size="90"] .cardbody{--card-font-scale:.9}
-.card[data-font-size="160"] .cardbody{--card-font-scale:1.6}
-.card[data-font-size="180"] .cardbody{--card-font-scale:1.8}
+.card[data-font-size="50"] .cardbody{--card-font-scale:.5}
+.card[data-font-size="60"] .cardbody{--card-font-scale:.6}
 .card.has-title .map-title{
  position:absolute;left:16px;top:5px;display:block;max-width:calc(100% - 300px);
  overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--ink);
@@ -1282,3 +1282,5 @@ body:not(.dark) .card[data-map-color="default"] .map-pane{background:#fff;color:
  .map-card.selected.has-title .cardbar,.map-card.selected:not(.has-title) .cardbar{height:var(--header-height)}
  .map-card.selected.has-title .cardbody,.map-card.selected:not(.has-title) .cardbody{height:calc(100% - var(--header-height))}
 }
+
+.card[data-font-size="160"] .cardbody{--card-font-scale:1.6}

@@ -428,12 +428,20 @@ function safeMarkdown(md){
    out=window.marked?marked.parse(md):`<p>${escapeHtml(md)}</p>`;
  }catch{out=`<p>${escapeHtml(md)}</p>`}
  try{if(window.DOMPurify)out=DOMPurify.sanitize(out)}catch{}
- return out;
+ const content=document.createElement('template');content.innerHTML=out;
+ content.content.querySelectorAll('a[href]').forEach(link=>{link.target='_blank';link.rel='noopener noreferrer'});
+ content.content.querySelectorAll('img').forEach(image=>{image.referrerPolicy='no-referrer'});
+ return content.innerHTML;
 }
+world.addEventListener('click',e=>{
+ const link=e.target.closest('a[href]');
+ if(link){link.setAttribute('target','_blank');link.setAttribute('rel','noopener noreferrer')}
+},true);
 function publicImageUrl(value){
  try{
   const url=new URL(value);
-  return ["http:","https:"].includes(url.protocol)&&/\.(?:avif|bmp|gif|jpe?g|png|svg|webp)$/i.test(url.pathname)
+  const direct=/\.(?:avif|bmp|gif|jpe?g|png|svg|webp)$/i.test(url.pathname)||['images.unsplash.com','images.pexels.com'].includes(url.hostname);
+  return ["http:","https:"].includes(url.protocol)&&direct
    ?url.href:"";
  }catch{return ""}
 }
@@ -1285,7 +1293,7 @@ function zoom(f,cx=innerWidth/2,cy=innerHeight/2){
  zoomPrecise(f,cx,cy);
  clearTimeout(state.saveTimer);state.saveTimer=setTimeout(save,180);
 }
-function snapshot(){return JSON.stringify({x:state.x,y:state.y,scale:state.scale,nextId:state.nextId,notes:state.notes.map(n=>({id:n.id,md:n.md,x:n.x,y:n.y,w:n.type==="map"?(n.mapWidth||n.width||n.el.offsetWidth):(n.width||n.el.offsetWidth),h:n.mapHeight,mapWidth:n.mapWidth,mapHeight:n.mapHeight,font:n.font||"mono",size:n.size||"100",type:n.type||"note",mapColor:n.mapColor||"default",mapFont:n.mapFont||"modern"}))})}
+function snapshot(){return JSON.stringify({x:state.x,y:state.y,scale:state.scale,nextId:state.nextId,notes:state.notes.map(n=>({id:n.id,md:n.md,x:n.x,y:n.y,w:n.type==="map"?(n.mapWidth||n.width||n.el.offsetWidth):(n.width||n.el.offsetWidth),h:n.mapHeight,mapWidth:n.mapWidth,mapHeight:n.mapHeight,font:n.font||"mono",size:n.size||"80",type:n.type||"note",mapColor:n.mapColor||"default",mapFont:n.mapFont||"modern"}))})}
 function history(){
  if(state.historyLock)return;
  const s=snapshot();
@@ -1295,7 +1303,7 @@ function restore(s){
  const d=JSON.parse(s);state.historyLock=true;
  state.notes.forEach(disposeCard);state.notes=[];state.selected=null;
  (d.notes||[]).forEach(n=>n.type==="map"
-  ? makeMap(n.md,n.x,n.y,n.w,n.h,false,n.id,n.mapColor,n.mapFont)
+  ? makeMap(n.md,n.x,n.y,n.w,n.h,false,n.id,n.mapColor,n.mapFont,n.size)
   : makeNote(n.md,n.x,n.y,n.w,false,n.id,n.font,n.size,n.mapColor,n.mapFont,n.mapWidth,n.mapHeight));
  state.x=Number.isFinite(d.x)?d.x:innerWidth/2;
  state.y=Number.isFinite(d.y)?d.y:innerHeight/2;
@@ -1726,7 +1734,10 @@ function select(n){
  if(state.selected===n&&(!n||n.el.classList.contains("selected")))return;
  if(state.selected!==n)state.spaceFocusStep=0;
  state.selected?.el.classList.remove("selected");
- state.selected=n;if(n)n.el.classList.add("selected");
+ state.selected=n;if(n){
+  n.el.classList.add("selected");
+  n.el.querySelectorAll('img').forEach(image=>{if(image.loading==='lazy')image.loading='eager'});
+ }
  highlightCanvasSearch();
  const current=$("#indexEntries [aria-current='true']");current?.setAttribute("aria-current","false");
  if(n)for(const button of $("#indexEntries").querySelectorAll("[data-card-id]")){if(button.dataset.cardId===String(n.id)){button.setAttribute("aria-current","true");break}}
@@ -1755,7 +1766,7 @@ function canvasPayload(){
    mapWidth:n.mapWidth,
    mapHeight:n.mapHeight,
    font:n.font||"mono",
-   size:n.size||"100",
+   size:n.size||"80",
    mapColor:n.mapColor||"default",
    mapFont:n.mapFont||"modern"
   }))
@@ -1803,7 +1814,7 @@ function openCanvasFile(file){
     const x=Number.isFinite(n.x)?n.x:0,y=Number.isFinite(n.y)?n.y:0;
     const width=Number.isFinite(n.width)?n.width:600,id=Number.isFinite(n.id)?n.id:null;
     n.type==="map"
-      ? makeMap(n.markdown,x,y,width,Number.isFinite(n.height)?n.height:640,false,id,n.mapColor,n.mapFont)
+      ? makeMap(n.markdown,x,y,width,Number.isFinite(n.height)?n.height:640,false,id,n.mapColor,n.mapFont,n.size)
       : makeNote(n.markdown,x,y,width,false,id,typeof n.font==="string"?n.font:"mono",n.size,n.mapColor,n.mapFont,n.mapWidth,n.mapHeight);
    });
 
@@ -1853,15 +1864,20 @@ function newBlankCanvas(){
  sync();apply();empty();finishCameraMotion();flushSave();
 }
 
-function makeNote(md,x,y,w=600,record=true,id=null,font=randomCardFont(),size="100",mapColor=randomCardTheme(),mapFont="modern",mapWidth=null,mapHeight=null){
+function normalizeCardSize(size){
+ const value=String(size??'80');
+ if(value==='180')return '160';
+ return ['50','60','70','80','90','100','110','125','140','160'].includes(value)?value:'80';
+}
+function makeNote(md,x,y,w=600,record=true,id=null,font=randomCardFont(),size="80",mapColor=randomCardTheme(),mapFont="modern",mapWidth=null,mapHeight=null){
  if(record)history();
  const minWidth=Math.min(520,Math.max(300,innerWidth-24));
  const width=Math.max(minWidth,Math.min(1200,w||600));
-const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size,width,type:"note",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:normalizeCardFont(font),mapWidth:Number.isFinite(mapWidth)?Math.max(minWidth,Math.min(1600,mapWidth)):null,mapHeight:Number.isFinite(mapHeight)?Math.max(320,Math.min(1200,mapHeight)):null,el:null};
+const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size:normalizeCardSize(size),width,type:"note",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:normalizeCardFont(font),mapWidth:Number.isFinite(mapWidth)?Math.max(minWidth,Math.min(1600,mapWidth)):null,mapHeight:Number.isFinite(mapHeight)?Math.max(320,Math.min(1200,mapHeight)):null,el:null};
  state.nextId=Math.max(state.nextId,n.id+1);
  const el=document.createElement("article");
  el.className="card";el.style.left=x+"px";el.style.top=y+"px";el.style.width=width+"px";
- el.innerHTML=`<div class="cardbar"><div class="map-title"></div></div><div class="cardactions"><select data-view aria-label="Card view" title="Card view"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-map-color aria-label="Card color theme" title="Card color theme"><option value="default">Midnight</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select><select data-font aria-label="Font" title="Font (V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option><option value="slab">Slab</option><option value="humanist">Humanist</option><option value="rounded">Rounded</option><option value="editorial">Editorial</option><option value="hand">Handwritten</option><option value="hand-soft">Hand Soft</option><option value="hand-bold">Hand Bold</option><option value="hand-marker">Hand Marker</option><option value="hand-script">Hand Script</option></select><select data-size aria-label="Card font size" title="Card font size"><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option><option value="180">180%</option></select><button data-map-open class="map-only"></button><button data-card-open></button><button data-edit></button><button data-delete></button></div>
+ el.innerHTML=`<div class="cardbar"><div class="map-title"></div></div><div class="cardactions"><select data-view aria-label="Card view" title="Card view"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-map-color aria-label="Card color theme" title="Card color theme"><option value="default">Midnight</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select><select data-font aria-label="Font" title="Font (V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option><option value="slab">Slab</option><option value="humanist">Humanist</option><option value="rounded">Rounded</option><option value="editorial">Editorial</option><option value="hand">Handwritten</option><option value="hand-soft">Hand Soft</option><option value="hand-bold">Hand Bold</option><option value="hand-marker">Hand Marker</option><option value="hand-script">Hand Script</option></select><select data-size aria-label="Card font size" title="Card font size"><option value="50">50%</option><option value="60">60%</option><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option></select><button data-map-open class="map-only"></button><button data-card-open></button><button data-edit></button><button data-delete></button></div>
  <div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div><div class="resize bottom" data-side="bottom" title="Resize map height"></div>
  <div class="cardbody">${renderCardMarkdown(md)}</div>`;
  setCardActionIcons(el,"note");
@@ -1872,7 +1888,7 @@ const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size,width,ty
  el.querySelector("[data-map-color]").value=n.mapColor||"default";
  el.querySelector("[data-view]").value="note";
  populateCardFontSelect(el,font);
- el.dataset.fontSize=["70","80","90","100","110","125","140","160","180"].includes(String(size))?String(size):"100";
+ el.dataset.fontSize=normalizeCardSize(size);
  el.querySelector("[data-size]").value=el.dataset.fontSize;
  n.el=el;applyCardFont(n,n.font);updateCardHeading(n);
  enhanceCardSelects(el);world.appendChild(el);state.notes.push(n);
@@ -1912,19 +1928,19 @@ const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size,width,ty
  empty();
  return n;
 }
-function makeMap(md,x,y,w=null,h=null,record=true,id=null,mapColor=randomCardTheme(),mapFont=randomCardFont()){
+function makeMap(md,x,y,w=null,h=null,record=true,id=null,mapColor=randomCardTheme(),mapFont=randomCardFont(),size="80"){
  if(record)history();
  const viewport=mapViewportSize();
  const width=Math.max(Math.min(520,Math.max(300,innerWidth-24)),Math.min(1600,w||viewport.width));
  const height=Math.max(320,h||viewport.height);
-const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type:"map",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:normalizeCardFont(mapFont),font:normalizeCardFont(mapFont),size:"100",el:null,mapInstance:null};
+const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type:"map",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:normalizeCardFont(mapFont),font:normalizeCardFont(mapFont),size:normalizeCardSize(size),el:null,mapInstance:null};
  state.nextId=Math.max(state.nextId,n.id+1);
  const el=document.createElement("article");
  el.className="card map-card";el.style.left=x+"px";el.style.top=y+"px";el.style.width=width+"px";el.style.height=height+"px";
  el.dataset.mapColor=n.mapColor;
  applyMapFont(n);
  el.dataset.font=n.font;
- el.innerHTML=`<div class="cardbar"><div class="map-title"></div></div><div class="cardactions"><select data-view aria-label="Card view" title="Card view"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-map-color aria-label="Card color theme" title="Card color theme"><option value="default">Midnight</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select><select data-font aria-label="Font" title="Font (V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option></select><select data-size aria-label="Card font size" title="Card font size (1–9)"><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option><option value="180">180%</option></select><button data-map-open></button><button data-card-open></button><button data-edit></button><button data-delete></button></div><div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div><div class="resize bottom" data-side="bottom" title="Resize map height"></div><div class="cardbody"><div class="map-loading">Rendering mind map…</div></div>`;
+ el.innerHTML=`<div class="cardbar"><div class="map-title"></div></div><div class="cardactions"><select data-view aria-label="Card view" title="Card view"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-map-color aria-label="Card color theme" title="Card color theme"><option value="default">Midnight</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select><select data-font aria-label="Font" title="Font (V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option></select><select data-size aria-label="Card font size" title="Card font size (1–9, 0)"><option value="50">50%</option><option value="60">60%</option><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option></select><button data-map-open></button><button data-card-open></button><button data-edit></button><button data-delete></button></div><div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div><div class="resize bottom" data-side="bottom" title="Resize map height"></div><div class="cardbody"><div class="map-loading">Rendering mind map…</div></div>`;
  setCardActionIcons(el,"map");
  n.el=el;applyCardFont(n,n.font);updateCardHeading(n);world.appendChild(el);state.notes.push(n);
  el.querySelector("[data-view]").value="map";
@@ -2249,6 +2265,43 @@ function touchEnd(e){
 canvas.addEventListener("pointerup",touchEnd);canvas.addEventListener("pointercancel",touchEnd);
 canvas.addEventListener("lostpointercapture",touchEnd);
 
+function rememberCardTextSelection(){
+ const selection=window.getSelection();
+ if(!selection?.rangeCount||selection.isCollapsed)return;
+ const range=selection.getRangeAt(0),element=range.startContainer.nodeType===1?range.startContainer:range.startContainer.parentElement;
+ const card=element?.closest('.card'),body=card?.querySelector('.cardbody');
+ if(!body||!body.contains(range.startContainer)||!body.contains(range.endContainer))return;
+ const prefix=range.cloneRange();prefix.selectNodeContents(body);prefix.setEnd(range.startContainer,range.startOffset);
+ rememberCardTextSelection.current={card,text:range.toString(),before:prefix.toString()};
+}
+// Capture before clicking Edit transfers focus away from the rendered selection.
+world.addEventListener('pointerdown',rememberCardTextSelection,true);
+document.addEventListener('selectionchange',rememberCardTextSelection);
+function editorSelectionRange(n){
+ rememberCardTextSelection();
+ const selection=rememberCardTextSelection.current;
+ if(!selection||selection.card!==n.el||!selection.text)return {start:0,end:0};
+ const text=selection.text,md=n.md;
+ const occurrence=selection.before.split(text).length-1;
+ let offset=-1;
+ for(let i=0;i<=occurrence;i++){const next=md.indexOf(text,offset+1);if(next<0)break;offset=next}
+ if(offset>=0)return {start:offset,end:offset+text.length};
+ // Rendered selections may cross Markdown emphasis or line wrapping.
+ const escaped=[...text.trim()].map(char=>/\s/.test(char)?'\\s+':char.replace(/[.*+?^$\{\}()|[\]\\]/g,'\\$&'));
+ const expression=new RegExp(escaped.join('[*_~'+String.fromCharCode(96)+']*'),'g');
+ const matches=[...md.matchAll(expression)],match=matches[Math.min(occurrence,matches.length-1)];
+ return match?{start:match.index,end:match.index+match[0].length}:{start:0,end:0};
+}
+function revealEditorSelection(start){
+ const styles=getComputedStyle(source),mirror=document.createElement('div');
+ for(const key of ['fontFamily','fontSize','fontWeight','fontStyle','lineHeight','letterSpacing','padding','boxSizing','tabSize'])mirror.style[key]=styles[key];
+ Object.assign(mirror.style,{position:'fixed',left:'-10000px',top:'0',width:source.clientWidth+'px',whiteSpace:'pre-wrap',overflowWrap:'break-word',visibility:'hidden'});
+ mirror.append(document.createTextNode(source.value.slice(0,start)));
+ const marker=document.createElement('span');marker.textContent='\u200b';mirror.append(marker);document.body.append(mirror);
+ const top=marker.getBoundingClientRect().top-mirror.getBoundingClientRect().top;
+ source.scrollTop=Math.max(0,top-source.clientHeight/3);mirror.remove();
+}
+
 function openEditor(mode="note",n=null){
  state.editId=n?.id??null;
  state.editorMode=mode;
@@ -2264,7 +2317,11 @@ function openEditor(mode="note",n=null){
  source.focus();
 }
 function editNote(n){
+ const range=editorSelectionRange(n);
  openEditor(n.type==="map"?"map":"note",n);
+ source.setSelectionRange(range.start,range.end);
+ revealEditorSelection(range.start);
+ rememberCardTextSelection.current=null;
 }
 function closeEditor(){
  editor.classList.remove("open");
@@ -2303,7 +2360,7 @@ function openMapTab(n){
   const title=escapeHtml((n.md.match(/^#\s+(.+)$/m)||[])[1]||"ConceptCards mind map");
   const fontStack=mapFontStack(n.mapFont);
   const stylesheet=escapeHtml(new URL("styles.css",location.href).href);
-  const size=["70","80","90","100","110","125","140","160","180"].includes(String(n.size))?String(n.size):"100";
+  const size=normalizeCardSize(n.size);
   const darkMode=document.body.classList.contains("dark");
   const theme=MAP_COLORS.includes(n.mapColor)?n.mapColor:"default";
   const fontStylesheet=googleFontStylesheetUrl(n.mapFont);
@@ -2343,7 +2400,7 @@ function duplicate(){
  if(!state.selected)return;
  const n=state.selected;
  const c=n.type==="map"
-  ? makeMap(n.md,n.x+45,n.y+45,n.mapWidth||n.el.offsetWidth,n.mapHeight||n.el.offsetHeight,true,null,n.mapColor,n.mapFont)
+  ? makeMap(n.md,n.x+45,n.y+45,n.mapWidth||n.el.offsetWidth,n.mapHeight||n.el.offsetHeight,true,null,n.mapColor,n.mapFont,n.size)
   : makeNote(n.md,n.x+45,n.y+45,n.el.offsetWidth,true,null,n.font,n.size,n.mapColor,n.mapFont,n.mapWidth,n.mapHeight);
  select(c);save()
 }
@@ -2586,7 +2643,7 @@ async function downloadCardPdf(n){
    title:cardMarkdownParts(n.md).title||"ConceptCards card",html:renderCardMarkdown(n.md),
    width:Math.max(300,Math.min(1600,n.el.offsetWidth||600)),
    font:normalizeCardFont(n.type==="map"?n.mapFont:n.font),fontStack:mapFontStack(n.type==="map"?n.mapFont:n.font),
-   size:String(n.size||"100"),theme:n.mapColor||"default",dark:document.body.classList.contains("dark")
+   size:String(n.size||"80"),theme:n.mapColor||"default",dark:document.body.classList.contains("dark")
   });
  }catch(error){pdfWindow.close();alert("Could not export this card: "+error.message)}
  finally{button.disabled=false}
@@ -2734,7 +2791,7 @@ function openCardTab(n){
  const fontStack=mapFontStack(font);
  const fontStylesheet=googleFontStylesheetUrl(font);
  const fontLink=fontStylesheet?`<link rel="stylesheet" href="${escapeHtml(fontStylesheet)}">`:"";
- const size=["70","80","90","100","110","125","140","160","180"].includes(String(n.size))?String(n.size):"100";
+ const size=normalizeCardSize(n.size);
  const stylesheet=escapeHtml(new URL("styles.css",location.href).href);
  const supportingStyles=[...document.querySelectorAll('link[rel="stylesheet"]')]
   .filter(link=>link.hasAttribute("data-ui-fonts")||link.href.includes("katex.min.css"))
@@ -2890,11 +2947,11 @@ window.addEventListener("keydown",e=>{
   }
   return;
  }
- if(/^[1-9]$/.test(key)&&!mod&&!e.altKey&&!e.shiftKey&&state.selected){
+ if(/^[0-9]$/.test(key)&&!mod&&!e.altKey&&!e.shiftKey&&state.selected){
    const sizeSelect=state.selected.el.querySelector("[data-size]");
    const active=document.activeElement;
    const focusedControl=active?.matches?.("input,textarea,select,[contenteditable='true']");
-   const sizeIndex=Number(key)-1;
+   const sizeIndex=key==="0"?9:Number(key)-1;
    const option=sizeSelect?.options[sizeIndex];
    if(option&&(!focusedControl||active===sizeSelect)){
      e.preventDefault();
@@ -3086,7 +3143,7 @@ function load(){
    (d.notes||[]).forEach(n=>{
     if(typeof n.md!=="string")return;
     n.type==="map"
-      ? makeMap(n.md,n.x||0,n.y||0,n.w||960,n.h||640,false,n.id,n.mapColor,n.mapFont)
+      ? makeMap(n.md,n.x||0,n.y||0,n.w||960,n.h||640,false,n.id,n.mapColor,n.mapFont,n.size)
       : makeNote(n.md,n.x||0,n.y||0,n.w||600,false,n.id,typeof n.font==="string"?n.font:"mono",n.size,n.mapColor,n.mapFont,n.mapWidth,n.mapHeight);
    })
   }

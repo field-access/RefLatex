@@ -6,7 +6,7 @@ const root=path.resolve(__dirname,'..');
   const name=req.url==='/'?'index.html':req.url.slice(1);
   if(!['index.html','app.js','styles.css'].includes(name)){res.writeHead(404).end();return}
   let body=fs.readFileSync(path.join(root,name),'utf8');
-  if(name==='app.js')body=body.replace(/\}\)\(\);\s*$/,'window.__content={state,makeNote,makeMap,select,focusSelected,layoutCards,updateCardHeading,deleteNote,openMapTab,openCardTab,wrapCodeLines,enableMapCameraFrames,ensureFontLoaded};})();');
+  if(name==='app.js')body=body.replace(/\}\)\(\);\s*$/,'window.__content={state,editNote,closeEditor,makeNote,makeMap,select,focusSelected,layoutCards,updateCardHeading,deleteNote,openMapTab,openCardTab,wrapCodeLines,enableMapCameraFrames,ensureFontLoaded};})();');
   res.setHeader('Content-Type',name.endsWith('.js')?'text/javascript':name.endsWith('.css')?'text/css':'text/html');res.end(body);
  });
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
@@ -15,6 +15,47 @@ const root=path.resolve(__dirname,'..');
   const page=await browser.newPage({viewport:{width:1280,height:900}});
   await page.route('https://**/*',r=>r.request().url().includes('/marked@')?r.fulfill({path:path.join(path.dirname(require.resolve('marked')),'marked.umd.js'),contentType:'text/javascript'}):r.abort());
   await page.goto(`http://127.0.0.1:${server.address().port}`,{waitUntil:'networkidle'});
+  await page.route('**/test-web-image.svg',route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20"><rect width="40" height="20" fill="blue"/></svg>'}));
+  const editorPosition=await page.evaluate(()=>{
+   const md='# Edit selection\n\nRepeated target\n\n'+('Filler paragraph with enough text to make the editor scroll.\n\n'.repeat(80))+'Repeated target\n\nA **formatted** selection here';
+   const n=__content.makeNote(md,0,0,600,false);__content.select(n);
+   const paragraphs=[...n.el.querySelectorAll('.cardbody p')];
+   const p=paragraphs.findLast(p=>p.textContent==='Repeated target');
+   const range=document.createRange();range.selectNodeContents(p);const selection=getSelection();selection.removeAllRanges();selection.addRange(range);
+   n.el.querySelector('[data-edit]').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}));
+   n.el.querySelector('[data-edit]').click();
+   const source=document.querySelector('#source');
+   const result={start:source.selectionStart,end:source.selectionEnd,expected:md.lastIndexOf('Repeated target'),scroll:source.scrollTop};
+   __content.closeEditor();
+   const formatted=paragraphs.at(-1);range.setStart(formatted.querySelector('strong').firstChild,0);range.setEnd(formatted.lastChild,10);selection.removeAllRanges();selection.addRange(range);
+   __content.editNote(n);result.formatted=source.value.slice(source.selectionStart,source.selectionEnd);
+   __content.closeEditor();__content.deleteNote(n);return result;
+  });
+  assert.equal(editorPosition.start,editorPosition.expected);
+  assert.equal(editorPosition.end-editorPosition.start,'Repeated target'.length);
+  assert.ok(editorPosition.scroll>0,'Editor reveals the selected text in long cards');
+  assert.equal(editorPosition.formatted,'formatted** selection');
+  const imageId=await page.evaluate(()=>{
+   const n=__content.makeNote('# Images\n\n[Website](https://example.com)\n\n![Web image]('+location.origin+'/test-web-image.svg)\n\nhttps://images.unsplash.com/photo-example?w=400',0,0,600,false);
+   __content.select(n);return n.id;
+  });
+  const imageCard=page.locator('.card.selected');
+  assert.equal(await imageCard.getAttribute('data-font-size'),'80','New cards default to 80%');
+  assert.deepEqual(await imageCard.locator('select[data-size] option').allTextContents(),['50%','60%','70%','80%','90%','100%','110%','125%','140%','160%']);
+  await page.evaluate(()=>document.activeElement?.blur());
+  for(const [key,size] of [['1','50'],['2','60'],['4','80'],['9','140'],['0','160']]){
+   await page.keyboard.press(key);
+   assert.equal(await imageCard.getAttribute('data-font-size'),size);
+   assert.equal(await page.evaluate(()=>__content.state.selected.size),size);
+  }
+  await page.keyboard.press('4');
+  assert.equal(await imageCard.locator('a').getAttribute('target'),'_blank');
+  assert.equal(await imageCard.locator('a').getAttribute('rel'),'noopener noreferrer');
+  assert.equal(await imageCard.locator('img').first().getAttribute('referrerpolicy'),'no-referrer');
+  assert.equal(await imageCard.locator('img').first().getAttribute('loading'),'eager');
+  await page.waitForFunction(()=>document.querySelector('.card.selected img').naturalWidth===40);
+  assert.equal(await imageCard.locator('img').count(),2,'Extensionless direct image URL renders as an image');
+  await page.evaluate(id=>__content.deleteNote(__content.state.notes.find(n=>n.id===id)),imageId);
   const searchCards=await page.evaluate(()=>[
    __content.makeNote('# Astronomy\nOrbit and stars',0,0,600,false,null,'sans','100','default').id,
    __content.makeNote('# Biology\nCells and tissues',700,0,600,false).id
@@ -167,6 +208,7 @@ const root=path.resolve(__dirname,'..');
      return {height:bar.offsetHeight,body:body.offsetHeight,card:n.el.clientHeight};
     },frameId);
     assert.equal(header.height,64,'Selected map header stays compact');
+    assert.equal(await page.evaluate(id=>__content.state.notes.find(n=>n.id===id).size,frameId),'80','New maps default to 80%');
     assert.ok(Math.abs(header.body+header.height-header.card)<=1,'Map body fills space below compact header');
    }
    const previousWidth=await page.evaluate(id=>{document.activeElement?.blur();return __content.state.notes.find(n=>n.id===id).el.offsetWidth},frameId);
