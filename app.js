@@ -1480,11 +1480,10 @@ function renderCardIndex(){
   const label=document.createElement("span");label.textContent=n.indexTitle;button.title=n.indexTitle;
   button.dataset.cardTitle=n.indexTitle;button.setAttribute("aria-label",`${i+1}: ${n.indexTitle}`);
   if($("#cardIndex").dataset.view==="palette")button.removeAttribute("title");
-  const detail=document.createElement("small");detail.textContent=`${i+1} · ${n.type==="map"?"Markmap":"Markdown"}`;
   const icon=document.createElementNS("http://www.w3.org/2000/svg","svg");
   icon.setAttribute("viewBox","0 0 24 24");icon.setAttribute("aria-hidden","true");icon.classList.add("index-icon");
   icon.innerHTML=ICON_PATHS[n.type==="map"?"map":"file"];
-  button.append(icon,label,detail);button.setAttribute("aria-current",String(state.selected===n));
+  button.append(icon,label);button.setAttribute("aria-current",String(state.selected===n));
   const row=document.createElement("div");row.className="index-row";row.draggable=true;
   const edit=document.createElement("button");edit.type="button";edit.className="index-rename";
   edit.innerHTML=ICONS.edit;edit.title="Edit heading";edit.setAttribute("aria-label",`Edit heading: ${n.indexTitle}`);

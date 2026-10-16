@@ -26,7 +26,7 @@ body.canvas-panning{user-select:none;-webkit-user-select:none}
 }
 #canvas[data-background="stars"]{
  background-color:#090d15;
- background-image:url("./assets/backgrounds/stars.webp");
+ background-image:url("./assets/backgrounds/night_sky_background.webp");
  background-position:center;background-repeat:no-repeat;background-size:cover;
 }
 #canvas[data-background="sun"]{
@@ -780,7 +780,7 @@ body.dark #canvas[data-background="sun"]{
 }
 body.dark #canvas[data-background="stars"]{
  background-color:#090d15;
- background-image:url("./assets/backgrounds/stars.webp");
+ background-image:url("./assets/backgrounds/night_sky_background.webp");
  background-position:center;background-repeat:no-repeat;background-size:cover;
 }
 body.dark #canvas[data-background="planets"]{
@@ -1200,7 +1200,7 @@ body.dark .map-card .markmap-node pre .hljs-comment,.map-card[data-map-color="de
 .index-row:has([aria-current="true"]){background:color-mix(in srgb,var(--ink) 8%,transparent)}
 .card-index nav button{border:0;background:transparent;color:inherit;font:inherit;cursor:pointer;border-radius:5px}
 .index-row>button[data-card-id]{display:grid;grid-template-columns:18px minmax(0,1fr);column-gap:9px;row-gap:2px;flex:1;min-width:0;width:100%;text-align:left;padding:9px 8px}
-.index-row>button>.index-icon{grid-row:1 / 3;margin-top:2px;color:var(--muted)}
+.index-row>button>.index-icon{grid-row:1;margin-top:1px;color:var(--muted)}
 .card-index nav button span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;font-size:12px;line-height:1.5}
 .card-index nav button small{grid-column:2;color:var(--muted);font-size:10px;line-height:1.4}
 .card-index nav button[aria-current="true"] span{font-weight:600}
