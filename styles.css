@@ -65,8 +65,8 @@ body.canvas-panning #canvas::before,body.canvas-panning #canvas::after{animation
  #canvas[data-background="village"]::before,#canvas[data-background="village"]::after{animation:none}
  #canvas[data-background="village"]::before{background:url("./assets/backgrounds/village.webp") center/cover no-repeat}
 }
-/* Prepare translation before input arrives; scale caching remains temporary. */
-#world{position:absolute;left:0;top:0;width:1px;height:1px;transform-origin:0 0;will-change:translate}
+/* Cache during navigation only, so settled text rasterizes at its final scale. */
+#world{position:absolute;left:0;top:0;width:1px;height:1px;transform-origin:0 0;will-change:auto}
 /* Hide offscreen paint while retaining dimensions for navigation and layout. */
 .card.offscreen{visibility:hidden;pointer-events:none}
 .card{
@@ -75,7 +75,7 @@ body.canvas-panning #canvas::before,body.canvas-panning #canvas::after{animation
  z-index:3;contain:layout style;
 }
 .map-card{
- width:960px;max-width:1600px;min-width:420px;height:640px;min-height:320px;
+ width:960px;max-width:1600px;min-width:300px;height:640px;min-height:320px;
  background:var(--paper);overflow:hidden;
 }
 .map-card .cardbar{height:32px;background:linear-gradient(90deg,#eeebff,#f8f6ff);border-bottom-color:#ded9f6}
@@ -104,7 +104,7 @@ body.canvas-panning #canvas::before,body.canvas-panning #canvas::after{animation
 /* Markmap measures the inner div to size its SVG node. Expand the width
    allowance before that measurement, rather than overflowing a 300px node. */
 .map-card .markmap-node foreignObject:has(table){--markmap-max-width:1200px}
-.map-card .markmap-node foreignObject>div>div:has(table){min-width:520px;max-width:1200px}
+.map-card .markmap-node foreignObject>div>div:has(table){min-width:300px;max-width:1200px}
 .map-card .markmap-node table{width:auto;min-width:100%;max-width:none;table-layout:auto;margin:8px 0;font:inherit;line-height:1.5}
 .map-card .markmap-node :is(th,td){min-width:120px;padding:8px 12px;vertical-align:top;word-break:normal;overflow-wrap:break-word}
 .map-card .markmap-node th{font-weight:600}
@@ -171,11 +171,11 @@ body.dark .map-card .markmap-node pre{
 }
 .card:not(.has-title) .cardbar{height:10px;background:transparent!important;border-bottom-color:transparent!important}
 .map-card:not(.has-title) .cardbody{height:calc(100% - 10px)}
-.card.has-title:not(.map-card) .cardbody{padding-top:18px}
-.card:not(.has-title):not(.map-card) .cardbody{padding-top:18px}
+.card.has-title:not(.map-card) .cardbody{padding-top:16px}
+.card:not(.has-title):not(.map-card) .cardbody{padding-top:16px}
 .cardbar:hover{border-bottom-color:#e0ddd6}
 .cardbody{
- padding:28px 42px 38px;
+ padding:16px 28px 24px;
  overflow-wrap:anywhere;
  user-select:text;
  cursor:pointer;
@@ -188,13 +188,13 @@ body.dark .map-card .markmap-node pre{
 .cardbody h2{font-size:calc(24px * var(--card-font-scale));margin:30px 0 12px}
 .cardbody h3{font-size:calc(19px * var(--card-font-scale));margin:25px 0 9px}
 /* Markdown headings retain a clear hierarchy in every card font and size. */
-.card:not(.map-card) .cardbody :is(h1,h2,h3,h4,h5,h6){font-family:var(--card-font-family);font-weight:700;line-height:1.25;letter-spacing:-.02em;margin:1.25em 0 .5em}
-.card:not(.map-card) .cardbody h1{font-size:calc(36px * var(--card-font-scale))}
-.card:not(.map-card) .cardbody h2{font-size:calc(29px * var(--card-font-scale))}
-.card:not(.map-card) .cardbody h3{font-size:calc(25px * var(--card-font-scale))}
-.card:not(.map-card) .cardbody h4{font-size:calc(22px * var(--card-font-scale))}
-.card:not(.map-card) .cardbody h5{font-size:calc(20px * var(--card-font-scale))}
-.card:not(.map-card) .cardbody h6{font-size:calc(19px * var(--card-font-scale))}
+.card:not(.map-card) .cardbody :is(h1,h2,h3,h4,h5,h6){font-family:var(--card-font-family);font-weight:700;line-height:1.25;letter-spacing:-.02em;margin:.85em 0 .35em}
+.card:not(.map-card) .cardbody h1{font-size:1.6em}
+.card:not(.map-card) .cardbody h2{font-size:1.4em}
+.card:not(.map-card) .cardbody h3{font-size:1.25em}
+.card:not(.map-card) .cardbody h4{font-size:1.15em}
+.card:not(.map-card) .cardbody h5{font-size:1.1em}
+.card:not(.map-card) .cardbody h6{font-size:1.05em}
 .card:not(.map-card) .cardbody :is(h1,h2,h3,h4,h5,h6):first-child{margin-top:0}
 .card:not(.map-card) .cardbody :is(h1,h2,h3,h4,h5,h6) code{font-size:.85em;line-height:inherit}
 .cardbody p,.cardbody li{
@@ -568,7 +568,7 @@ body.fullscreen.toolbar-hidden .edge{display:grid;pointer-events:auto}
 }
 body.fullscreen.controls .toolbar{transform:translateY(-50%)}
  .hint{display:none}.help-dialog{padding:18px}.help-grid{grid-template-columns:1fr;gap:17px}.card{max-width:calc(100vw - 30px)}
- .cardbody{padding:22px 25px 30px}.cardbody p,.cardbody li{font-size:calc(17px * var(--card-font-scale))}
+ .cardbody{padding:16px 22px 22px}.cardbody p,.cardbody li{font-size:calc(17px * var(--card-font-scale))}
  .map-card{min-width:320px;width:calc(100vw - 30px);height:420px}
 }
 
@@ -906,8 +906,8 @@ body.dark .editorfoot .cancel:hover{background:#303744;color:#f1f3f7}
 }
 
 /* Keep the title and the selected-card controls in separate header rows. */
-.card{min-width:520px}
-.map-card{min-width:520px}
+.card{min-width:300px}
+.map-card{min-width:300px}
 .card.selected.has-title .cardbar{height:44px}
 .card.selected:not(.has-title) .cardbar{height:26px}
 .map-card.selected.has-title .cardbody{height:calc(100% - 44px)}
@@ -967,7 +967,7 @@ body.dark .custom-select-option:hover,body.dark .custom-select-option:focus-visi
 body.dark .custom-select-option.is-selected{background:color-mix(in srgb,var(--menu-accent,#b6aaff) 24%,#252a33);color:#fff}
 body.dark .custom-select-group{color:#9ca4b3}
 @media(max-width:534px){
- .card,.map-card{min-width:calc(100vw - 24px)}
+ .card,.map-card{min-width:min(300px,calc(100vw - 24px))}
  .cardactions{left:6px;right:6px;gap:2px;flex-wrap:wrap;height:auto}
  .custom-select[data-control="map-font"]{width:94px}
  .card.selected.has-title .cardbar{height:72px}
@@ -1257,10 +1257,11 @@ button,input,select,textarea{font-family:inherit}
 .zoom-settings summary{display:grid;place-items:center;border-radius:5px;color:var(--muted)}
 .zoom-settings summary .icon{width:16px;height:16px}
 .zoom-settings summary:hover{background:color-mix(in srgb,var(--ink) 7%,transparent);color:var(--ink)}
-@container(max-width:490px){
+@container(max-width:550px){
  .card.selected.has-title .cardbar{height:112px}
  .card.selected:not(.has-title) .cardbar{height:76px}
  .card .cardactions{flex-wrap:wrap;height:auto;row-gap:6px;left:12px;right:12px}
+ .card .cardactions>.custom-select{flex:0 0 calc((100% - 9px)/4);width:auto!important}
  .map-card.selected.has-title .cardbody{height:calc(100% - 112px)}
  .map-card.selected:not(.has-title) .cardbody{height:calc(100% - 76px)}
 }
@@ -1276,11 +1277,26 @@ body:not(.dark) .card[data-map-color="default"] .map-pane{background:#fff;color:
 .map-card.has-title .cardactions{top:30px}
 .map-card:not(.has-title) .cardactions{top:4px}
 .map-card .cardbody,.map-card.selected.has-title .cardbody,.map-card.selected:not(.has-title) .cardbody{height:calc(100% - var(--header-height))}
-@container(max-width:490px){
+@container(max-width:550px){
  .map-card.selected.has-title{--header-height:98px}
  .map-card.selected:not(.has-title){--header-height:70px}
- .map-card.selected.has-title .cardbar,.map-card.selected:not(.has-title) .cardbar{height:var(--header-height)}
- .map-card.selected.has-title .cardbody,.map-card.selected:not(.has-title) .cardbody{height:calc(100% - var(--header-height))}
+ .map-card.selected.has-title .cardbar{height:98px}
+ .map-card.selected:not(.has-title) .cardbar{height:70px}
+ .map-card.selected.has-title .cardbody{height:calc(100% - 98px)}
+ .map-card.selected:not(.has-title) .cardbody{height:calc(100% - 70px)}
 }
 
 .card[data-font-size="160"] .cardbody{--card-font-scale:1.6}
+
+/* Markdown rhythm follows the current card text size. */
+.card:not(.map-card) .cardbody{font-size:calc(18px * var(--card-font-scale))}
+.card:not(.map-card) .cardbody p{margin-bottom:.8em}
+.card:not(.map-card) .cardbody :is(ul,ol){margin:.45em 0 .8em;padding-inline-start:1.7em}
+.card:not(.map-card) .cardbody li :is(ul,ol){margin:.3em 0}
+.card:not(.map-card) .cardbody blockquote{margin:.8em 0;padding:.15em 0 .15em .85em}
+.card:not(.map-card) .cardbody pre{margin:.85em 0}
+.card:not(.map-card) .cardbody table{margin:.85em 0}
+.card:not(.map-card) .cardbody :is(th,td){padding:.45em .65em}
+@media(max-width:700px){.card:not(.map-card) .cardbody{font-size:calc(17px * var(--card-font-scale))}}
+
+@container(max-width:550px){.card:not(.map-card) .cardbody{padding:16px 22px 22px}}

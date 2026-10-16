@@ -33,7 +33,7 @@ const state={
  x:innerWidth/2,y:innerHeight/2,scale:1,
  targetX:innerWidth/2,targetY:innerHeight/2,targetScale:1,
  notes:[],selected:null,nextId:1,
- hand:true,controlsVisible:true,pan:null,rightPan:null,resize:null,editId:null,editorMode:"note",
+ hand:false,controlsVisible:true,pan:null,rightPan:null,resize:null,editId:null,editorMode:"note",
  spaceFocusStep:0,
  undo:[],redo:[],historyLock:false,raf:0,saveTimer:0,hideTimer:0,
 };
@@ -888,7 +888,7 @@ function mapViewportSize(){
   // Map dimensions describe the card itself, not canvas world units at the
   // current camera zoom. Keeping them viewport-based prevents huge cards when
   // the canvas happens to be zoomed far out.
-  width:Math.max(Math.min(520,Math.max(300,innerWidth-24)),Math.min(1600,Math.floor(innerWidth-80))),
+  width:Math.max(Math.min(300,Math.max(200,innerWidth-24)),Math.min(1600,Math.floor(innerWidth-80))),
   height:Math.max(320,Math.min(1600,Math.round(innerHeight*.94)))
  };
 }
@@ -1730,8 +1730,18 @@ $("#indexEntries").addEventListener("click",e=>{
 try{$("#cardIndex").hidden=localStorage.getItem("reflatex-index-open")==="false"}catch{}
 $("#toggleIndex").setAttribute("aria-expanded",String(!$("#cardIndex").hidden));
 
+function rememberCardView(n){
+ if(!n)return;
+ const view=focusViewport(),moving=Boolean(state.raf||cameraInputFrame);
+ const scale=moving?state.targetScale:state.scale;
+ const x=moving?state.targetX:state.x,y=moving?state.targetY:state.y;
+ if(!Number.isFinite(scale)||scale<=0)return;
+ const body=n.el.querySelector('.cardbody');
+ n.navigationView={scale,localX:(view.left+view.width/2-x)/scale-n.x,localY:(view.top+view.height/2-y)/scale-n.y,scrollTop:body?.scrollTop||0,scrollLeft:body?.scrollLeft||0,focusStep:state.spaceFocusStep};
+}
 function select(n){
  if(state.selected===n&&(!n||n.el.classList.contains("selected")))return;
+ if(state.selected!==n)rememberCardView(state.selected);
  if(state.selected!==n)state.spaceFocusStep=0;
  state.selected?.el.classList.remove("selected");
  state.selected=n;if(n){
@@ -1871,7 +1881,7 @@ function normalizeCardSize(size){
 }
 function makeNote(md,x,y,w=600,record=true,id=null,font=randomCardFont(),size="80",mapColor=randomCardTheme(),mapFont="modern",mapWidth=null,mapHeight=null){
  if(record)history();
- const minWidth=Math.min(520,Math.max(300,innerWidth-24));
+ const minWidth=Math.min(300,Math.max(200,innerWidth-24));
  const width=Math.max(minWidth,Math.min(1200,w||600));
 const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size:normalizeCardSize(size),width,type:"note",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:normalizeCardFont(font),mapWidth:Number.isFinite(mapWidth)?Math.max(minWidth,Math.min(1600,mapWidth)):null,mapHeight:Number.isFinite(mapHeight)?Math.max(320,Math.min(1200,mapHeight)):null,el:null};
  state.nextId=Math.max(state.nextId,n.id+1);
@@ -1931,7 +1941,7 @@ const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size:normaliz
 function makeMap(md,x,y,w=null,h=null,record=true,id=null,mapColor=randomCardTheme(),mapFont=randomCardFont(),size="80"){
  if(record)history();
  const viewport=mapViewportSize();
- const width=Math.max(Math.min(520,Math.max(300,innerWidth-24)),Math.min(1600,w||viewport.width));
+ const width=Math.max(Math.min(300,Math.max(200,innerWidth-24)),Math.min(1600,w||viewport.width));
  const height=Math.max(320,h||viewport.height);
 const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type:"map",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:normalizeCardFont(mapFont),font:normalizeCardFont(mapFont),size:normalizeCardSize(size),el:null,mapInstance:null};
  state.nextId=Math.max(state.nextId,n.id+1);
@@ -1981,7 +1991,7 @@ window.addEventListener("pointermove",e=>{
    r.n.el.style.height=h+"px";
    r.n.mapHeight=h;
   }else{
-   const minWidth=Math.min(520,Math.max(300,innerWidth-24));
+   const minWidth=Math.min(300,Math.max(200,innerWidth-24));
    const w=Math.max(minWidth,Math.min(1600,r.w+(r.side==="right"?dx:-dx)));
    r.n.el.style.width=w+"px";
    if(r.n.type==="map")r.n.mapWidth=w;
@@ -2815,8 +2825,16 @@ function cycleSelected(direction){
     index=Math.max(0,Math.min(state.notes.length-1,index+direction));
   }
 
-  select(state.notes[index]);
-  focusSelected();
+  const n=state.notes[index];
+  if(n===state.selected)return;
+  select(n);
+  const remembered=n.navigationView;
+  if(!remembered){focusSelected();return}
+  const view=focusViewport(),scale=clampScale(remembered.scale);
+  const body=n.el.querySelector('.cardbody');
+  if(body){body.scrollTop=remembered.scrollTop;body.scrollLeft=remembered.scrollLeft}
+  state.spaceFocusStep=remembered.focusStep;
+  moveTo(view.left+view.width/2-(n.x+remembered.localX)*scale,view.top+view.height/2-(n.y+remembered.localY)*scale,scale);
 }
 
 function cycleFont(direction=1){
@@ -2854,7 +2872,7 @@ function setCardColorTheme(n,color,record=true){
 let widthShortcutFrame=0;
 function resizeSelectedWidth(direction){
  const n=state.selected;if(!n)return;
- const min=Math.min(520,Math.max(300,innerWidth-24)),max=n.type==="map"?1600:1200;
+ const min=Math.min(300,Math.max(200,innerWidth-24)),max=n.type==="map"?1600:1200;
  const current=n.type==="map"?(n.mapWidth||n.el.offsetWidth):(n.width||n.el.offsetWidth);
  const width=Math.max(min,Math.min(max,current+direction*40));
  if(width===current)return;
@@ -3024,7 +3042,7 @@ window.addEventListener("keydown",e=>{
   *   next card
   *
   * PageUp/PageDown:
-  *   previous / next card, stopping at the first or last card
+  *   scroll one page without changing the selected card
   *
   * Home/End:
   *   first / last card
@@ -3032,14 +3050,16 @@ window.addEventListener("keydown",e=>{
   * Arrow Up/Down:
   *   page-style canvas movement without changing card selection.
   */
- if(e.key==="PageUp"){
+ if(e.key==="PageUp"||e.key==="PageDown"){
+   if(mod||e.altKey||e.shiftKey||e.target.closest?.('#indexEntries,.custom-select-menu,.help'))return;
    e.preventDefault();
-   cycleSelected(-1);
-   return;
- }
- if(e.key==="PageDown"){
-   e.preventDefault();
-   cycleSelected(1);
+   const direction=e.key==="PageDown"?1:-1;
+   const body=e.target.closest?.('.cardbody')||state.selected?.el.querySelector('.cardbody');
+   if(body&&body.scrollHeight>body.clientHeight+1){
+    body.scrollBy({top:direction*body.clientHeight*.9,behavior:'auto'});
+   }else{
+    state.targetY-=direction*innerHeight*.9;animate();
+   }
    return;
  }
  if(e.key==="ArrowRight"&&!mod){
@@ -3153,7 +3173,7 @@ function load(){
  updateThemeIcon();
  setBackground(localStorage.getItem("reflatex-background")||"light");
  toggleToolbar(localStorage.getItem("reflatex-toolbar-hidden")!=="1");
- state.hand=true;$("#hand").classList.add("active");document.body.classList.add("hand-mode");canvas.style.cursor="grab";
+ state.hand=false;updateHandUI();
  sync();apply();empty()
 }
 let resizeFrame=0;

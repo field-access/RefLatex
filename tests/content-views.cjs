@@ -6,7 +6,7 @@ const root=path.resolve(__dirname,'..');
   const name=req.url==='/'?'index.html':req.url.slice(1);
   if(!['index.html','app.js','styles.css'].includes(name)){res.writeHead(404).end();return}
   let body=fs.readFileSync(path.join(root,name),'utf8');
-  if(name==='app.js')body=body.replace(/\}\)\(\);\s*$/,'window.__content={state,editNote,closeEditor,makeNote,makeMap,select,focusSelected,layoutCards,updateCardHeading,deleteNote,openMapTab,openCardTab,wrapCodeLines,enableMapCameraFrames,ensureFontLoaded};})();');
+  if(name==='app.js')body=body.replace(/\}\)\(\);\s*$/,'window.__content={state,resizeSelectedWidth,setCameraImmediate,focusViewport,editNote,closeEditor,makeNote,makeMap,select,focusSelected,layoutCards,updateCardHeading,deleteNote,openMapTab,openCardTab,wrapCodeLines,enableMapCameraFrames,ensureFontLoaded};})();');
   res.setHeader('Content-Type',name.endsWith('.js')?'text/javascript':name.endsWith('.css')?'text/css':'text/html');res.end(body);
  });
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
@@ -40,6 +40,16 @@ const root=path.resolve(__dirname,'..');
    __content.select(n);return n.id;
   });
   const imageCard=page.locator('.card.selected');
+  const toolbarFit=await imageCard.evaluate(card=>{
+   const original=card.style.width,results=[];
+   for(const width of [320,520,550,600]){
+    card.style.width=width+'px';
+    const bounds=card.getBoundingClientRect(),bar=card.querySelector('.cardbar').getBoundingClientRect();
+    results.push([...card.querySelectorAll('.cardactions>button,.cardactions>.custom-select')].every(el=>{const r=el.getBoundingClientRect();return r.left>=bounds.left&&r.right<=bounds.right&&r.bottom<=bar.bottom}));
+   }
+   card.style.width=original;return results;
+  });
+  assert.ok(toolbarFit.every(Boolean),'Toolbar controls remain inside narrow and wide cards');
   assert.equal(await imageCard.getAttribute('data-font-size'),'80','New cards default to 80%');
   assert.deepEqual(await imageCard.locator('select[data-size] option').allTextContents(),['50%','60%','70%','80%','90%','100%','110%','125%','140%','160%']);
   await page.evaluate(()=>document.activeElement?.blur());
@@ -56,6 +66,42 @@ const root=path.resolve(__dirname,'..');
   await page.waitForFunction(()=>document.querySelector('.card.selected img').naturalWidth===40);
   assert.equal(await imageCard.locator('img').count(),2,'Extensionless direct image URL renders as an image');
   await page.evaluate(id=>__content.deleteNote(__content.state.notes.find(n=>n.id===id)),imageId);
+  const switchIds=await page.evaluate(()=>{
+   const a=__content.makeNote('# First context\n\n'+('Paragraph content.\n\n'.repeat(100)),0,0,600,false);
+   const b=__content.makeNote('# Second context\n\nOther content',700,0,600,false);
+   __content.select(a);
+   const body=a.el.querySelector('.cardbody');body.style.maxHeight='300px';body.style.overflow='auto';body.scrollTop=180;
+   __content.setCameraImmediate(110,-300,.75);document.activeElement?.blur();return [a.id,b.id];
+  });
+  await page.keyboard.press('ArrowRight');
+  await page.waitForFunction(id=>__content.state.selected.id===id&&!__content.state.raf,switchIds[1]);
+  await page.evaluate(()=>__content.setCameraImmediate(-560,-100,1.1));
+  await page.keyboard.press('ArrowLeft');
+  await page.waitForFunction(id=>__content.state.selected.id===id&&!__content.state.raf,switchIds[0]);
+  const restoredContext=await page.evaluate(()=>{
+   const n=__content.state.selected,v=__content.focusViewport(),r=n.navigationView;
+   return {scale:__content.state.scale,scroll:n.el.querySelector('.cardbody').scrollTop,error:Math.hypot(__content.state.x-(v.left+v.width/2-(n.x+r.localX)*r.scale),__content.state.y-(v.top+v.height/2-(n.y+r.localY)*r.scale))};
+  });
+  assert.equal(restoredContext.scale,.75);assert.equal(restoredContext.scroll,180);assert.ok(restoredContext.error<.01);
+  await page.keyboard.press('ArrowRight');
+  await page.waitForFunction(id=>__content.state.selected.id===id&&!__content.state.raf,switchIds[1]);
+  assert.equal(await page.evaluate(()=>__content.state.scale),1.1,'Each card restores its own zoom');
+  for(const id of switchIds)await page.evaluate(id=>__content.deleteNote(__content.state.notes.find(n=>n.id===id)),id);
+  const narrowId=await page.evaluate(async()=>{
+   const n=__content.makeNote('# Narrow card\n\nReadable content',0,0,400,false);__content.select(n);await __content.focusSelected('fit');return n.id;
+  });
+  await page.waitForFunction(()=>!__content.state.raf);
+  const narrowHandle=await page.locator('.card.selected .resize.right').boundingBox();
+  const narrowScale=await page.evaluate(()=>__content.state.scale);
+  await page.mouse.move(narrowHandle.x+narrowHandle.width/2,narrowHandle.y+narrowHandle.height/2);
+  await page.mouse.down();await page.mouse.move(narrowHandle.x+narrowHandle.width/2-160*narrowScale,narrowHandle.y+narrowHandle.height/2,{steps:5});await page.mouse.up();
+  assert.equal(await page.evaluate(()=>__content.state.selected.el.offsetWidth),300,'Edge dragging can narrow cards below the old 520px limit');
+  await page.evaluate(()=>__content.resizeSelectedWidth(1));
+  assert.equal(await page.evaluate(()=>__content.state.selected.width),340);
+  await page.evaluate(()=>__content.resizeSelectedWidth(-1));
+  assert.equal(await page.evaluate(()=>__content.state.selected.width),300);
+  await page.waitForFunction(()=>!__content.state.raf);
+  await page.evaluate(id=>__content.deleteNote(__content.state.notes.find(n=>n.id===id)),narrowId);
   const searchCards=await page.evaluate(()=>[
    __content.makeNote('# Astronomy\nOrbit and stars',0,0,600,false,null,'sans','100','default').id,
    __content.makeNote('# Biology\nCells and tissues',700,0,600,false).id
@@ -133,7 +179,7 @@ const root=path.resolve(__dirname,'..');
    return {first,sizes,weights,body,shared:a===b,links:document.querySelectorAll('#card-font-itim').length,requests};
   });
   assert.equal(typography.first,'Main heading');
-  assert.deepEqual(typography.sizes,[45,36.25,31.25,27.5,25,23.75]);
+  typography.sizes.forEach((size,i)=>assert.ok(Math.abs(size-typography.body*[1.6,1.4,1.25,1.15,1.1,1.05][i])<.01));
   assert.ok(typography.sizes.every(size=>size>typography.body));
   assert.ok(typography.weights.every(weight=>weight==='700'));
   assert.ok(typography.shared);assert.equal(typography.links,1);assert.equal(typography.requests.length,2);
