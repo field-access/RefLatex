@@ -39,7 +39,6 @@
    <button type="button" data-background-choice="sun" role="menuitem"><svg viewBox="0 0 32 22" aria-hidden="true"><image class="sun-preview" href="./assets/backgrounds/sun.webp" width="32" height="22" preserveAspectRatio="xMidYMid slice"/><image class="moon-preview" href="./assets/backgrounds/moon.webp" width="32" height="22" preserveAspectRatio="xMidYMid slice"/></svg><span>Sun</span></button>
    <button type="button" data-background-choice="ocean" role="menuitem"><svg viewBox="0 0 32 22" aria-hidden="true"><image href="./assets/backgrounds/ocean.webp" width="32" height="22" preserveAspectRatio="xMidYMid slice"/></svg><span>Ocean</span></button>
    <button type="button" data-background-choice="stars" role="menuitem"><svg viewBox="0 0 32 22" aria-hidden="true"><image href="./assets/backgrounds/night_sky_background.webp" width="32" height="22" preserveAspectRatio="xMidYMid slice"/></svg><span>Stars</span></button>
-   <button type="button" data-background-choice="planets" role="menuitem"><svg viewBox="0 0 32 22" aria-hidden="true"><image href="./assets/backgrounds/planets.webp" width="32" height="22" preserveAspectRatio="xMidYMid slice"/></svg><span>Planets</span></button>
    <button type="button" data-background-choice="village" role="menuitem"><svg viewBox="0 0 32 22" aria-hidden="true"><image href="./assets/backgrounds/village.webp" width="32" height="22" preserveAspectRatio="xMidYMid slice"/></svg><span>Village</span></button>
   </div>
  </div>
@@ -66,6 +65,8 @@
   <button type="button" data-index-view="list" aria-pressed="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>List</button>
   <button type="button" data-index-view="palette" aria-pressed="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg>Palette</button>
  </div>
+ <label class="canvas-search"><span>Search canvas</span><input id="canvasSearch" type="search" placeholder="Titles or content…" autocomplete="off" aria-keyshortcuts="Control+F Meta+F"></label>
+ <p id="searchStatus" role="status" hidden></p>
  <nav id="indexEntries" aria-label="Jump to card"></nav>
  <p id="indexEmpty">Add a card to see its heading here.</p>
 </aside>
@@ -105,6 +106,7 @@
     <p>The Open menu has New blank canvas and recent subject canvases. A new canvas has no linked file; Save as enables file autosave. Use a card’s download button for PDF.</p>
    </div>
    <div class="help-group"><h3>Inside the card index</h3>
+    <div><kbd>Ctrl/⌘ + F</kbd><span>Search canvas; Enter opens first match, Esc clears</span></div>
     <div><kbd>↑ / ↓</kbd><span>Move between visible entries</span></div><div><kbd>← / →</kbd><span>Collapse / expand subtopics</span></div><div><kbd>Home / End</kbd><span>Focus first / last visible entry</span></div><div><kbd>Alt + ↑ / ↓</kbd><span>Reorder card when its drag handle is focused</span></div><div><kbd>Tab / Esc</kbd><span>Close index</span></div>
     <p>Drag index handles to reorder cards. Letter shortcuts stay inactive while typing.</p>
    </div>

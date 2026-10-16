@@ -15,6 +15,35 @@ const root=path.resolve(__dirname,'..');
   const page=await browser.newPage({viewport:{width:1280,height:900}});
   await page.route('https://**/*',r=>r.request().url().includes('/marked@')?r.fulfill({path:path.join(path.dirname(require.resolve('marked')),'marked.umd.js'),contentType:'text/javascript'}):r.abort());
   await page.goto(`http://127.0.0.1:${server.address().port}`,{waitUntil:'networkidle'});
+  const searchCards=await page.evaluate(()=>[
+   __content.makeNote('# Astronomy\nOrbit and stars',0,0,600,false,null,'sans','100','default').id,
+   __content.makeNote('# Biology\nCells and tissues',700,0,600,false).id
+  ]);
+  await page.waitForFunction(()=>document.querySelectorAll('#indexEntries [data-card-id]').length>=2);
+  const fontChoices=await page.locator('.card select[data-font]').first().locator('option').allTextContents();
+  assert.ok(fontChoices.includes('Comic Sans'));
+  for(const removed of ['Dancing Script','Sacramento','Satisfy','Marck Script','Bebas Neue','Editorial Serif','Josefin Sans','System Sans'])assert.ok(!fontChoices.includes(removed));
+  const neutral=page.locator('.card[data-map-color="default"]').first();
+  assert.equal(await neutral.evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 255, 255)');
+  assert.equal(await neutral.locator('select[data-map-color] option[value="default"]').textContent(),'White');
+  await page.locator('#theme').click();
+  assert.equal(await neutral.locator('select[data-map-color] option[value="default"]').textContent(),'Midnight');
+  assert.notEqual(await neutral.evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 255, 255)');
+  await page.locator('#theme').click();
+  assert.equal(await neutral.evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 255, 255)');
+  await page.keyboard.press('Control+f');
+  assert.equal(await page.locator('#canvasSearch').evaluate(el=>document.activeElement===el),true);
+  await page.locator('#canvasSearch').fill('orbit');
+  assert.equal(await page.locator('#indexEntries .index-entry:not([hidden])').count(),1);
+  assert.equal(await page.locator('.card.search-muted').count(),0);
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(()=>document.querySelector('.card.selected mark.canvas-search-match')?.textContent==='Orbit');
+  assert.equal(await page.locator('.card.selected mark.canvas-search-match').count(),1);
+  await page.locator('#canvasSearch').focus();
+  await page.keyboard.press('Escape');
+  assert.equal(await page.locator('mark.canvas-search-match').count(),0);
+  assert.equal(await page.locator('.card.search-muted').count(),0);
+  for(const id of searchCards)await page.evaluate(id=>__content.deleteNote(__content.state.notes.find(n=>n.id===id)),id);
   const cameraFrames=await page.evaluate(async()=>{
    const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');document.body.append(svg);
    let paints=0,last=null,listener=function(event){paints++;last=event.transform;};
@@ -57,10 +86,10 @@ const root=path.resolve(__dirname,'..');
    const first=headings[0].textContent;__content.deleteNote(n);
    const requests=[],original=document.fonts.load;
    document.fonts.load=async spec=>{requests.push(spec);return []};
-   const a=__content.ensureFontLoaded('sacramento'),b=__content.ensureFontLoaded('sacramento');
-   document.querySelector('#card-font-sacramento').dispatchEvent(new Event('load'));
+   const a=__content.ensureFontLoaded('itim'),b=__content.ensureFontLoaded('itim');
+   document.querySelector('#card-font-itim').dispatchEvent(new Event('load'));
    await a;document.fonts.load=original;
-   return {first,sizes,weights,body,shared:a===b,links:document.querySelectorAll('#card-font-sacramento').length,requests};
+   return {first,sizes,weights,body,shared:a===b,links:document.querySelectorAll('#card-font-itim').length,requests};
   });
   assert.equal(typography.first,'Main heading');
   assert.deepEqual(typography.sizes,[45,36.25,31.25,27.5,25,23.75]);
@@ -132,6 +161,14 @@ const root=path.resolve(__dirname,'..');
    },frameId);
    assert.ok(Math.abs(frame.top-frame.bottom)<1.1,`${type} vertical fit is balanced: ${JSON.stringify(frame)}`);
    assert.ok(frame.top>=23.9&&frame.left>=frame.indexRight+23.9&&frame.right<=frame.trayLeft-23.9,`${type} fits between panels: ${JSON.stringify(frame)}`);
+   if(type==='map'){
+    const header=await page.evaluate(id=>{
+     const n=__content.state.notes.find(n=>n.id===id),bar=n.el.querySelector('.cardbar'),body=n.el.querySelector('.cardbody');
+     return {height:bar.offsetHeight,body:body.offsetHeight,card:n.el.clientHeight};
+    },frameId);
+    assert.equal(header.height,64,'Selected map header stays compact');
+    assert.ok(Math.abs(header.body+header.height-header.card)<=1,'Map body fills space below compact header');
+   }
    const previousWidth=await page.evaluate(id=>{document.activeElement?.blur();return __content.state.notes.find(n=>n.id===id).el.offsetWidth},frameId);
    await page.keyboard.press(']');
    await page.waitForTimeout(400);

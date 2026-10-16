@@ -34,11 +34,6 @@ body.canvas-panning{user-select:none;-webkit-user-select:none}
  background-image:url("./assets/backgrounds/sun.webp");
  background-position:center;background-repeat:no-repeat;background-size:cover;
 }
-#canvas[data-background="planets"]{
- background-color:#080d17;
- background-image:url("./assets/backgrounds/planets.webp");
- background-position:center;background-repeat:no-repeat;background-size:cover;
-}
 #canvas[data-background="ocean"]{
  background-color:#132935;
  background-image:url("./assets/backgrounds/ocean.webp");
@@ -707,26 +702,26 @@ body.fullscreen.controls .toolbar{transform:translateY(-50%)}
  content:"";position:absolute;left:0;bottom:-7px;width:26px;height:2px;
  border-radius:2px;background:currentColor;opacity:.48
 }
-.card[data-map-color="default"]{
+body.dark .card[data-map-color="default"]{
  --paper:#17181d;--ink:#e7eaf1;--map-surface:#17181d;
  color:#d9dce5;background:#17181d;border:1px solid #202127;border-radius:34px
 }
-.card:not(.map-card)[data-map-color="default"]{background:#17181d;border-color:#202127}
-.card[data-map-color="default"] .cardbar{
+body.dark .card:not(.map-card)[data-map-color="default"]{background:#17181d;border-color:#202127}
+body.dark .card[data-map-color="default"] .cardbar{
  background:#121317;border-bottom-color:#1b1d23;border-radius:34px 34px 0 0
 }
-.card[data-map-color="default"] .cardbar:hover{border-bottom-color:#262a33}
-.card:not(.map-card)[data-map-color="default"] .cardbar{background:#121317;border-bottom-color:#1b1d23}
-.card[data-map-color="default"] .cardbody{color:#d9dce5}
-.card[data-map-color="default"] .cardbody blockquote{color:#a9afbd;border-color:#4d6079}
-.card[data-map-color="default"] .cardbody th{background:#22252c}
-.card[data-map-color="default"] .cardbody th,
-.card[data-map-color="default"] .cardbody td{border-color:#343842}
-.card[data-map-color="default"] .cardbody hr{border-color:#343842}
-.card[data-map-color="default"] .cardactions select{color:#c4c9d4}
-.card[data-map-color="default"] .cardactions button{color:#c4c9d4}
-.card[data-map-color="default"] .cardactions select:hover,
-.card[data-map-color="default"] .cardactions button:hover{background:#292c34;color:#fff}
+body.dark .card[data-map-color="default"] .cardbar:hover{border-bottom-color:#262a33}
+body.dark .card:not(.map-card)[data-map-color="default"] .cardbar{background:#121317;border-bottom-color:#1b1d23}
+body.dark .card[data-map-color="default"] .cardbody{color:#d9dce5}
+body.dark .card[data-map-color="default"] .cardbody blockquote{color:#a9afbd;border-color:#4d6079}
+body.dark .card[data-map-color="default"] .cardbody th{background:#22252c}
+body.dark .card[data-map-color="default"] .cardbody th,
+body.dark .card[data-map-color="default"] .cardbody td{border-color:#343842}
+body.dark .card[data-map-color="default"] .cardbody hr{border-color:#343842}
+body.dark .card[data-map-color="default"] .cardactions select{color:#c4c9d4}
+body.dark .card[data-map-color="default"] .cardactions button{color:#c4c9d4}
+body.dark .card[data-map-color="default"] .cardactions select:hover,
+body.dark .card[data-map-color="default"] .cardactions button:hover{background:#292c34;color:#fff}
 body.dark .card[data-map-color="default"]{
  --paper:#17181d;--ink:#e7eaf1;--map-surface:#17181d;
  color:#d9dce5;background:linear-gradient(135deg,#17181d 0%,#242633 100%);border-color:#303542
@@ -781,11 +776,6 @@ body.dark #canvas[data-background="sun"]{
 body.dark #canvas[data-background="stars"]{
  background-color:#090d15;
  background-image:url("./assets/backgrounds/night_sky_background.webp");
- background-position:center;background-repeat:no-repeat;background-size:cover;
-}
-body.dark #canvas[data-background="planets"]{
- background-color:#080d17;
- background-image:url("./assets/backgrounds/planets.webp");
  background-position:center;background-repeat:no-repeat;background-size:cover;
 }
 body.dark #canvas[data-background="ocean"]{
@@ -971,6 +961,7 @@ body.dark .editorfoot .cancel:hover{background:#303744;color:#f1f3f7}
 .custom-select-option:hover,.custom-select-option:focus-visible{outline:0;background:color-mix(in srgb,var(--menu-accent,#7669d3) 12%,transparent)}
 .custom-select-option.is-selected{background:color-mix(in srgb,var(--menu-accent,#7669d3) 18%,#fff);color:color-mix(in srgb,var(--menu-accent,#7669d3) 76%,#222);font-weight:700}
 .custom-select-group{padding:8px 10px 3px;color:#777b86;font-size:9px;font-weight:700;letter-spacing:.09em;text-transform:uppercase}
+.custom-select-group:not(:first-child){margin-top:7px;padding-top:10px;border-top:1px solid color-mix(in srgb,var(--ink) 15%,transparent)}
 body.dark .custom-select-menu{border-color:color-mix(in srgb,var(--menu-accent,#b6aaff) 30%,#4b5260);background:#20242c;color:#e7eaf1;box-shadow:0 16px 42px #0009,0 3px 12px #0007}
 body.dark .custom-select-option:hover,body.dark .custom-select-option:focus-visible{background:color-mix(in srgb,var(--menu-accent,#b6aaff) 20%,#292f39)}
 body.dark .custom-select-option.is-selected{background:color-mix(in srgb,var(--menu-accent,#b6aaff) 24%,#252a33);color:#fff}
@@ -1142,12 +1133,12 @@ body.dark .map-card[data-map-color="ocean"]{--map-surface:#172f35}
 body.dark .map-card[data-map-color="forest"]{--map-surface:#203027}
 body.dark .map-card[data-map-color="sunset"]{--map-surface:#35212a}
 body.dark .map-card[data-map-color="slate"]{--map-surface:#252e3a}
-body.dark .map-card .markmap-node pre,.map-card[data-map-color="default"] .markmap-node pre{
+body.dark .map-card .markmap-node pre,body.dark .map-card[data-map-color="default"] .markmap-node pre{
  --code-keyword:#c792ea;--code-function:#82aaff;--code-string:#c3e88d;
  color:#e4eaf3;background:color-mix(in srgb,#111720 94%,var(--card-accent-dark,#7669d3) 6%);border-color:#465064
 }
 .map-card .markmap-node pre .hljs-comment{color:#78879b}
-body.dark .map-card .markmap-node pre .hljs-comment,.map-card[data-map-color="default"] .markmap-node pre .hljs-comment{color:#a2aec0}
+body.dark .map-card .markmap-node pre .hljs-comment,body.dark .map-card[data-map-color="default"] .markmap-node pre .hljs-comment{color:#a2aec0}
 .card-window .table-scroll{max-width:100%}
 
 .card-index{position:fixed;z-index:25;left:14px;right:auto;top:14px;bottom:auto;height:auto;max-height:calc(100dvh - 28px);width:260px;box-sizing:border-box;display:flex;flex-direction:column;background:color-mix(in srgb,var(--paper) 97%,var(--ink) 3%);color:var(--ink);border:1px solid color-mix(in srgb,var(--ink) 10%,transparent);border-radius:12px;box-shadow:0 8px 32px #0000000a;overflow:hidden;font:13px/1.45 Inter,system-ui,sans-serif}
@@ -1162,6 +1153,14 @@ body.dark .map-card .markmap-node pre .hljs-comment,.map-card[data-map-color="de
 .index-view-switch button{display:flex;align-items:center;justify-content:center;gap:6px;flex:1;min-height:28px;padding:5px 8px;border:0;border-radius:5px;background:transparent;color:var(--muted);font:500 12px var(--ui-font);cursor:pointer}
 .index-view-switch button[aria-pressed="true"]{background:var(--paper);color:var(--ink);box-shadow:0 1px 3px #0001}
 .index-view-switch .icon{width:14px;height:14px}
+.canvas-search{display:block;margin:0 12px 10px;flex-shrink:0;font:500 11px var(--ui-font);color:var(--muted)}
+.canvas-search span{display:block;margin-bottom:5px}
+.canvas-search input{width:100%;min-width:0;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--paper);color:var(--ink);font:13px var(--ui-font)}
+.canvas-search input:focus{outline:2px solid var(--accent);outline-offset:1px}
+#searchStatus{margin:0 12px 8px;font:12px var(--ui-font);color:var(--muted)}
+.index-entry[hidden]{display:none!important}
+.cardbody mark.canvas-search-match{background:#ffe28a;color:#26210f;border-radius:2px;padding:0;box-shadow:none}
+.cardbody .canvas-search-map-match{fill:#b06c00!important;paint-order:stroke;stroke:#ffe28a;stroke-width:3px;stroke-linejoin:round}
 .card-index[data-view="palette"] nav{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;padding:6px 10px 10px;align-items:start;scroll-padding-block:8px}
 .card-index[data-view="palette"] .index-entry{min-width:0;border:1px solid color-mix(in srgb,var(--index-card-color) 24%,transparent);border-radius:11px;overflow:hidden;background:color-mix(in srgb,var(--index-card-color) 9%,var(--paper));scroll-margin-block:6px}
 .card-index[data-view="palette"] .index-entry:hover{box-shadow:0 2px 5px #00000012}
@@ -1240,6 +1239,7 @@ button,input,select,textarea{font-family:inherit}
 .map-card .cardbody,.map-card.selected.has-title .cardbody,.map-card.selected:not(.has-title) .cardbody{height:calc(100% - var(--header-height))}
 .card .resize.left,.card .resize.right{top:16px;bottom:16px;width:14px;touch-action:none;z-index:9}
 .card .resize.left{left:0}.card .resize.right{right:0}
+.card .resize.left::after,.card .resize.right::after{display:none}
 .card .resize:hover::after,.card.selected .resize::after{background:color-mix(in srgb,var(--ink) 24%,transparent)}
 /* Quiet icon buttons with a single optical size across the interface. */
 .toolbar,.zoom{border-radius:10px}
@@ -1263,4 +1263,22 @@ button,input,select,textarea{font-family:inherit}
  .card .cardactions{flex-wrap:wrap;height:auto;row-gap:6px;left:12px;right:12px}
  .map-card.selected.has-title .cardbody{height:calc(100% - 112px)}
  .map-card.selected:not(.has-title) .cardbody{height:calc(100% - 76px)}
+}
+
+/* The neutral theme follows the app's light/dark appearance. */
+body:not(.dark) .card[data-map-color="default"]{--paper:#fff;--ink:#272622;--map-surface:#fff;background:#fff;color:#272622;border-color:#d8dce2}
+body:not(.dark) .card[data-map-color="default"] .cardbar{background:#f7f8fa;border-bottom-color:#e3e6eb}
+body:not(.dark) .card[data-map-color="default"] .map-pane{background:#fff;color:#272622}
+.map-card.has-title{--header-height:32px}
+.map-card.selected.has-title{--header-height:64px}
+.map-card.selected:not(.has-title){--header-height:36px}
+.map-card.has-title .map-title{top:6px;left:16px;right:16px;max-width:none}
+.map-card.has-title .cardactions{top:30px}
+.map-card:not(.has-title) .cardactions{top:4px}
+.map-card .cardbody,.map-card.selected.has-title .cardbody,.map-card.selected:not(.has-title) .cardbody{height:calc(100% - var(--header-height))}
+@container(max-width:490px){
+ .map-card.selected.has-title{--header-height:98px}
+ .map-card.selected:not(.has-title){--header-height:70px}
+ .map-card.selected.has-title .cardbar,.map-card.selected:not(.has-title) .cardbar{height:var(--header-height)}
+ .map-card.selected.has-title .cardbody,.map-card.selected:not(.has-title) .cardbody{height:calc(100% - var(--header-height))}
 }

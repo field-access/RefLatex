@@ -112,38 +112,41 @@ const CARD_FONT_GROUPS=[
   ["mono-dm","DM Mono"],["mono-azeret","Azeret Mono"],["mono-victor","Victor Mono"]
  ]],
  ["Sans serif",[
-  ["sans","System Sans"],["dm-sans","DM Sans"],["poppins","Poppins"],["raleway","Raleway"],
-  ["josefin-sans","Josefin Sans"],["nunito","Nunito"],["quicksand","Quicksand"],["league-spartan","League Spartan"]
+  ["dm-sans","DM Sans"],["poppins","Poppins"],["raleway","Raleway"],
+  ["nunito","Nunito"],["quicksand","Quicksand"],["league-spartan","League Spartan"]
  ]],
  ["Serif",[
-  ["slab","Roboto Slab"],["editorial-serif","Editorial Serif"],["lora","Lora"],
+  ["slab","Roboto Slab"],["lora","Lora"],
   ["alegreya","Alegreya"],["cormorant","Cormorant Garamond"],["fraunces","Fraunces"],
   ["bodoni","Bodoni Moda"]
  ]],
  ["Rounded",[["comfortaa","Comfortaa"],["fredoka","Fredoka"],["varela-round","Varela Round"]]],
  ["Display",[
-  ["bebas-neue","Bebas Neue"],["cinzel","Cinzel"]
+  ["cinzel","Cinzel"]
  ]],
  ["Handwritten",[
+  ["comic-sans","Comic Sans"],
   ["comic-neue","Comic Neue"],["coming-soon","Coming Soon"],["itim","Itim"],
-  ["hand-kalam","Kalam"],["hand-patrick","Patrick Hand"],["dancing-script","Dancing Script"],
-  ["sacramento","Sacramento"],["satisfy","Satisfy"],["marck-script","Marck Script"]
+  ["hand-kalam","Kalam"],["hand-patrick","Patrick Hand"],
+
  ]]
 ];
 const CARD_FONTS=CARD_FONT_GROUPS.flatMap(([,fonts])=>fonts);
 const MAP_FONTS=CARD_FONTS.map(([value])=>value);
-const readyCardFonts=new Set(["mono","sans","editorial-serif"]);
+const readyCardFonts=new Set(["mono","comic-sans"]);
 function randomCardFont(){
  const ready=[...readyCardFonts];return ready[Math.floor(Math.random()*ready.length)];
 }
 const LEGACY_CARD_FONTS={
- hand:"hand-patrick",caveat:"hand-patrick","hand-caveat":"hand-patrick","hand-script":"dancing-script",
+ sans:"dm-sans","josefin-sans":"nunito","editorial-serif":"lora","bebas-neue":"cinzel",
+ "dancing-script":"hand-patrick",sacramento:"hand-patrick",satisfy:"comic-sans","marck-script":"hand-patrick",
+ hand:"hand-patrick",caveat:"hand-patrick","hand-caveat":"hand-patrick","hand-script":"hand-patrick",
  "hand-soft":"hand-patrick","hand-bold":"hand-kalam","hand-marker":"hand-kalam",
  "mono-terminal":"mono-typewriter","mono-inconsolata":"mono-fira","mono-roboto":"mono-code","mono-source":"mono-code","mono-ubuntu":"mono-typewriter",
- serif:"lora",editorial:"editorial-serif",humanist:"nunito",maiandra:"josefin-sans",inter:"dm-sans",
+ serif:"lora",editorial:"lora",humanist:"nunito",maiandra:"nunito",inter:"dm-sans",
  "nunito-sans":"nunito",manrope:"dm-sans","space-grotesk":"league-spartan",outfit:"poppins",rubik:"dm-sans",archivo:"dm-sans",rounded:"quicksand",
  montserrat:"dm-sans",playfair:"fraunces",merriweather:"lora",
- oswald:"league-spartan","dm-serif-display":"fraunces",anton:"bebas-neue",shrikhand:"bebas-neue","abril-fatface":"cinzel"
+ oswald:"league-spartan","dm-serif-display":"fraunces",anton:"cinzel",shrikhand:"cinzel","abril-fatface":"cinzel"
 };
 
 const GOOGLE_FONT_SPECS={
@@ -217,6 +220,7 @@ function mapFontStack(font){
   lora:'"Lora",Georgia,serif',alegreya:'"Alegreya",Georgia,serif',
   cormorant:'"Cormorant Garamond",Georgia,serif',fraunces:'"Fraunces",Georgia,serif',bodoni:'"Bodoni Moda",Georgia,serif',
   "bebas-neue":'"Bebas Neue",Impact,sans-serif',cinzel:'"Cinzel",Georgia,serif',
+  "comic-sans":'"Comic Sans MS","Comic Sans",cursive',
   "comic-neue":'"Comic Neue","Comic Sans MS",cursive',"coming-soon":'"Coming Soon","Comic Sans MS",cursive',itim:'"Itim","Comic Sans MS",cursive',
   "hand-kalam":'"Kalam",cursive',"hand-patrick":'"Patrick Hand",cursive',"dancing-script":'"Dancing Script",cursive',
   sacramento:'"Sacramento",cursive',satisfy:'"Satisfy",cursive',"marck-script":'"Marck Script",cursive',
@@ -256,6 +260,11 @@ function applyCardFont(n,font=n.font){
 let activeCardMenu=null;
 let cardMenuId=0;
 function syncCardSelect(select){
+ if(select?.matches('[data-map-color],#mapColor')){
+  const neutral=select.querySelector('option[value="default"]');
+  if(neutral)neutral.textContent=document.body.classList.contains('dark')?'Midnight':'White';
+ }
+
  const wrap=select?.closest(".custom-select");
  if(!wrap)return;
  const option=select.selectedOptions[0];
@@ -1508,8 +1517,77 @@ function renderCardIndex(){
  }
  list.replaceChildren(fragment);$("#indexCount").textContent=state.notes.length;
  $("#indexEmpty").hidden=state.notes.length>0;
+ applyCanvasSearch();
  revealIndexSelection();
 }
+
+function highlightCanvasSearch(reveal=false){
+ const previous=highlightCanvasSearch.card;
+ if(previous){
+  for(const mark of previous.querySelectorAll('mark.canvas-search-match')){const parent=mark.parentNode;mark.replaceWith(document.createTextNode(mark.textContent));parent.normalize()}
+  for(const text of previous.querySelectorAll('.canvas-search-map-match'))text.classList.remove('canvas-search-map-match');
+ }
+ const n=state.selected,query=$("#canvasSearch").value.trim();
+ highlightCanvasSearch.card=n?.el||null;
+ if(!n||!query)return;
+ const terms=[...new Set(query.split(/\s+/).filter(Boolean))].sort((a,b)=>b.length-a.length);
+ const pattern=terms.map(term=>term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|');
+ const expression=new RegExp(pattern,'gi');
+ const root=n.el.querySelector('.cardbody');if(!root)return;
+ const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode(node){
+  return node.parentElement.closest('script,style,svg,.katex,.canvas-search-match')?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT;
+ }});
+ const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
+ for(const node of nodes){
+  const source=node.nodeValue;expression.lastIndex=0;
+  const matches=[...source.matchAll(expression)];if(!matches.length)continue;
+  const fragment=document.createDocumentFragment();let offset=0;
+  for(const match of matches){
+   fragment.append(document.createTextNode(source.slice(offset,match.index)));
+   const mark=document.createElement('mark');mark.className='canvas-search-match';mark.textContent=match[0];fragment.append(mark);offset=match.index+match[0].length;
+  }
+  fragment.append(document.createTextNode(source.slice(offset)));node.replaceWith(fragment);
+ }
+ for(const text of root.querySelectorAll('svg text')){expression.lastIndex=0;if(expression.test(text.textContent))text.classList.add('canvas-search-map-match')}
+ if(reveal&&n.type!=='map'){
+  const first=root.querySelector('mark.canvas-search-match');
+  if(first){const box=root.getBoundingClientRect(),hit=first.getBoundingClientRect();root.scrollTop+=(hit.top-box.top)/state.scale-root.clientHeight/3}
+ }
+}
+
+function applyCanvasSearch(){
+ const query=$("#canvasSearch").value.trim().toLocaleLowerCase();
+ const terms=query.split(/\s+/).filter(Boolean);
+ highlightCanvasSearch();
+ const entries=$("#indexEntries").children;
+ let matches=0;
+ if(!terms.length){
+  for(const entry of entries)if(entry.hidden)entry.hidden=false;
+  $("#searchStatus").hidden=true;return;
+ }
+ const notes=new Map(state.notes.map(n=>[String(n.id),n]));
+ for(const entry of entries){
+  const n=notes.get(entry.dataset.indexCardId);if(!n)continue;
+  if(n.searchSource!==n.md){n.searchSource=n.md;n.searchText=String(n.md).toLocaleLowerCase()}
+  const match=terms.every(term=>n.searchText.includes(term));
+  if(entry.hidden===match)entry.hidden=!match;
+  if(match)matches++;
+ }
+ const status=$("#searchStatus");status.hidden=false;
+ status.textContent=matches?matches+' of '+state.notes.length+' cards':'No matching cards';
+ hidePaletteTitle();
+}
+$("#canvasSearch").addEventListener('input',applyCanvasSearch);
+$("#canvasSearch").addEventListener('keydown',e=>{
+ e.stopPropagation();
+ if(e.key==='Escape'){e.preventDefault();e.target.value='';applyCanvasSearch();e.target.blur()}
+ if(e.key==='Enter'){
+  e.preventDefault();
+  const button=$("#indexEntries .index-entry:not([hidden]) button[data-card-id]");
+  if(button)button.click();
+ }
+});
+
 let indexDragId=null,indexDropTarget=null,indexDropAfter=false;
 let indexRevealFrame=0;
 const paletteTitleTooltip=document.createElement("div");
@@ -1639,7 +1717,7 @@ $("#indexEntries").addEventListener("click",e=>{
  const button=e.target.closest("button[data-card-id]");if(!button)return;
  const n=state.notes.find(note=>String(note.id)===button.dataset.cardId);if(!n)return;
  if(innerWidth<700)setIndexOpen(false);
- select(n);focusSelected("readable");
+ select(n);focusSelected("readable").then(()=>{if(state.selected===n)highlightCanvasSearch(true)});
 });
 try{$("#cardIndex").hidden=localStorage.getItem("reflatex-index-open")==="false"}catch{}
 $("#toggleIndex").setAttribute("aria-expanded",String(!$("#cardIndex").hidden));
@@ -1649,6 +1727,7 @@ function select(n){
  if(state.selected!==n)state.spaceFocusStep=0;
  state.selected?.el.classList.remove("selected");
  state.selected=n;if(n)n.el.classList.add("selected");
+ highlightCanvasSearch();
  const current=$("#indexEntries [aria-current='true']");current?.setAttribute("aria-current","false");
  if(n)for(const button of $("#indexEntries").querySelectorAll("[data-card-id]")){if(button.dataset.cardId===String(n.id)){button.setAttribute("aria-current","true");break}}
  revealIndexSelection();
@@ -2375,12 +2454,11 @@ function arrange(record=true){
 function scheduleArrange(){
  requestAnimationFrame(()=>arrange(false));
 }
-const backgrounds=["light","sun","ocean","stars","planets","village"];
+const backgrounds=["light","sun","ocean","stars","village"];
 const backgroundLabels={
  light:"Light",
  stars:"Stars",
  sun:"Sun",
- planets:"Planets",
  ocean:"Ocean",
  village:"Village"
 };
@@ -2427,6 +2505,8 @@ function toggleBackgroundMenu(force){
 }
 function updateThemeIcon(){
  const dark=document.body.classList.contains("dark");
+ closeCardMenu();
+ document.querySelectorAll('select[data-map-color],select#mapColor').forEach(syncCardSelect);
  setButtonIcon($("#theme"),dark?"sun":"moon",dark?"Switch to light mode (T)":"Switch to dark mode (T)");
 }
 function toggleTheme(){document.body.classList.toggle("dark");localStorage.setItem("reflatex-theme",document.body.classList.contains("dark")?"dark":"light");updateThemeIcon()}
@@ -2748,6 +2828,9 @@ window.addEventListener("keydown",e=>{
   return;
  }
  const mod=e.ctrlKey||e.metaKey;
+ if(mod&&!e.shiftKey&&e.key.toLowerCase()==='f'&&!editor.classList.contains('open')){
+  e.preventDefault();setIndexOpen(true);$("#canvasSearch").focus();$("#canvasSearch").select();return;
+ }
  const editing=document.activeElement===source ||
    document.activeElement?.tagName==="INPUT" ||
    document.activeElement?.tagName==="TEXTAREA";
