@@ -9,7 +9,8 @@ const MAX_SCALE=8;
 const navigation={wheel:1,scroll:1,pinch:1,drag:1,step:1.2};
 try{
  const saved=JSON.parse(localStorage.getItem("reflatex-navigation")||"{}");
- for(const key of ["wheel","scroll","pinch","drag"])if(Number.isFinite(saved[key]))navigation[key]=saved[key]>1.5?1:Math.max(.5,saved[key]);
+ for(const key of ["wheel","scroll","drag"])if(Number.isFinite(saved[key]))navigation[key]=saved[key]>1.5?1:Math.max(.5,saved[key]);
+ if(Number.isFinite(saved.pinch))navigation.pinch=Math.max(.25,Math.min(3,saved.pinch));
  if(Number.isFinite(saved.step))navigation.step=saved.step>1.35?1.2:Math.max(1.05,saved.step);
 }catch{}
 const zoomLabel=$("#zoomLabel");
@@ -672,11 +673,31 @@ function wrapCodeLines(code){
  for(const child of code.childNodes)visit(child,[]);
  code.replaceChildren(fragment);
 }
+function textHighlightSpans(md){
+ const stack=[],spans=[];
+ if(!String(md).includes('card-text-highlight'))return spans;
+ // Ignore literal examples inside code while keeping source offsets intact.
+ const source=String(md)
+  .replace(/(^|\n)([ \t]*)(```+|~~~+)([^\n]*)\n([\s\S]*?)(?:\n[ \t]*\3[ \t]*)(?=\n|$)/g,block=>block.replace(/[^\n]/g,' '))
+  .replace(/(^|\n)((?:[ \t]{4}.*(?:\n|$))+)/g,block=>block.replace(/[^\n]/g,' '))
+  .replace(/(`+)[\s\S]*?\1/g,code=>code.replace(/[^\n]/g,' '));
+ for(const match of source.matchAll(/<mark\b[^>]*>|<\/mark\s*>/gi)){
+  if(/^<mark/i.test(match[0])){
+   const color=/data-highlight=["'](theme|yellow|green|blue|pink)["']/i.exec(match[0]);
+   stack.push({start:match.index,contentStart:match.index+match[0].length,color:color?.[1],ours:/card-text-highlight/.test(match[0])});
+  }else{
+   const opening=stack.pop();if(opening?.ours&&opening.color)spans.push({...opening,contentEnd:match.index,end:match.index+match[0].length});
+  }
+ }
+ return spans.sort((a,b)=>a.start-b.start);
+}
+
 function render(md){
   let text=normalizeEscapedLatex(String(md));
   const blockCodes=[];
   const inlineCodes=[];
   const math=[];
+  const highlightTokens=[];
 
   function listContentIndentBefore(offset,source){
     const indentWidth=value=>[...value].reduce((width,char)=>
@@ -736,6 +757,17 @@ function render(md){
     inlineCodes.push(code);
     return `@@REFLATEX_INLINE_${id}@@`;
   });
+
+  const highlights=textHighlightSpans(text);
+  const outerHighlights=highlights.filter(span=>!highlights.some(parent=>parent.start<span.start&&parent.end>span.end));
+  for(const span of outerHighlights.reverse()){
+   let content=text.slice(span.contentStart,span.contentEnd);
+   inlineCodes.forEach((code,i)=>{content=content.split('@@REFLATEX_INLINE_'+i+'@@').join(String.fromCharCode(96)+code+String.fromCharCode(96))});
+   const html=render(content).replace(/^<p>([\s\S]*)<\/p>\s*$/,(_,inner)=>inner);
+   const token='@@REFLATEX_HIGHLIGHT_'+highlightTokens.length+'@@';
+   highlightTokens.push('<mark class="card-text-highlight" data-highlight="'+span.color+'">'+html+'</mark>');
+   text=text.slice(0,span.start)+token+text.slice(span.end);
+  }
 
   // Explicit LaTeX delimiters. Long/display forms first.
   const mathPatterns=[
@@ -802,12 +834,18 @@ function render(md){
     out=out.split(`@@REFLATEX_MATH_${i}@@`).join(value);
   });
 
+  highlightTokens.forEach((html,i)=>{out=out.split('@@REFLATEX_HIGHLIGHT_'+i+'@@').join(html)});
   const box=document.createElement("div");
   box.innerHTML=out;
+  const sourceHighlights=textHighlightSpans(md);
+  box.querySelectorAll('mark.card-text-highlight').forEach((mark,i)=>{
+   const span=sourceHighlights[i];if(span){mark.dataset.highlightStart=span.start;mark.dataset.highlightEnd=span.end}
+  });
 
-  box.querySelectorAll("pre.line-numbered").forEach(pre=>{
-    const code=pre.querySelector("code");
-    if(!code)return;
+  box.querySelectorAll("pre").forEach(pre=>{
+    let code=pre.querySelector("code");
+    if(!code){code=document.createElement("code");code.append(...pre.childNodes);pre.append(code)}
+    pre.classList.add("line-numbered");pre.dataset.lineCount=code.textContent.split("\n").length;
     if(window.hljs){
       const languageClass=[...code.classList].find(name=>name.startsWith("language-"));
       const language=languageClass?.slice("language-".length);
@@ -869,8 +907,20 @@ function updateCardHeading(n){
  n.el.classList.toggle("has-title",Boolean(heading));
  scheduleCardIndex();
 }
-function renderCardMarkdown(md){
- return render(String(md));
+function renderCardMarkdown(md,highlights=[]){
+ const html=render(String(md));if(!highlights?.length)return html;
+ const root=document.createElement('div');root.innerHTML=html;ConceptTextHighlights.paint(root,highlights);return root.innerHTML;
+}
+function migrateCardHighlights(n){
+ n.highlights=ConceptTextHighlights.normalize(n.highlights);
+ if(!n.md.includes('card-text-highlight'))return;
+ const root=document.createElement('div');root.innerHTML=render(n.md);
+ for(const mark of root.querySelectorAll('mark.card-text-highlight')){
+  const range=document.createRange();range.selectNodeContents(mark);
+  const selected=ConceptTextHighlights.selection(root,range);if(selected)n.highlights.push(ConceptTextHighlights.create(selected,mark.dataset.highlight||'theme'));
+ }
+ const edits=textHighlightSpans(n.md).flatMap(span=>[{start:span.start,end:span.contentStart},{start:span.contentEnd,end:span.end}]);
+ for(const edit of edits.sort((a,b)=>b.start-a.start))n.md=n.md.slice(0,edit.start)+n.md.slice(edit.end);
 }
 function markmapOptions(n){
  const colors=MAP_PALETTES[n.mapColor]||MAP_PALETTES.default;
@@ -898,6 +948,11 @@ const PEN_PAN_GAIN=1.7;
 function enableMapCameraFrames(svg,map,settings={drag:1}){
  const zoom=map.zoom,paint=zoom?.on("zoom");
  if(!paint)return;
+ zoom.wheelDelta?.(e=>{
+  const unit=e.deltaMode===1?.05:e.deltaMode===2?1:.002;
+  const sensitivity=e.ctrlKey?Math.max(.25,Math.min(3,Number(settings.pinch)||1)):Math.max(.5,Math.min(1.5,Number(settings.wheel)||1));
+  return Math.max(-4,Math.min(4,-e.deltaY*unit*2.2*sensitivity));
+ });
  let frame=0,pending=null,dragOrigin=null;
  zoom.on("start.drag-sensitivity",e=>{
   dragOrigin=e.sourceEvent?.type==="mousedown"?{transform:window.d3.zoomTransform(svg),gain:Math.max(.5,Math.min(1.5,Number(settings.drag)||1))}:null;
@@ -924,11 +979,9 @@ function enablePenMapWheel(pane,svg,map){
  let lastPointer=null;
  const rememberPointer=e=>{
   if(!Number.isFinite(e.clientX)||!Number.isFinite(e.clientY))return;
-  // Some tablet drivers keep emitting pointer events after pen hover ends.
-  // Preserve the last known pointer type so synthetic mouse events do not
-  // replace the pen's actual zoom anchor.
-  if(e.pointerType==="pen"||!lastPointer||lastPointer.type!=="pen")
-   lastPointer={x:e.clientX,y:e.clientY,type:e.pointerType||"mouse"};
+  // Pointer events identify the active device; compatibility mouse wheel
+  // events may need this recent position when a tablet driver omits it.
+  lastPointer={x:e.clientX,y:e.clientY,type:e.pointerType||"mouse",time:e.timeStamp};
  };
  pane.addEventListener("pointermove",rememberPointer,true);
  pane.addEventListener("pointerdown",rememberPointer,true);
@@ -947,10 +1000,12 @@ function enablePenMapWheel(pane,svg,map){
   // Tablet drivers often expose wheel as a compatibility MouseEvent, so its
   // coordinates can be stale even when they are nonzero and inside the map.
   // Pen pointermove is the reliable source of the current stylus position.
-  if(lastPointer?.type==="pen"&&inside(lastPointer.x,lastPointer.y)){
+  const recentPointer=lastPointer&&e.timeStamp-lastPointer.time>=0&&e.timeStamp-lastPointer.time<500;
+  if(!e.ctrlKey&&recentPointer&&lastPointer.type==="pen"&&inside(lastPointer.x,lastPointer.y)){
    clientX=lastPointer.x;clientY=lastPointer.y;
   }else if((clientX===0&&clientY===0)||!inside(clientX,clientY)){
-   clientX=rect.left+rect.width/2;clientY=rect.top+rect.height/2;
+   clientX=recentPointer&&inside(lastPointer.x,lastPointer.y)?lastPointer.x:rect.left+rect.width/2;
+   clientY=recentPointer&&inside(lastPointer.x,lastPointer.y)?lastPointer.y:rect.top+rect.height/2;
   }
   const point=window.d3?.pointer?.({clientX,clientY},svg)||[rect.width/2,rect.height/2];
   const unit=e.deltaMode===1?0.05:e.deltaMode===2?1:0.002;
@@ -1084,6 +1139,8 @@ async function renderMap(n){
   await map.setData(root);
   if(n.mapRenderId!==renderId||n.type!=="map")return;
   n.mapIndexRoot=root;scheduleCardIndex();
+  const spans=textHighlightSpans(n.md);
+  pane.querySelectorAll('mark.card-text-highlight').forEach((mark,i)=>{const span=spans[i];if(span){mark.dataset.highlightStart=span.start;mark.dataset.highlightEnd=span.end}});
   pane.querySelectorAll(".markmap-node pre").forEach(pre=>{
    pre.classList.add("map-codeblock");
    const code=pre.querySelector("code");
@@ -1093,6 +1150,7 @@ async function renderMap(n){
    if(language&&!hljs.getLanguage(language))code.classList.remove(languageClass);
    try{hljs.highlightElement(code)}catch{}
   });
+  ConceptTextHighlights.paint(pane,n.highlights);
   enablePenMapPan(pane,svg,map);
   await map.fit();
  }catch(err){
@@ -1130,7 +1188,7 @@ function setCardType(n,type,record=true){
  if(type==="map"){
   n.mapReady=renderMap(n);
  }else{
-  body.innerHTML=renderCardMarkdown(n.md);
+  body.innerHTML=renderCardMarkdown(n.md,n.highlights);
  }
  layoutCards();
  if(state.selected===n){
@@ -1154,8 +1212,6 @@ function apply(){
   state.x=innerWidth/2;state.y=innerHeight/2;state.scale=1;
   state.targetX=state.x;state.targetY=state.y;state.targetScale=state.scale;
  }
- // Keep D3's gesture origin in sync after fit, touch, keyboard and drag input.
- if(window.d3?.ZoomTransform&&!state.raf&&!cameraInputFrame)canvas.__zoom=new window.d3.ZoomTransform(state.scale,state.x,state.y);
  world.style.transform=`translate(${state.x}px,${state.y}px) scale(${state.scale})`;
  const label=String(Math.round(state.scale*1000)/10);
  if(label!==lastZoomLabel){
@@ -1176,6 +1232,9 @@ function setCameraImmediate(x,y,s){
 
 function interruptCamera(){
  clearTimeout(wheelScrollTimer);wheelScrollTimer=0;
+ clearTimeout(fallbackWheelTimer);fallbackWheelTimer=0;wheelZoomKind=null;
+ if(wheelFrame){cancelAnimationFrame(wheelFrame);wheelFrame=0}
+ panWheelX=panWheelY=0;
  if(cameraInputFrame){cancelAnimationFrame(cameraInputFrame);cameraInputFrame=0}
  if(state.raf){cancelAnimationFrame(state.raf);state.raf=0}
  sync();
@@ -1223,6 +1282,7 @@ function beginCameraMotion(){
  world.style.willChange=state.pan?"translate":"transform";
  if(!document.body.classList.contains("camera-moving")){
   document.body.classList.add("camera-moving");
+  hideTextHighlighter();
  }
 }
 function markCameraMoving(){
@@ -1234,7 +1294,7 @@ function markCameraMoving(){
  },120);
 }
 function finishCameraMotion(){
- if(state.pan||state.raf||cameraInputFrame)return;
+ if(state.pan||state.raf||cameraInputFrame||fallbackWheelTimer)return;
  clearTimeout(motionHintTimer);motionHintTimer=0;
  document.body.classList.remove("camera-moving");
  world.style.willChange="";
@@ -1287,13 +1347,14 @@ function canvasWheelExponent(e){
 }
 function moveTo(x,y,s=state.targetScale){
  if(!Number.isFinite(x)||!Number.isFinite(y)||!Number.isFinite(s))return;
+ interruptCamera();
  state.targetX=x;state.targetY=y;state.targetScale=clampScale(s);animate()
 }
 function zoom(f,cx=innerWidth/2,cy=innerHeight/2){
  zoomPrecise(f,cx,cy);
  clearTimeout(state.saveTimer);state.saveTimer=setTimeout(save,180);
 }
-function snapshot(){return JSON.stringify({x:state.x,y:state.y,scale:state.scale,nextId:state.nextId,notes:state.notes.map(n=>({id:n.id,md:n.md,x:n.x,y:n.y,w:n.type==="map"?(n.mapWidth||n.width||n.el.offsetWidth):(n.width||n.el.offsetWidth),h:n.mapHeight,mapWidth:n.mapWidth,mapHeight:n.mapHeight,font:n.font||"mono",size:n.size||"80",type:n.type||"note",mapColor:n.mapColor||"default",mapFont:n.mapFont||"modern"}))})}
+function snapshot(){return JSON.stringify({x:state.x,y:state.y,scale:state.scale,nextId:state.nextId,notes:state.notes.map(n=>({id:n.id,md:n.md,x:n.x,y:n.y,w:n.type==="map"?(n.mapWidth||n.width||n.el.offsetWidth):(n.width||n.el.offsetWidth),h:n.mapHeight,mapWidth:n.mapWidth,mapHeight:n.mapHeight,font:n.font||"mono",size:n.size||"80",type:n.type||"note",mapColor:n.mapColor||"default",highlights:n.highlights||[],mapFont:n.mapFont||"modern"}))})}
 function history(){
  if(state.historyLock)return;
  const s=snapshot();
@@ -1303,8 +1364,8 @@ function restore(s){
  const d=JSON.parse(s);state.historyLock=true;
  state.notes.forEach(disposeCard);state.notes=[];state.selected=null;
  (d.notes||[]).forEach(n=>n.type==="map"
-  ? makeMap(n.md,n.x,n.y,n.w,n.h,false,n.id,n.mapColor,n.mapFont,n.size)
-  : makeNote(n.md,n.x,n.y,n.w,false,n.id,n.font,n.size,n.mapColor,n.mapFont,n.mapWidth,n.mapHeight));
+  ? makeMap(n.md,n.x,n.y,n.w,n.h,false,n.id,n.mapColor,n.mapFont,n.size,n.highlights)
+  : makeNote(n.md,n.x,n.y,n.w,false,n.id,n.font,n.size,n.mapColor,n.mapFont,n.mapWidth,n.mapHeight,n.highlights));
  state.x=Number.isFinite(d.x)?d.x:innerWidth/2;
  state.y=Number.isFinite(d.y)?d.y:innerHeight/2;
  state.scale=clampScale(Number.isFinite(d.scale)?d.scale:1);
@@ -1317,13 +1378,11 @@ function save(){
  clearTimeout(state.saveTimer);
  state.saveTimer=setTimeout(()=>{
   try{localStorage.setItem("reflatex",snapshot())}catch{}
-  canvasFiles?.changed();
  },80);
 }
 function flushSave(){
  clearTimeout(state.saveTimer);
  try{localStorage.setItem("reflatex",snapshot())}catch{}
- canvasFiles?.changed();
 }
 function empty(){$("#empty").style.display=state.notes.length?"none":"grid";scheduleCardIndex()}
 
@@ -1395,7 +1454,7 @@ function editIndexHeading(n){
    const heading=`${"#".repeat(range?.depth||1)} ${title}${range?range.ending:"\n"}`;
    n.md=range?n.md.slice(0,range.start)+heading+n.md.slice(range.end):heading+"\n"+n.md;
    if(n.type==="map")n.mapReady=renderMap(n);
-   else n.el.querySelector(".cardbody").innerHTML=renderCardMarkdown(n.md);
+   else n.el.querySelector(".cardbody").innerHTML=renderCardMarkdown(n.md,n.highlights);
    updateCardHeading(n);layoutCards();save();
   }
   if(indexFrame){cancelAnimationFrame(indexFrame);indexFrame=0}
@@ -1532,8 +1591,13 @@ function renderCardIndex(){
 function highlightCanvasSearch(reveal=false){
  const previous=highlightCanvasSearch.card;
  if(previous){
-  for(const mark of previous.querySelectorAll('mark.canvas-search-match')){const parent=mark.parentNode;mark.replaceWith(document.createTextNode(mark.textContent));parent.normalize()}
+  let restoreHighlights=false;
+  for(const mark of previous.querySelectorAll('mark.canvas-search-match')){
+   if(mark.querySelector('[data-highlight-id]'))restoreHighlights=true;
+   const parent=mark.parentNode;mark.replaceWith(document.createTextNode(mark.textContent));parent.normalize();
+  }
   for(const text of previous.querySelectorAll('.canvas-search-map-match'))text.classList.remove('canvas-search-map-match');
+  const note=restoreHighlights&&state.notes.find(note=>note.el===previous);if(note?.highlights?.length)ConceptTextHighlights.paint(previous.querySelector('.cardbody'),note.highlights);
  }
  const n=state.selected,query=$("#canvasSearch").value.trim();
  highlightCanvasSearch.card=n?.el||null;
@@ -1778,7 +1842,7 @@ function canvasPayload(){
    font:n.font||"mono",
    size:n.size||"80",
    mapColor:n.mapColor||"default",
-   mapFont:n.mapFont||"modern"
+   highlights:n.highlights||[],mapFont:n.mapFont||"modern"
   }))
  };
 }
@@ -1824,8 +1888,8 @@ function openCanvasFile(file){
     const x=Number.isFinite(n.x)?n.x:0,y=Number.isFinite(n.y)?n.y:0;
     const width=Number.isFinite(n.width)?n.width:600,id=Number.isFinite(n.id)?n.id:null;
     n.type==="map"
-      ? makeMap(n.markdown,x,y,width,Number.isFinite(n.height)?n.height:640,false,id,n.mapColor,n.mapFont,n.size)
-      : makeNote(n.markdown,x,y,width,false,id,typeof n.font==="string"?n.font:"mono",n.size,n.mapColor,n.mapFont,n.mapWidth,n.mapHeight);
+      ? makeMap(n.markdown,x,y,width,Number.isFinite(n.height)?n.height:640,false,id,n.mapColor,n.mapFont,n.size,n.highlights)
+      : makeNote(n.markdown,x,y,width,false,id,typeof n.font==="string"?n.font:"mono",n.size,n.mapColor,n.mapFont,n.mapWidth,n.mapHeight,n.highlights);
    });
 
    state.nextId=Number.isFinite(data.nextId)
@@ -1879,17 +1943,18 @@ function normalizeCardSize(size){
  if(value==='180')return '160';
  return ['50','60','70','80','90','100','110','125','140','160'].includes(value)?value:'80';
 }
-function makeNote(md,x,y,w=600,record=true,id=null,font=randomCardFont(),size="80",mapColor=randomCardTheme(),mapFont="modern",mapWidth=null,mapHeight=null){
+function makeNote(md,x,y,w=600,record=true,id=null,font=randomCardFont(),size="80",mapColor=randomCardTheme(),mapFont="modern",mapWidth=null,mapHeight=null,highlights=[]){
  if(record)history();
  const minWidth=Math.min(300,Math.max(200,innerWidth-24));
  const width=Math.max(minWidth,Math.min(1200,w||600));
-const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size:normalizeCardSize(size),width,type:"note",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:normalizeCardFont(font),mapWidth:Number.isFinite(mapWidth)?Math.max(minWidth,Math.min(1600,mapWidth)):null,mapHeight:Number.isFinite(mapHeight)?Math.max(320,Math.min(1200,mapHeight)):null,el:null};
+const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size:normalizeCardSize(size),width,type:"note",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:normalizeCardFont(font),mapWidth:Number.isFinite(mapWidth)?Math.max(minWidth,Math.min(1600,mapWidth)):null,mapHeight:Number.isFinite(mapHeight)?Math.max(320,Math.min(1200,mapHeight)):null,highlights,el:null};
+ migrateCardHighlights(n);
  state.nextId=Math.max(state.nextId,n.id+1);
  const el=document.createElement("article");
  el.className="card";el.style.left=x+"px";el.style.top=y+"px";el.style.width=width+"px";
  el.innerHTML=`<div class="cardbar"><div class="map-title"></div></div><div class="cardactions"><select data-view aria-label="Card view" title="Card view"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-map-color aria-label="Card color theme" title="Card color theme"><option value="default">Midnight</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select><select data-font aria-label="Font" title="Font (V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option><option value="slab">Slab</option><option value="humanist">Humanist</option><option value="rounded">Rounded</option><option value="editorial">Editorial</option><option value="hand">Handwritten</option><option value="hand-soft">Hand Soft</option><option value="hand-bold">Hand Bold</option><option value="hand-marker">Hand Marker</option><option value="hand-script">Hand Script</option></select><select data-size aria-label="Card font size" title="Card font size"><option value="50">50%</option><option value="60">60%</option><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option></select><button data-map-open class="map-only"></button><button data-card-open></button><button data-edit></button><button data-delete></button></div>
- <div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div><div class="resize bottom" data-side="bottom" title="Resize map height"></div>
- <div class="cardbody">${renderCardMarkdown(md)}</div>`;
+ <div class="resize right" data-side="right"></div><div class="resize bottom" data-side="bottom" title="Resize map height"></div>
+ <div class="cardbody">${renderCardMarkdown(n.md,n.highlights)}</div>`;
  setCardActionIcons(el,"note");
  el.dataset.font=n.font;
  el.style.setProperty("--card-font-family",mapFontStack(n.font));
@@ -1938,19 +2003,20 @@ const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size:normaliz
  empty();
  return n;
 }
-function makeMap(md,x,y,w=null,h=null,record=true,id=null,mapColor=randomCardTheme(),mapFont=randomCardFont(),size="80"){
+function makeMap(md,x,y,w=null,h=null,record=true,id=null,mapColor=randomCardTheme(),mapFont=randomCardFont(),size="80",highlights=[]){
  if(record)history();
  const viewport=mapViewportSize();
  const width=Math.max(Math.min(300,Math.max(200,innerWidth-24)),Math.min(1600,w||viewport.width));
  const height=Math.max(320,h||viewport.height);
-const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type:"map",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:normalizeCardFont(mapFont),font:normalizeCardFont(mapFont),size:normalizeCardSize(size),el:null,mapInstance:null};
+const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type:"map",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:normalizeCardFont(mapFont),font:normalizeCardFont(mapFont),size:normalizeCardSize(size),highlights,el:null,mapInstance:null};
+ migrateCardHighlights(n);
  state.nextId=Math.max(state.nextId,n.id+1);
  const el=document.createElement("article");
  el.className="card map-card";el.style.left=x+"px";el.style.top=y+"px";el.style.width=width+"px";el.style.height=height+"px";
  el.dataset.mapColor=n.mapColor;
  applyMapFont(n);
  el.dataset.font=n.font;
- el.innerHTML=`<div class="cardbar"><div class="map-title"></div></div><div class="cardactions"><select data-view aria-label="Card view" title="Card view"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-map-color aria-label="Card color theme" title="Card color theme"><option value="default">Midnight</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select><select data-font aria-label="Font" title="Font (V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option></select><select data-size aria-label="Card font size" title="Card font size (1–9, 0)"><option value="50">50%</option><option value="60">60%</option><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option></select><button data-map-open></button><button data-card-open></button><button data-edit></button><button data-delete></button></div><div class="resize left" data-side="left"></div><div class="resize right" data-side="right"></div><div class="resize bottom" data-side="bottom" title="Resize map height"></div><div class="cardbody"><div class="map-loading">Rendering mind map…</div></div>`;
+ el.innerHTML=`<div class="cardbar"><div class="map-title"></div></div><div class="cardactions"><select data-view aria-label="Card view" title="Card view"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-map-color aria-label="Card color theme" title="Card color theme"><option value="default">Midnight</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select><select data-font aria-label="Font" title="Font (V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option></select><select data-size aria-label="Card font size" title="Card font size (1–9, 0)"><option value="50">50%</option><option value="60">60%</option><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option></select><button data-map-open></button><button data-card-open></button><button data-edit></button><button data-delete></button></div><div class="resize right" data-side="right"></div><div class="resize bottom" data-side="bottom" title="Resize map height"></div><div class="cardbody"><div class="map-loading">Rendering mind map…</div></div>`;
  setCardActionIcons(el,"map");
  n.el=el;applyCardFont(n,n.font);updateCardHeading(n);world.appendChild(el);state.notes.push(n);
  el.querySelector("[data-view]").value="map";
@@ -1992,11 +2058,10 @@ window.addEventListener("pointermove",e=>{
    r.n.mapHeight=h;
   }else{
    const minWidth=Math.min(300,Math.max(200,innerWidth-24));
-   const w=Math.max(minWidth,Math.min(1600,r.w+(r.side==="right"?dx:-dx)));
+   const w=Math.max(minWidth,Math.min(1600,r.w+dx));
    r.n.el.style.width=w+"px";
    if(r.n.type==="map")r.n.mapWidth=w;
    else r.n.width=w;
-   if(r.side==="left"){r.n.x=r.x+r.w-w;r.n.el.style.left=r.n.x+"px"}
   }
   // Reflow the board once on release; resize only this card during the drag.
  }
@@ -2058,6 +2123,7 @@ window.addEventListener("blur",()=>{
  finishCanvasDrag();
 });
 function startResize(e,n,side){
+ if(side!=="right"&&side!=="bottom")return;
  e.preventDefault();e.stopPropagation();select(n);history();
  interruptCamera();
  state.resize={n,side,sx:e.clientX,sy:e.clientY,w:n.el.offsetWidth,h:n.el.offsetHeight,x:n.x,pointerId:e.pointerId};
@@ -2153,7 +2219,7 @@ window.addEventListener("keydown",wakeControls);
  * Trackpads emit many small WheelEvents. Accumulate them per animation frame
  * and use the existing camera interpolator for smooth motion.
  */
-let wheelFrame=0,panWheelX=0,panWheelY=0,fallbackWheelTimer=0;
+let wheelFrame=0,panWheelX=0,panWheelY=0,fallbackWheelTimer=0,wheelZoomKind=null;
 function wheelUnitDelta(e){
  const unit=e.deltaMode===1?16:e.deltaMode===2?innerHeight:1;
  return {x:e.deltaX*unit,y:e.deltaY*unit};
@@ -2179,24 +2245,8 @@ canvas.addEventListener("wheel",e=>{
  e.stopImmediatePropagation();
 },{capture:true,passive:false});
 
-// Use the same wheel/pinch engine as Markmap. Other input handlers retain
-// ownership of pen drag, one-finger pan and two-finger midpoint translation.
-if(window.d3?.zoom){
- const cameraZoom=window.d3.zoom()
-  .scaleExtent([MIN_SCALE,MAX_SCALE])
-  .extent(()=>[[0,0],[innerWidth,innerHeight]])
-  .touchable(false)
-  .filter(e=>!state.pan&&e.type==="wheel"&&!e.target.closest?.(".map-card")&&(state.hand||e.ctrlKey))
-  .wheelDelta(canvasWheelExponent)
-  .on("start.camera",()=>interruptCamera())
-  .on("zoom.camera",e=>{
-   const input=e.sourceEvent;
-   const smooth=!input?.ctrlKey&&(input?.deltaMode!==0||Math.abs(input?.deltaY)>=40);
-   queueCamera(e.transform.x,e.transform.y,e.transform.k,smooth);
-  })
-  .on("end.camera",()=>finishCameraMotion());
- window.d3.select(canvas).call(cameraZoom).on("dblclick.zoom",null);
-}
+// One frame-batched camera owns canvas scrolling and pinch zoom, so switching
+// input types cannot leave D3's gesture transform ahead of the rendered view.
 
 canvas.addEventListener("wheel",e=>{
  if(state.pan){e.preventDefault();return}
@@ -2206,9 +2256,11 @@ canvas.addEventListener("wheel",e=>{
 
  const pinch=e.ctrlKey&&e.deltaMode===0;
  if(pinch||state.hand){
-  if(!fallbackWheelTimer)interruptCamera();
+  const kind=pinch?"pinch":"wheel";
+  if(!fallbackWheelTimer||wheelZoomKind!==kind||(pinch&&state.raf))interruptCamera();
+  wheelZoomKind=kind;
   clearTimeout(fallbackWheelTimer);
-  fallbackWheelTimer=setTimeout(()=>{fallbackWheelTimer=0;finishCameraMotion()},160);
+  fallbackWheelTimer=setTimeout(()=>{fallbackWheelTimer=0;wheelZoomKind=null;finishCameraMotion()},160);
   queueWheelZoom(canvasWheelExponent(e),e.clientX,e.clientY,!pinch&&(e.deltaMode!==0||Math.abs(e.deltaY)>=40));
   return;
  }
@@ -2275,6 +2327,70 @@ function touchEnd(e){
 canvas.addEventListener("pointerup",touchEnd);canvas.addEventListener("pointercancel",touchEnd);
 canvas.addEventListener("lostpointercapture",touchEnd);
 
+const textHighlighter=document.createElement('div');
+textHighlighter.id='textHighlighter';textHighlighter.className='text-highlighter';textHighlighter.hidden=true;
+textHighlighter.setAttribute('role','toolbar');textHighlighter.setAttribute('aria-label','Highlight selected text');
+const highlightColors={theme:'Theme',yellow:'Yellow',green:'Green',blue:'Blue',pink:'Pink'};
+for(const [color,label] of Object.entries(highlightColors)){
+ const button=document.createElement('button');button.type='button';button.dataset.highlightColor=color;
+ button.className='highlight-swatch';button.title=label+' highlight';button.setAttribute('aria-label',label+' highlight');
+ textHighlighter.append(button);
+}
+const clearHighlight=document.createElement('button');clearHighlight.type='button';clearHighlight.className='highlight-clear';clearHighlight.textContent='Clear';clearHighlight.title='Remove highlight';clearHighlight.setAttribute('aria-label','Remove highlight');textHighlighter.append(clearHighlight);
+document.body.append(textHighlighter);
+textHighlighter.addEventListener('pointerdown',e=>e.preventDefault());
+function hideTextHighlighter(){textHighlighter.hidden=true}
+function clearSelectedTextHighlight(){
+ showTextHighlighter();
+ if(textHighlighter.hidden||!textHighlighter.existing?.length)return false;
+ clearHighlight.click();return true;
+}
+function showTextHighlighter(){
+ const selection=getSelection();
+ if(!selection?.rangeCount||state.pan){hideTextHighlighter();return}
+ let range=selection.getRangeAt(0);
+ const element=range.startContainer.nodeType===1?range.startContainer:range.startContainer.parentElement;
+ if(selection.isCollapsed){
+  const mark=element?.closest('[data-highlight-id],.katex,math,mjx-container');if(!mark){hideTextHighlighter();return}
+  range=document.createRange();range.selectNodeContents(mark);selection.removeAllRanges();selection.addRange(range);
+ }
+ const card=element?.closest('.card'),body=card?.querySelector('.cardbody');
+ if(!body||!body.contains(range.endContainer)||element.closest('.code-gutter,script,style')||!range.toString().trim()){hideTextHighlighter();return}
+ rememberCardTextSelection();
+ const n=state.notes.find(note=>note.el===card);if(!n)return;
+ textHighlighter.card=n;
+ textHighlighter.source=n.md;
+ textHighlighter.sourceRange=ConceptTextHighlights.selection(body,range);
+ textHighlighter.existing=[...new Set([...body.querySelectorAll("[data-highlight-id]")].filter(mark=>range.intersectsNode(mark)).map(mark=>mark.dataset.highlightId))];
+ const style=getComputedStyle(card);
+ textHighlighter.style.setProperty('--highlight-theme',style.getPropertyValue(document.body.classList.contains('dark')?'--card-accent-dark':'--card-accent'));
+ const bounds=range.getBoundingClientRect();textHighlighter.hidden=false;
+ const width=textHighlighter.offsetWidth,height=textHighlighter.offsetHeight;
+ textHighlighter.style.left=Math.max(8,Math.min(innerWidth-width-8,bounds.left+(bounds.width-width)/2))+'px';
+ textHighlighter.style.top=(bounds.bottom+height+12<innerHeight?bounds.bottom+8:Math.max(8,bounds.top-height-8))+'px';
+}
+world.addEventListener('pointerup',()=>{if(!state.pan)setTimeout(showTextHighlighter,0)});
+world.addEventListener('keyup',showTextHighlighter);
+document.addEventListener('pointerdown',e=>{if(!textHighlighter.contains(e.target))hideTextHighlighter()});
+textHighlighter.addEventListener('keydown',e=>{
+ e.stopPropagation();
+ if(e.key==='Escape'){hideTextHighlighter();getSelection()?.removeAllRanges()}
+ if(e.key==='Backspace'&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.shiftKey&&clearSelectedTextHighlight())e.preventDefault();
+});
+textHighlighter.addEventListener('click',e=>{
+ const button=e.target.closest('button'),n=textHighlighter.card;if(!button||!n)return;
+ if(textHighlighter.source!==n.md){hideTextHighlighter();return}
+ const selected=textHighlighter.sourceRange,ids=textHighlighter.existing,color=button.dataset.highlightColor;
+ if(!selected||(!color&&!ids.length)){hideTextHighlighter();return}
+ history();
+ if(color){
+  if(ids.length)n.highlights=n.highlights.map(item=>ids.includes(item.id)?{...item,color}:item);
+  else n.highlights.push(ConceptTextHighlights.create(selected,color));
+ }else n.highlights=n.highlights.filter(item=>!ids.includes(item.id));
+ ConceptTextHighlights.paint(n.el.querySelector('.cardbody'),n.highlights);
+ save();hideTextHighlighter();getSelection()?.removeAllRanges();rememberCardTextSelection.current=null;
+});
+
 function rememberCardTextSelection(){
  const selection=window.getSelection();
  if(!selection?.rangeCount||selection.isCollapsed)return;
@@ -2293,13 +2409,14 @@ function editorSelectionRange(n){
  if(!selection||selection.card!==n.el||!selection.text)return {start:0,end:0};
  const text=selection.text,md=n.md;
  const occurrence=selection.before.split(text).length-1;
- let offset=-1;
- for(let i=0;i<=occurrence;i++){const next=md.indexOf(text,offset+1);if(next<0)break;offset=next}
- if(offset>=0)return {start:offset,end:offset+text.length};
- // Rendered selections may cross Markdown emphasis or line wrapping.
- const escaped=[...text.trim()].map(char=>/\s/.test(char)?'\\s+':char.replace(/[.*+?^$\{\}()|[\]\\]/g,'\\$&'));
- const expression=new RegExp(escaped.join('[*_~'+String.fromCharCode(96)+']*'),'g');
- const matches=[...md.matchAll(expression)],match=matches[Math.min(occurrence,matches.length-1)];
+ const escape=char=>char.replace(/[.*+?^$\{\}()|[\]\\]/g,'\\$&');
+ const separator='(?:[*_~'+String.fromCharCode(96)+']|<[^>]+>|\\]\\([^\\n)]*\\)|\\[)*';
+ const pattern=[...text].map(char=>/\s/.test(char)?'\\s+':escape(char)).join(separator);
+ const hidden=[];
+ for(const tag of md.matchAll(/<\/?[a-z][^>]*>/gi))hidden.push([tag.index,tag.index+tag[0].length]);
+ for(const link of md.matchAll(/\[[^\]\n]*\]\(([^)]*)\)/g)){const start=link.index+link[0].lastIndexOf('](')+2;hidden.push([start,link.index+link[0].length])}
+ const matches=[...md.matchAll(new RegExp(pattern,'g'))].filter(match=>!hidden.some(([start,end])=>match.index>=start&&match.index<end));
+ const match=matches[occurrence];
  return match?{start:match.index,end:match.index+match[0].length}:{start:0,end:0};
 }
 function revealEditorSelection(start){
@@ -2347,7 +2464,7 @@ function applyEditor(type=state.editorMode){
   history();n.md=md;n.mapColor=$("#mapColor").value;applyMapFont(n,$("#mapFont").value);
   if(n.type!==type)setCardType(n,type,false);
   else if(type==="map")n.mapReady=renderMap(n);
-  else n.el.querySelector(".cardbody").innerHTML=renderCardMarkdown(md);
+  else n.el.querySelector(".cardbody").innerHTML=renderCardMarkdown(n.md,n.highlights);
   updateCardHeading(n);
   n.el.dataset.mapColor=n.mapColor;
   applyMapFont(n);
@@ -2358,7 +2475,7 @@ function applyEditor(type=state.editorMode){
   const size=mapViewportSize();
   const n=type==="map"
    ? makeMap(md,p.x-size.width/2,p.y-size.height/2,size.width,size.height,true,null,$("#mapColor").value,randomCardFont())
-   : makeNote(md,p.x-300,p.y-150,600,true,null,randomCardFont(),"100",$("#mapColor").value,$("#mapFont").value);
+   : makeNote(md,p.x-300,p.y-150,600,true,null,randomCardFont(),"80",$("#mapColor").value,$("#mapFont").value);
   select(n);inserted=true;
  }
  closeEditor();
@@ -2378,7 +2495,9 @@ function openMapTab(n){
   const rainbow=["#e76f51","#f4a261","#e9c46a","#6b9b67","#299c97","#4e7bc5","#a16bb3","#d5668a"];
   const colors=(MAP_PALETTES[theme]||MAP_PALETTES.default);
   const colorPayload=JSON.stringify(colors);
-  const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>${fontLink}<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css"><link rel="stylesheet" href="${stylesheet}"><style>html,body{height:100%;margin:0}.card.map-window{position:fixed;inset:0;width:100%;height:100%;min-width:0;max-width:none;min-height:0;border:0;border-radius:0}.map-window .cardbody{height:100%;padding:0}.map-window .map-pane{height:100%;background:transparent}.map-window .map-pane>svg{width:100%;height:100%}</style></head><body class="${darkMode?"dark":""}"><article class="card map-card map-window" data-map-color="${theme}" data-font="${normalizeCardFont(n.mapFont)}" data-font-size="${size}" style="--card-font-family:${escapeHtml(fontStack)};--map-font-family:${escapeHtml(fontStack)}"><div class="cardbody"><div class="map-pane"><svg id="map"></svg></div></div></article><script src="https://cdn.jsdelivr.net/npm/d3@7"><\/script><script src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18.12"><\/script><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/highlight.min.js"><\/script><script>const md=${payload};const colors=${colorPayload};const root=new markmap.Transformer().transform(md).root;const depth=node=>node.state?.depth||0;const svg=document.querySelector("#map");const map=markmap.Markmap.create(svg,{autoFit:false,duration:350,maxWidth:300,spacingHorizontal:82,spacingVertical:15,color:node=>colors[depth(node)%colors.length],lineWidth:node=>depth(node)===1?3.6:depth(node)===2?2.25:1.55,style:id=>"#"+id+" .markmap-link{stroke-linecap:round;stroke-linejoin:round}"});${enableMapCameraFrames.toString()};let mapNavigation={drag:1};try{mapNavigation=JSON.parse(localStorage.getItem("reflatex-navigation")||"{}")}catch{}enableMapCameraFrames(svg,map,mapNavigation);(async()=>{await document.fonts.ready;await map.setData(root);svg.querySelectorAll("pre code").forEach(code=>{if(window.hljs){try{hljs.highlightElement(code)}catch{}}});await map.fit()})().catch(error=>{document.querySelector(".map-pane").textContent="Could not render this map: "+error.message});<\/script></body></html>`;
+  const highlightPayload=JSON.stringify(n.highlights||[]).replace(/</g,"\\u003c");
+  const highlightScript=escapeHtml(new URL("text-highlights.js",location.href).href);
+  const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>${fontLink}<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css"><link rel="stylesheet" href="${stylesheet}"><style>html,body{height:100%;margin:0}.card.map-window{position:fixed;inset:0;width:100%;height:100%;min-width:0;max-width:none;min-height:0;border:0;border-radius:0}.map-window .cardbody{height:100%;padding:0}.map-window .map-pane{height:100%;background:transparent}.map-window .map-pane>svg{width:100%;height:100%}</style></head><body class="${darkMode?"dark":""}"><article class="card map-card map-window" data-map-color="${theme}" data-font="${normalizeCardFont(n.mapFont)}" data-font-size="${size}" style="--card-font-family:${escapeHtml(fontStack)};--map-font-family:${escapeHtml(fontStack)}"><div class="cardbody"><div class="map-pane"><svg id="map"></svg></div></div></article><script src="https://cdn.jsdelivr.net/npm/d3@7"><\/script><script src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18.12"><\/script><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/highlight.min.js"><\/script><script src="${highlightScript}"><\/script><script>const md=${payload};const colors=${colorPayload};const highlights=${highlightPayload};const root=new markmap.Transformer().transform(md).root;const depth=node=>node.state?.depth||0;const svg=document.querySelector("#map");const map=markmap.Markmap.create(svg,{autoFit:false,duration:350,maxWidth:300,spacingHorizontal:82,spacingVertical:15,color:node=>colors[depth(node)%colors.length],lineWidth:node=>depth(node)===1?3.6:depth(node)===2?2.25:1.55,style:id=>"#"+id+" .markmap-link{stroke-linecap:round;stroke-linejoin:round}"});${enableMapCameraFrames.toString()};let mapNavigation={drag:1};try{mapNavigation=JSON.parse(localStorage.getItem("reflatex-navigation")||"{}")}catch{}enableMapCameraFrames(svg,map,mapNavigation);(async()=>{await document.fonts.ready;await map.setData(root);svg.querySelectorAll("pre code").forEach(code=>{if(window.hljs){try{hljs.highlightElement(code)}catch{}}});ConceptTextHighlights.paint(document.querySelector(".map-pane"),highlights);await map.fit()})().catch(error=>{document.querySelector(".map-pane").textContent="Could not render this map: "+error.message});<\/script></body></html>`;
   const tab=window.open();if(!tab){alert("Allow pop-ups to open this mind map.");return}
   tab.document.write(html);tab.document.close();
 }
@@ -2410,8 +2529,8 @@ function duplicate(){
  if(!state.selected)return;
  const n=state.selected;
  const c=n.type==="map"
-  ? makeMap(n.md,n.x+45,n.y+45,n.mapWidth||n.el.offsetWidth,n.mapHeight||n.el.offsetHeight,true,null,n.mapColor,n.mapFont,n.size)
-  : makeNote(n.md,n.x+45,n.y+45,n.el.offsetWidth,true,null,n.font,n.size,n.mapColor,n.mapFont,n.mapWidth,n.mapHeight);
+  ? makeMap(n.md,n.x+45,n.y+45,n.mapWidth||n.el.offsetWidth,n.mapHeight||n.el.offsetHeight,true,null,n.mapColor,n.mapFont,n.size,n.highlights)
+  : makeNote(n.md,n.x+45,n.y+45,n.el.offsetWidth,true,null,n.font,n.size,n.mapColor,n.mapFont,n.mapWidth,n.mapHeight,n.highlights);
  select(c);save()
 }
 function fit(widthOnly=false){
@@ -2628,7 +2747,7 @@ document.querySelectorAll("[data-background-choice]").forEach(button=>{
  };
 });
 $("#theme").onclick=toggleTheme
-$("#saveCanvas").onclick=()=>canvasFiles?canvasFiles.toggleMenu():downloadCanvas();
+$("#saveCanvas").onclick=downloadCanvas;
 let pdfExportLoader;
 async function downloadCardPdf(n){
  if(!n)return;
@@ -2650,7 +2769,7 @@ async function downloadCardPdf(n){
     ...[...document.querySelectorAll('link[rel="stylesheet"]')].filter(link=>link.hasAttribute("data-ui-fonts")||link.href.includes("katex.min.css")).map(link=>link.href),
     googleFontStylesheetUrl(n.type==="map"?n.mapFont:n.font)
    ].filter(Boolean))],
-   title:cardMarkdownParts(n.md).title||"ConceptCards card",html:renderCardMarkdown(n.md),
+   title:cardMarkdownParts(n.md).title||"ConceptCards card",html:renderCardMarkdown(n.md,n.highlights),
    width:Math.max(300,Math.min(1600,n.el.offsetWidth||600)),
    font:normalizeCardFont(n.type==="map"?n.mapFont:n.font),fontStack:mapFontStack(n.type==="map"?n.mapFont:n.font),
    size:String(n.size||"80"),theme:n.mapColor||"default",dark:document.body.classList.contains("dark")
@@ -2808,7 +2927,7 @@ function openCardTab(n){
   .map(link=>`<link rel="stylesheet" href="${escapeHtml(link.href)}">`).join("");
  const dark=document.body.classList.contains("dark");
  const width=Math.max(300,Math.min(1600,n.el.offsetWidth||600));
- const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="stylesheet" href="${stylesheet}">${supportingStyles}${fontLink}<style>html,body{min-height:100%;margin:0}body{min-height:100vh;display:grid;place-items:center;padding:24px;box-sizing:border-box;background:var(--canvas);color:var(--ink)}.card.card-window{min-width:0;position:relative;left:auto;top:auto;width:min(${width}px,calc(100vw - 48px));max-width:100%;max-height:calc(100vh - 48px);overflow:hidden;box-sizing:border-box}.card-window .cardbar{cursor:default}.card-window .cardactions,.card-window .resize{display:none!important}.card-window .cardbody{max-height:calc(100vh - 112px);overflow:auto}@media(max-width:600px){body{padding:12px}.card.card-window{width:100%;max-height:calc(100vh - 24px)}.card-window .cardbody{max-height:calc(100vh - 88px)}}</style></head><body class="${dark?"dark":""}"><article class="card card-window${heading?" has-title":""}" data-map-color="${theme}" data-font="${font}" data-font-size="${size}" style="--card-font-family:${escapeHtml(fontStack)}">${titleHtml}<div class="cardbody">${renderCardMarkdown(n.md)}</div></article></body></html>`;
+ const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="stylesheet" href="${stylesheet}">${supportingStyles}${fontLink}<style>html,body{min-height:100%;margin:0}body{min-height:100vh;display:grid;place-items:center;padding:24px;box-sizing:border-box;background:var(--canvas);color:var(--ink)}.card.card-window{min-width:0;position:relative;left:auto;top:auto;width:min(${width}px,calc(100vw - 48px));max-width:100%;max-height:calc(100vh - 48px);overflow:hidden;box-sizing:border-box}.card-window .cardbar{cursor:default}.card-window .cardactions,.card-window .resize{display:none!important}.card-window .cardbody{max-height:calc(100vh - 112px);overflow:auto}@media(max-width:600px){body{padding:12px}.card.card-window{width:100%;max-height:calc(100vh - 24px)}.card-window .cardbody{max-height:calc(100vh - 88px)}}</style></head><body class="${dark?"dark":""}"><article class="card card-window${heading?" has-title":""}" data-map-color="${theme}" data-font="${font}" data-font-size="${size}" style="--card-font-family:${escapeHtml(fontStack)}">${titleHtml}<div class="cardbody">${renderCardMarkdown(n.md,n.highlights)}</div></article></body></html>`;
  const tab=window.open();
  if(!tab){alert("Allow pop-ups to open this card.");return}
  tab.document.write(html);tab.document.close();
@@ -2949,6 +3068,10 @@ window.addEventListener("keydown",e=>{
   * These mirror the visible buttons without interfering with card text input.
  */
  const key=e.key.toLowerCase();
+ if(key==="backspace"&&!mod&&!e.altKey&&!e.shiftKey&&!document.activeElement?.isContentEditable&&document.activeElement?.tagName!=="SELECT"){
+  if(clearSelectedTextHighlight())e.preventDefault();
+  return;
+ }
  if(key==="p"&&!mod&&!e.altKey&&!document.activeElement?.isContentEditable&&document.activeElement?.tagName!=="SELECT"){
   const pauseButton=$("#pauseBackground");
   if(pauseButton&&!pauseButton.disabled){
@@ -3105,7 +3228,7 @@ window.addEventListener("keydown",e=>{
  /* Canvas/file/edit shortcuts */
  if(mod&&e.key.toLowerCase()==="s"){
    e.preventDefault();
-   if(canvasFiles)canvasFiles.save();else downloadCanvas();
+   downloadCanvas();
    return;
  }
  if(mod&&e.key.toLowerCase()==="o"){
@@ -3163,8 +3286,8 @@ function load(){
    (d.notes||[]).forEach(n=>{
     if(typeof n.md!=="string")return;
     n.type==="map"
-      ? makeMap(n.md,n.x||0,n.y||0,n.w||960,n.h||640,false,n.id,n.mapColor,n.mapFont,n.size)
-      : makeNote(n.md,n.x||0,n.y||0,n.w||600,false,n.id,typeof n.font==="string"?n.font:"mono",n.size,n.mapColor,n.mapFont,n.mapWidth,n.mapHeight);
+      ? makeMap(n.md,n.x||0,n.y||0,n.w||960,n.h||640,false,n.id,n.mapColor,n.mapFont,n.size,n.highlights)
+      : makeNote(n.md,n.x||0,n.y||0,n.w||600,false,n.id,typeof n.font==="string"?n.font:"mono",n.size,n.mapColor,n.mapFont,n.mapWidth,n.mapHeight,n.highlights);
    })
   }
  }catch{}
@@ -3184,7 +3307,7 @@ window.addEventListener("resize",()=>{
 window.addEventListener("pagehide",flushSave);
 try{
  load();
- if(window.createCanvasFileManager)canvasFiles=window.createCanvasFileManager({payload:canvasPayload,openFile:openCanvasFile,newCanvas:newBlankCanvas,backup:flushSave,hasContent:()=>state.notes.length>0});
+ if(window.createCanvasFileManager)canvasFiles=window.createCanvasFileManager({openFile:openCanvasFile,newCanvas:newBlankCanvas});
 }catch(err){
  showRuntimeError(err?.message||"Refresh the page and try again.");
 }

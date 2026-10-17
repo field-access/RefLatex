@@ -8,9 +8,9 @@ const root=path.resolve(__dirname,'..');
 (async()=>{
  const server=http.createServer((req,res)=>{
   const name=req.url==='/'?'index.html':req.url.slice(1);
-  if(!['index.html','app.js','styles.css','favicon.svg'].includes(name)){res.writeHead(404).end();return}
+  if(!['text-highlights.js','index.html','app.js','styles.css','favicon.svg'].includes(name)){res.writeHead(404).end();return}
   let body=fs.readFileSync(path.join(root,name),'utf8');
-  if(name==='app.js')body=body.replace(/\}\)\(\);\s*$/, 'window.__test={state,zoomPrecise,worldPoint,moveTo,layoutCards};})();');
+  if(name==='app.js')body=body.replace(/\}\)\(\);\s*$/, 'window.__test={state,zoomPrecise,worldPoint,moveTo,layoutCards,setCameraImmediate,interruptCamera};})();');
   res.setHeader('Content-Type',name.endsWith('.js')?'text/javascript':name.endsWith('.css')?'text/css':'text/html');res.end(body);
  });
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
@@ -33,6 +33,53 @@ const root=path.resolve(__dirname,'..');
   assert.equal(await page.evaluate(()=>__test.state.targetY),pageOrigin-720);
   await page.keyboard.press('PageUp');
   assert.equal(await page.evaluate(()=>__test.state.targetY),pageOrigin);
+  const pinchTransition=await page.evaluate(async()=>{
+   const t=__test,el=document.querySelector('#canvas');t.interruptCamera();t.setCameraImmediate(100,70,1);
+   const anchor=t.worldPoint(800,300);
+   el.dispatchEvent(new WheelEvent('wheel',{deltaY:100,clientX:800,clientY:300,bubbles:true,cancelable:true}));
+   el.dispatchEvent(new WheelEvent('wheel',{deltaY:-20,ctrlKey:true,clientX:800,clientY:300,bubbles:true,cancelable:true}));
+   await new Promise(resolve=>setTimeout(resolve,350));
+   const actual=t.worldPoint(800,300);
+   return {error:Math.hypot(actual.x-anchor.x,actual.y-anchor.y),scale:t.state.scale};
+  });
+  assert.ok(pinchTransition.error<1e-7,'Scroll-to-pinch keeps the point under the cursor: '+JSON.stringify(pinchTransition));
+  const pinchSensitivity=await page.evaluate(async()=>{
+   const t=__test,el=document.querySelector('#canvas'),slider=document.querySelector('#nav-pinch'),results=[];
+   for(const sensitivity of [.25,1,3]){
+    slider.value=sensitivity;slider.dispatchEvent(new Event('input',{bubbles:true}));
+    t.interruptCamera();t.setCameraImmediate(100,70,1);const anchor=t.worldPoint(800,300);
+    for(let i=0;i<40;i++)el.dispatchEvent(new WheelEvent('wheel',{deltaY:-.5,ctrlKey:true,clientX:800,clientY:300,bubbles:true,cancelable:true}));
+    const beforeFrame=t.state.scale;await new Promise(requestAnimationFrame);
+    const point=t.worldPoint(800,300);results.push({sensitivity,beforeFrame,scale:t.state.scale,error:Math.hypot(point.x-anchor.x,point.y-anchor.y)});
+   }
+   // Starting a pinch during a fit animation must use the visible transform.
+   t.moveTo(-1000,-900,2);const anchor=t.worldPoint(800,300);
+   el.dispatchEvent(new WheelEvent('wheel',{deltaY:-1,ctrlKey:true,clientX:800,clientY:300,bubbles:true,cancelable:true}));
+   await new Promise(requestAnimationFrame);const point=t.worldPoint(800,300);
+   return {results,fitError:Math.hypot(point.x-anchor.x,point.y-anchor.y)};
+  });
+  for(const sample of pinchSensitivity.results){
+   assert.equal(sample.beforeFrame,1,'Pinch input paints once per frame');
+   assert.ok(Math.abs(sample.scale-2**(.08*sample.sensitivity))<1e-8,'Sensitivity scales actual pinch input: '+JSON.stringify(sample));
+   assert.ok(sample.error<1e-7);
+  }
+  assert.ok(pinchSensitivity.fitError<1e-7,'Fit-to-pinch keeps the visible cursor anchor');
+  await page.reload({waitUntil:'networkidle'});
+  assert.equal(await page.locator('#nav-pinch').inputValue(),'3','Expanded pinch sensitivity survives reload');
+  await page.evaluate(()=>{const slider=document.querySelector('#nav-pinch');slider.value=1;slider.dispatchEvent(new Event('input',{bubbles:true}));__test.interruptCamera();__test.setCameraImmediate(640,400,1)});
+
+  const nativePinchBefore=await page.evaluate(()=>{
+   __test.interruptCamera();__test.setCameraImmediate(100,70,1);
+   document.querySelector('#canvas').addEventListener('wheel',event=>{window.__nativePinch={trusted:event.isTrusted,ctrl:event.ctrlKey,delta:event.deltaY}},{once:true,capture:true});
+   return __test.worldPoint(800,300);
+  });
+  await page.mouse.move(800,300);await page.keyboard.down('Control');await page.mouse.wheel(0,-20);await page.keyboard.up('Control');
+  await page.waitForFunction(()=>__test.state.scale>1);
+  const nativePinch=await page.evaluate(()=>({event:__nativePinch,scale:__test.state.scale,point:__test.worldPoint(800,300)}));
+  assert.ok(nativePinch.event.trusted&&nativePinch.event.ctrl,'Browser-delivered trackpad-style pinch reaches the camera');
+  assert.ok(Math.abs(nativePinch.scale-2**.08)<1e-7);
+  assert.ok(Math.hypot(nativePinch.point.x-nativePinchBefore.x,nativePinch.point.y-nativePinchBefore.y)<1e-7);
+  await page.evaluate(()=>{__test.interruptCamera();__test.setCameraImmediate(640,400,1)});
   await page.locator('#hand').click();
   await page.waitForFunction(()=>window.__test);
   const result=await page.evaluate(()=>{
@@ -162,6 +209,6 @@ const root=path.resolve(__dirname,'..');
    assert.ok(Math.hypot(after.p.x-before.p.x,after.p.y-before.p.y)<1e-7);
   }
   assert.deepEqual(errors,[]);
-  console.log(JSON.stringify({passed:true,...result,wheel,drag:{captured,dx:drag.x-dragStart.x,dy:drag.y-dragStart.y,savesDuringDrag:drag.saves},touch,errors},null,2));
+  console.log(JSON.stringify({passed:true,...result,pinchTransition,pinchSensitivity,nativePinch,wheel,drag:{captured,dx:drag.x-dragStart.x,dy:drag.y-dragStart.y,savesDuringDrag:drag.saves},touch,errors},null,2));
  }finally{await browser?.close();await new Promise(r=>server.close(r))}
 })().catch(e=>{console.error(e);process.exitCode=1});

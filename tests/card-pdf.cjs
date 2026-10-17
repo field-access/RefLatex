@@ -4,7 +4,7 @@ const root=path.resolve(__dirname,'..');
 (async()=>{
  const server=http.createServer((req,res)=>{
   const name=req.url.split('?')[0]==='/'?'index.html':req.url.split('?')[0].slice(1);
-  if(!['index.html','app.js','styles.css','card-pdf.js','village.js','favicon.svg','assets/backgrounds/village-pdf.js'].includes(name)){res.writeHead(404).end();return}
+  if(!['text-highlights.js','index.html','app.js','styles.css','card-pdf.js','village.js','favicon.svg','assets/backgrounds/village-pdf.js'].includes(name)){res.writeHead(404).end();return}
   let body=fs.readFileSync(path.join(root,name),'utf8');
   if(name==='app.js')body=body.replace(/\}\)\(\);\s*$/,'window.__pdfTest={makeNote,select};})();');
   res.setHeader('Content-Type',name.endsWith('.js')?'text/javascript':name.endsWith('.css')?'text/css':'text/html');res.end(body);

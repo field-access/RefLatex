@@ -4,9 +4,9 @@ const root=path.resolve(__dirname,'..');
 (async()=>{
  const server=http.createServer((req,res)=>{
   const name=req.url==='/'?'index.html':req.url.slice(1);
-  if(!['index.html','app.js','styles.css'].includes(name)){res.writeHead(404).end();return}
+  if(!['text-highlights.js','index.html','app.js','styles.css'].includes(name)){res.writeHead(404).end();return}
   let body=fs.readFileSync(path.join(root,name),'utf8');
-  if(name==='app.js')body=body.replace(/\}\)\(\);\s*$/,'window.__content={state,resizeSelectedWidth,setCameraImmediate,focusViewport,editNote,closeEditor,makeNote,makeMap,select,focusSelected,layoutCards,updateCardHeading,deleteNote,openMapTab,openCardTab,wrapCodeLines,enableMapCameraFrames,ensureFontLoaded};})();');
+  if(name==='app.js')body=body.replace(/\}\)\(\);\s*$/,'window.__content={state,showTextHighlighter,canvasPayload,resizeSelectedWidth,setCameraImmediate,focusViewport,editNote,closeEditor,makeNote,makeMap,select,focusSelected,layoutCards,updateCardHeading,deleteNote,openMapTab,openCardTab,wrapCodeLines,enableMapCameraFrames,enablePenMapWheel,ensureFontLoaded};})();');
   res.setHeader('Content-Type',name.endsWith('.js')?'text/javascript':name.endsWith('.css')?'text/css':'text/html');res.end(body);
  });
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
@@ -16,6 +16,164 @@ const root=path.resolve(__dirname,'..');
   await page.route('https://**/*',r=>r.request().url().includes('/marked@')?r.fulfill({path:path.join(path.dirname(require.resolve('marked')),'marked.umd.js'),contentType:'text/javascript'}):r.abort());
   await page.goto(`http://127.0.0.1:${server.address().port}`,{waitUntil:'networkidle'});
   await page.route('**/test-web-image.svg',route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20"><rect width="40" height="20" fill="blue"/></svg>'}));
+  const highlightId=await page.evaluate(()=>{
+   const n=__content.makeNote('# Highlights\n\nRemember this important idea.',0,0,600,false,null,'mono','80','ocean');__content.select(n);
+   const text=n.el.querySelector('.cardbody p').firstChild,range=document.createRange();range.setStart(text,14);range.setEnd(text,28);
+   getSelection().removeAllRanges();getSelection().addRange(range);n.el.dispatchEvent(new PointerEvent('pointerup',{bubbles:true}));return n.id;
+  });
+  await page.locator('#textHighlighter').waitFor({state:'visible'});
+  await page.getByRole('button',{name:'Theme highlight',exact:true}).click();
+  const themedMark=page.locator('.card.selected mark.card-text-highlight');
+  assert.equal(await themedMark.textContent(),'important idea');
+  assert.equal(await themedMark.getAttribute('data-highlight'),'theme');
+  const persisted=await page.evaluate(id=>{
+   const entry=__content.canvasPayload().notes.find(n=>n.id===id),copy=__content.makeNote(entry.markdown,0,0,600,false,null,entry.font,entry.size,entry.mapColor,entry.mapFont,null,null,entry.highlights);
+   const result={saved:entry.highlights.length===1&&!entry.markdown.includes('<mark'),restored:copy.el.querySelector('mark.card-text-highlight')?.textContent};__content.deleteNote(copy);return result;
+  },highlightId);
+  assert.ok(persisted.saved);assert.equal(persisted.restored,'important idea');
+  await page.evaluate(()=>{__content.editNote(__content.state.selected);const source=document.querySelector('#source');source.value='Editable';source.focus();source.setSelectionRange(8,8)});
+  await page.keyboard.press('Backspace');
+  assert.equal(await page.locator('#source').inputValue(),'Editabl','Backspace edits source normally');
+  assert.equal(await page.evaluate(()=>__content.state.selected.highlights.length),1,'Typing does not clear card highlights');
+  await page.evaluate(()=>__content.closeEditor());
+  for(const action of ['Blue highlight','Remove highlight']){
+   await themedMark.evaluate(mark=>{const range=document.createRange();range.selectNodeContents(mark);getSelection().removeAllRanges();getSelection().addRange(range);mark.closest('.card').dispatchEvent(new PointerEvent('pointerup',{bubbles:true}))});
+   await page.locator('#textHighlighter').waitFor({state:'visible'});
+   if(action==='Remove highlight')await page.keyboard.press('Backspace');
+   else await page.getByRole('button',{name:action,exact:true}).click();
+   if(action==='Blue highlight')assert.equal(await themedMark.getAttribute('data-highlight'),'blue');
+  }
+  assert.equal(await themedMark.count(),0);
+  assert.equal(await page.evaluate(()=>__content.state.selected.md),'# Highlights\n\nRemember this important idea.');
+  await page.evaluate(id=>__content.deleteNote(__content.state.notes.find(n=>n.id===id)),highlightId);
+  const integrityId=await page.evaluate(()=>{
+   const md='# Highlight integrity\n\nKeep **bold words** and [linked words](https://example.com) unchanged.';
+   const n=__content.makeNote(md,0,0,600,false,null,'mono','80','ocean');__content.select(n);
+   const p=n.el.querySelector('.cardbody p'),range=document.createRange();range.setStart(p.querySelector('strong').firstChild,0);range.setEnd(p.querySelector('a').firstChild,6);
+   getSelection().removeAllRanges();getSelection().addRange(range);__content.showTextHighlighter();return n.id;
+  });
+  await page.getByRole('button',{name:'Theme highlight',exact:true}).click();
+  const integrityMark=page.locator('.card.selected mark.card-text-highlight').first();
+  assert.equal(await page.locator('.card.selected .cardbody p').textContent(),'Keep bold words and linked words unchanged.');
+  assert.equal(await page.locator('.card.selected strong').textContent(),'bold words');
+  assert.equal(await page.locator('.card.selected .cardbody a').getAttribute('href'),'https://example.com');
+  for(const dark of [false,true]){
+   await page.evaluate(dark=>document.body.classList.toggle('dark',dark),dark);
+   const backgrounds=[];
+   for(const color of ['Theme','Yellow','Green','Blue','Pink']){
+    await integrityMark.evaluate(mark=>{const range=document.createRange();range.setStart(mark.firstChild,0);range.collapse(true);getSelection().removeAllRanges();getSelection().addRange(range);__content.showTextHighlighter()});
+    await page.getByRole('button',{name:color+' highlight',exact:true}).click();
+    assert.equal(await integrityMark.getAttribute('data-highlight'),color.toLowerCase());
+    backgrounds.push(await integrityMark.evaluate(mark=>getComputedStyle(mark).backgroundColor));
+    assert.equal(await page.locator('.card.selected .cardbody p').textContent(),'Keep bold words and linked words unchanged.');
+   }
+   assert.equal(new Set(backgrounds).size,5,'All five highlight colors are distinct: '+JSON.stringify({dark,backgrounds}));
+  }
+  await page.evaluate(()=>document.body.classList.remove('dark'));
+  await integrityMark.evaluate(mark=>{const range=document.createRange();range.setStart(mark.firstChild,0);range.collapse(true);getSelection().removeAllRanges();getSelection().addRange(range);__content.showTextHighlighter()});
+  await page.getByRole('button',{name:'Remove highlight',exact:true}).click();
+  assert.equal(await page.evaluate(()=>__content.state.selected.md),'# Highlight integrity\n\nKeep **bold words** and [linked words](https://example.com) unchanged.');
+  await page.evaluate(id=>__content.deleteNote(__content.state.notes.find(n=>n.id===id)),integrityId);
+  const pasted=await page.evaluate(()=>{
+   const fence=String.fromCharCode(96).repeat(3);
+   const md='# Pasted code\n\n<pre><code><span class="hljs-keyword">const</span> value = 42;\nreturn value;</code></pre>\n\n'+fence+'js\nconst value = 42;\nreturn value;\n'+fence+'\n\n    const value = 42;\n    return value;\n\n<pre>const value = 42;\nreturn value;</pre>';
+   const n=__content.makeNote(md,0,0,600,false,null,'mono','80','ocean');__content.select(n);
+   const blocks=[...n.el.querySelectorAll('pre')];
+   const styles=[];
+   for(const dark of [false,true]){
+    document.body.classList.toggle('dark',dark);
+    styles.push(blocks.map(pre=>({background:getComputedStyle(pre).backgroundColor,font:getComputedStyle(pre.querySelector('code')).fontSize,lines:pre.querySelectorAll('.code-line').length,numbered:pre.classList.contains('line-numbered')})));
+   }
+   document.body.classList.remove('dark');
+   const token=blocks[0].querySelector('.hljs-keyword').firstChild,range=document.createRange();range.selectNodeContents(token);
+   getSelection().removeAllRanges();getSelection().addRange(range);__content.showTextHighlighter();
+   return {id:n.id,md,text:blocks[0].textContent,styles};
+  });
+  for(const styles of pasted.styles){
+   assert.equal(styles.length,4,'HTML, fenced, indented, and plain preformatted pasted code render');
+   assert.ok(styles.every(style=>style.numbered&&style.lines===2));
+   assert.equal(new Set(styles.map(style=>style.background)).size,1,'All code formats share the current theme');
+   assert.equal(new Set(styles.map(style=>style.font)).size,1);
+  }
+  await page.getByRole('button',{name:'Green highlight',exact:true}).click();
+  assert.equal(await page.locator('.card.selected pre .hljs-keyword mark').textContent(),'const');
+  assert.equal(await page.evaluate(()=>__content.state.selected.md),pasted.md);
+  assert.equal(await page.locator('.card.selected pre').first().textContent(),pasted.text);
+  const codeRestored=await page.evaluate(()=>{
+   const entry=__content.canvasPayload().notes.find(n=>n.id===__content.state.selected.id);
+   const copy=__content.makeNote(entry.markdown,0,0,600,false,null,entry.font,entry.size,entry.mapColor,entry.mapFont,null,null,entry.highlights);
+   const result=copy.el.querySelector('pre .hljs-keyword mark')?.textContent;
+   __content.deleteNote(copy);return result;
+  });
+  assert.equal(codeRestored,'const','Code annotations survive saving and reopening');
+  await page.waitForTimeout(50);
+  await page.locator('.card.selected pre mark').evaluate(mark=>{
+   const range=document.createRange();range.selectNodeContents(mark);getSelection().removeAllRanges();getSelection().addRange(range);__content.showTextHighlighter();
+  });
+  await page.getByRole('button',{name:'Remove highlight',exact:true}).click();
+  assert.equal(await page.locator('.card.selected pre mark').count(),0);
+  assert.equal(await page.evaluate(()=>__content.state.selected.md),pasted.md);
+  await page.evaluate(id=>__content.deleteNote(__content.state.notes.find(n=>n.id===id)),pasted.id);
+  const equation=await page.evaluate(()=>{
+   // KaTeX's dual accessibility/visual structure, independent of CDN availability.
+   const fixture='<span class="katex"><span class="katex-mathml"><math><semantics><mi>x</mi><annotation encoding="application/x-tex">x^2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span style="display:inline-block;width:40px;height:24px">x²</span></span></span>';
+   const md='# Equation\n\n$$x^2$$';
+   const n=__content.makeNote(md,0,0,600,false);__content.select(n);
+   n.el.querySelector('.cardbody').innerHTML=fixture;
+   const math=n.el.querySelector('.katex'),range=document.createRange();range.setStart(math.querySelector('.katex-html span').firstChild,0);range.collapse(true);
+   getSelection().removeAllRanges();getSelection().addRange(range);__content.showTextHighlighter();
+   const r=math.getBoundingClientRect();return {id:n.id,md,width:r.width,height:r.height};
+  });
+  await page.getByRole('button',{name:'Pink highlight',exact:true}).click();
+  const mathMark=page.locator('.card.selected .card-equation-highlight');
+  assert.equal(await mathMark.getAttribute('data-highlight'),'pink');
+  const geometry=await mathMark.boundingBox();
+  assert.equal(geometry.width,equation.width);assert.equal(geometry.height,equation.height);
+  assert.equal(await page.evaluate(()=>__content.state.selected.md),equation.md);
+  await mathMark.evaluate(math=>{const range=document.createRange();range.selectNodeContents(math);getSelection().removeAllRanges();getSelection().addRange(range);__content.showTextHighlighter()});
+  await page.keyboard.press('Backspace');
+  assert.equal(await mathMark.count(),0);
+  assert.equal(await page.evaluate(()=>__content.state.selected.md),equation.md);
+  await page.evaluate(id=>__content.deleteNote(__content.state.notes.find(n=>n.id===id)),equation.id);
+  const tableLayout=await page.evaluate(()=>{
+   const md='# Table highlights\n\n| Topic | Details |\n| --- | --- |\n| First | Several words close to wrapping onto another line. |\n| Second | Formula |';
+   const n=__content.makeNote(md,0,0,320,false),body=n.el.querySelector('.cardbody'),table=body.querySelector('table');
+   const cells=table.querySelectorAll('td');
+   cells[3].innerHTML='<span class="katex-display">\n<span class="katex"><span class="katex-mathml"><math><semantics><mfrac><mi>x</mi><mn>2</mn></mfrac><annotation encoding="application/x-tex">\\frac{x}{2}</annotation></semantics></math></span><span class="katex-html"><span style="display:inline-block;width:30px;height:38px">x / 2</span></span></span>\n</span><math xmlns="http://www.w3.org/1998/Math/MathML"><mfrac><mi>y</mi><mn>3</mn></mfrac></math>';
+   const source=body.innerHTML,math=body.querySelector('.katex'),native=body.querySelector('td>math');
+   const structure=root=>JSON.stringify([...root.querySelectorAll('table,thead,tbody,tr,th,td,.katex span,math>*')].map(el=>[el.tagName,el.parentElement.tagName]));
+   const dimensions=root=>[...root.querySelectorAll('table,tr,th,td,.katex,.katex-html,td>math')].map(el=>{const r=el.getBoundingClientRect();return [r.width,r.height]});
+   const before=dimensions(body),beforeStructure=structure(body),mathHTML=math.innerHTML,nativeHTML=native.innerHTML;
+   const range=document.createRange();range.selectNodeContents(table);
+   const selected=ConceptTextHighlights.selection(body,range),items=[ConceptTextHighlights.create(selected,'yellow')];
+   ConceptTextHighlights.paint(body,items);
+   const after=dimensions(body),afterStructure=structure(body);
+   const result={before,after,beforeStructure,afterStructure,mathUnchanged:math.innerHTML===mathHTML,nativeUnchanged:native.innerHTML===nativeHTML,structuralMarks:body.querySelectorAll('table>mark,thead>mark,tbody>mark,tr>mark,.katex-display>mark,math mark').length,marksOutsideCells:[...table.querySelectorAll('mark')].filter(mark=>!mark.closest('td,th')).length,highlightCount:table.querySelectorAll('mark').length,mathHighlights:table.querySelectorAll('.card-equation-highlight').length,mdUnchanged:n.md===md};
+   // Saved/exported HTML must also survive the browser's table parser.
+   body.innerHTML=body.innerHTML;
+   result.roundTripStructure=structure(body);result.roundTripDimensions=dimensions(body);
+   for(const color of ['green','blue','pink','theme']){
+    items[0].color=color;ConceptTextHighlights.paint(body,items);
+   }
+   result.recoloredDimensions=dimensions(body);
+   ConceptTextHighlights.paint(body,[]);
+   result.cleared=body.innerHTML===source;result.clearedDimensions=dimensions(body);
+   __content.deleteNote(n);return result;
+  });
+  assert.ok(tableLayout.highlightCount>0);assert.equal(tableLayout.mathHighlights,2);
+  assert.equal(tableLayout.structuralMarks,0);assert.equal(tableLayout.marksOutsideCells,0);
+  assert.ok(tableLayout.mathUnchanged&&tableLayout.nativeUnchanged&&tableLayout.mdUnchanged&&tableLayout.cleared);
+  for(const key of ['afterStructure','roundTripStructure'])assert.equal(tableLayout[key],tableLayout.beforeStructure,'Table and equation structure stays intact');
+  for(const key of ['after','roundTripDimensions','recoloredDimensions','clearedDimensions'])assert.deepEqual(tableLayout[key],tableLayout.before,'Highlighting, saving, recoloring, and clearing preserve layout');
+  const migration=await page.evaluate(()=>{
+   const fence=String.fromCharCode(96).repeat(3),example='<mark class="card-text-highlight" data-highlight="blue">literal</mark>';
+   const md='# Legacy\n\n<mark class="card-text-highlight" data-highlight="yellow">**old highlight**</mark>\n\n'+fence+'html\n'+example+'\n'+fence;
+   const n=__content.makeNote(md,0,0,600,false);
+   const result={md:n.md,expected:md.replace('<mark class="card-text-highlight" data-highlight="yellow">**old highlight**</mark>','**old highlight**'),text:n.el.querySelector('strong mark')?.textContent,count:n.highlights.length};
+   __content.deleteNote(n);return result;
+  });
+  assert.equal(migration.md,migration.expected,'Legacy annotations migrate without changing code examples');
+  assert.equal(migration.text,'old highlight');assert.equal(migration.count,1);
   const editorPosition=await page.evaluate(()=>{
    const md='# Edit selection\n\nRepeated target\n\n'+('Filler paragraph with enough text to make the editor scroll.\n\n'.repeat(80))+'Repeated target\n\nA **formatted** selection here';
    const n=__content.makeNote(md,0,0,600,false);__content.select(n);
@@ -145,6 +303,26 @@ const root=path.resolve(__dirname,'..');
    return {immediate,...committed,afterCleanup:paints};
   });
   assert.deepEqual(cameraFrames,{immediate:0,paints:1,last:119,afterCleanup:1});
+  const mapPinch=await page.evaluate(()=>{
+   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');document.body.append(svg);
+   let delta;const zoom={on(){return arguments.length===1?()=>{}:this},wheelDelta(callback){delta=callback;return this}};
+   const settings={pinch:3,wheel:.5},cleanup=__content.enableMapCameraFrames(svg,{zoom},settings);
+   const high=delta({ctrlKey:true,deltaY:-20,deltaMode:0});settings.pinch=.25;
+   const low=delta({ctrlKey:true,deltaY:-20,deltaMode:0}),wheel=delta({ctrlKey:false,deltaY:-20,deltaMode:0});
+   cleanup();svg.remove();
+   const original=window.d3;let captured;
+   window.d3={pointer:event=>[event.clientX,event.clientY],select:()=>({call(fn,scale,point){captured={scale,point}}})};
+   const card=document.createElement('article');card.className='card map-card selected';card.style.cssText='position:fixed;left:0;top:0;width:1000px;height:600px';
+   card.innerHTML='<div class="map-pane"><svg style="width:100%;height:100%"></svg></div>';document.body.append(card);
+   const pane=card.querySelector('.map-pane');__content.enablePenMapWheel(pane,card.querySelector('svg'),{zoom:{scaleBy(){}}});
+   pane.dispatchEvent(new PointerEvent('pointermove',{pointerType:'pen',clientX:100,clientY:100,bubbles:true}));
+   pane.dispatchEvent(new WheelEvent('wheel',{ctrlKey:true,deltaY:-20,clientX:600,clientY:400,bubbles:true,cancelable:true}));
+   card.remove();window.d3=original;return {high,low,wheel,anchor:captured.point};
+  });
+  assert.ok(Math.abs(mapPinch.high/mapPinch.low-12)<1e-8,'Standalone maps honor the expanded pinch sensitivity');
+  assert.ok(Math.abs(mapPinch.wheel-.044)<1e-8,'Ctrl pinch and wheel retain separate sensitivities');
+  assert.deepEqual(mapPinch.anchor,[600,400],'A previous pen hover cannot replace the touchpad pinch anchor');
+
   const palette=await page.evaluate(async()=>{
    const notes=Array.from({length:90},(_,i)=>__content.makeNote(`# Subject ${i+1}: a longer card title`,0,0,600,false,null,'sans'));
    document.querySelector('[data-index-view="palette"]').click();

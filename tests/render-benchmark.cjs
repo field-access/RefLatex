@@ -33,8 +33,9 @@ Use **clear headings**, short paragraphs, and meaningful labels. Revisit the boa
 `;
 (async()=>{
  const server=http.createServer((req,res)=>{
-  let name=req.url==='/'?'index.html':req.url.slice(1);
-  if(!['index.html','styles.css','app.js'].includes(name)){res.writeHead(404).end();return}
+  let name=req.url.split('?')[0]==='/'?'index.html':req.url.split('?')[0].slice(1);
+  if(name==='assets/backgrounds/night_sky_background.webp'){res.setHeader('Content-Type','image/webp');res.end(fs.readFileSync(path.join(root,name)));return}
+  if(!['text-highlights.js','index.html','styles.css','app.js'].includes(name)){res.writeHead(404).end();return}
   let body=fs.readFileSync(path.join(root,name),'utf8');
   if(name==='app.js')body=body.replace(/\}\)\(\);\s*$/,'window.__bench={state,zoomPrecise,apply};})();');
   res.setHeader('Content-Type',name.endsWith('.js')?'text/javascript':name.endsWith('.css')?'text/css':'text/html');res.end(body);
@@ -42,14 +43,17 @@ Use **clear headings**, short paragraphs, and meaningful labels. Revisit the boa
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
  const browser=await chromium.launch({channel:'msedge',headless:true});
  try{
- for(const cardCount of [10,150])for(const layers of [false,true]){
+ for(const cardCount of (process.env.BENCH_CARDS?[Number(process.env.BENCH_CARDS)]:[10,150]))for(const dark of (process.env.BENCH_DARK==='both'?[false,true]:[process.env.BENCH_DARK==='true']))for(const layers of (process.env.BENCH_LAYERS?[process.env.BENCH_LAYERS==='true']:[false,true])){
  const page=await browser.newPage({viewport:{width:1440,height:900}});
  await page.route('https://**/*',r=>r.request().url().includes('/marked@')?r.fulfill({path:markedPath,contentType:'text/javascript'}):r.abort());
  await page.addInitScript(({md,cardCount})=>localStorage.setItem('reflatex',JSON.stringify({x:100,y:70,scale:.36,notes:Array.from({length:cardCount},(_,i)=>({id:i+1,md,x:(i%5)*680,y:Math.floor(i/5)*1120,w:600,font:'sans'}))})),{md,cardCount});
- await page.addInitScript(()=>localStorage.setItem('reflatex-index-open','false'));
+ await page.addInitScript(background=>localStorage.setItem('reflatex-background',background),process.env.BENCH_BACKGROUND||'light');
+ await page.addInitScript(dark=>{localStorage.setItem('reflatex-index-open','false');localStorage.setItem('reflatex-theme',dark?'dark':'light')},dark);
   await page.goto(`http://127.0.0.1:${server.address().port}`,{waitUntil:'networkidle'});
+ if(process.env.BENCH_STYLE)await page.addStyleTag({content:fs.readFileSync(process.env.BENCH_STYLE,'utf8')});
  if(!layers)await page.addStyleTag({content:'#world{will-change:auto!important}'});
  const cdp=await page.context().newCDPSession(page);await cdp.send('Performance.enable');
+ let renderLayers=0;cdp.on('LayerTree.layerTreeDidChange',event=>{renderLayers=event.layers?.length||0});await cdp.send('LayerTree.enable');
  const metric=async()=>Object.fromEntries((await cdp.send('Performance.getMetrics')).metrics.map(m=>[m.name,m.value]));
  const before=await metric();
  const stats=await page.evaluate(async()=>{
@@ -59,10 +63,10 @@ Use **clear headings**, short paragraphs, and meaningful labels. Revisit the boa
    __bench.zoomPrecise(Math.exp(Math.sin(i/16)*.018),720,450);
   }
   times.sort((a,b)=>a-b);
-  return {p95:times[Math.floor(times.length*.95)],slowFrames:times.filter(t=>t>25).length,nodes:document.querySelectorAll('*').length,tables:document.querySelectorAll('.cardbody table').length};
+  return {backdrop:getComputedStyle(document.querySelector('.cardbody pre')).backdropFilter,p95:times[Math.floor(times.length*.95)],slowFrames:times.filter(t=>t>25).length,nodes:document.querySelectorAll('*').length,tables:document.querySelectorAll('.cardbody table').length};
  });
  const after=await metric();
- console.log(JSON.stringify({layers,characters:md.length,...stats,taskMs:(after.TaskDuration-before.TaskDuration)*1000,layoutMs:(after.LayoutDuration-before.LayoutDuration)*1000,styleMs:(after.RecalcStyleDuration-before.RecalcStyleDuration)*1000}));
+ console.log(JSON.stringify({cardCount,dark,layers,renderLayers,characters:md.length,...stats,taskMs:(after.TaskDuration-before.TaskDuration)*1000,layoutMs:(after.LayoutDuration-before.LayoutDuration)*1000,styleMs:(after.RecalcStyleDuration-before.RecalcStyleDuration)*1000}));
  await page.waitForTimeout(200);
  await page.mouse.move(700,350);await page.mouse.down({button:'right'});
  const panBefore=await metric();
@@ -80,7 +84,7 @@ Use **clear headings**, short paragraphs, and meaningful labels. Revisit the boa
   return {p95:times[114],slowFrames:times.filter(t=>t>25).length,dx:__bench.state.x-start.x,dy:__bench.state.y-start.y,positionError:Math.abs(rect.left-__bench.state.x)};
  });
  const panAfter=await metric();
- console.log(JSON.stringify({phase:'right-drag',layers,characters:md.length,...pan,taskMs:(panAfter.TaskDuration-panBefore.TaskDuration)*1000,layoutMs:(panAfter.LayoutDuration-panBefore.LayoutDuration)*1000}));
+ console.log(JSON.stringify({phase:'right-drag',cardCount,dark,layers,characters:md.length,...pan,taskMs:(panAfter.TaskDuration-panBefore.TaskDuration)*1000,layoutMs:(panAfter.LayoutDuration-panBefore.LayoutDuration)*1000}));
  await page.mouse.up({button:'right'});
  await page.close();
  }
