@@ -1,0 +1,5 @@
+# Deploy the static web app without desktop build artifacts or test tooling.
+.desktop-cache/
+desktop/
+dist/
+tests/
