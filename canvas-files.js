@@ -37,7 +37,9 @@ window.createCanvasFileManager=options=>{
   if(!record&&reconnect&&!reconnect.handle&&reconnect.name===name)record=reconnect;
   record ||= {id:crypto.randomUUID(),name};record.handle=handle||null;record.name=name;record.used=Date.now();
   records=[record,...records.filter(item=>item.id!==record.id)].slice(0,10);
-  await stored('put',record);
+  // Native handles contain IPC functions; persist only their approved file ID.
+  const saved=handle?.desktopId?{...record,handle:{desktopId:handle.desktopId,name:handle.name,kind:'file'}}:record;
+  await stored('put',saved);
   try{localStorage.setItem('reflatex-recent-files',JSON.stringify(records.map(({id,name,used})=>({id,name,used}))))}catch{}
   return record;
  }
@@ -72,12 +74,16 @@ window.createCanvasFileManager=options=>{
   try{
    localStorage.removeItem('reflatex-active-file');localStorage.removeItem('reflatex-file-baseline');
    const names=JSON.parse(localStorage.getItem('reflatex-recent-files')||'[]'),saved=await stored('getAll');
-   records=names.map(name=>saved.find(record=>record.id===name.id)||name).slice(0,10);
+   records=names.map(name=>saved.find(record=>record.id===name.id)||name).slice(0,10).map(record=>{
+    if(record.handle?.desktopId)record.handle=window.ConceptDesktop?.restoreFileHandle(record.handle)||null;
+    return record;
+   });
   }catch{}
   render();
  })();
  document.getElementById('openCanvasFile').onclick=()=>open();
  document.getElementById('newBlankCanvas').onclick=newCanvas;
+ document.getElementById('importMarkdownFiles').onclick=()=>{closeMenu();document.getElementById('markdownFiles').click()};
  document.addEventListener('click',event=>{if(!event.target.closest('.canvas-open-picker'))closeMenu()});
  menu.addEventListener('keydown',event=>{
   if(event.key==='Escape'){event.preventDefault();event.stopPropagation();closeMenu();trigger.focus()}

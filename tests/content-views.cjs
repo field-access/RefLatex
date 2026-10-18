@@ -21,6 +21,17 @@ const root=path.resolve(__dirname,'..');
    const text=n.el.querySelector('.cardbody p').firstChild,range=document.createRange();range.setStart(text,14);range.setEnd(text,28);
    getSelection().removeAllRanges();getSelection().addRange(range);n.el.dispatchEvent(new PointerEvent('pointerup',{bubbles:true}));return n.id;
   });
+  await page.waitForTimeout(60);
+  assert.equal(await page.locator('#textHighlighter').isVisible(),true,'Text selection opens the compact palette');
+  await page.locator('#textHighlighter').waitFor({state:'visible'});
+  const paletteSize=await page.locator('#textHighlighter').boundingBox();
+  assert.ok(paletteSize.width<=160&&paletteSize.height<=32,'The palette is compact');
+  await page.keyboard.press('Escape');
+  assert.equal(await page.locator('#textHighlighter').isVisible(),false,'Escape dismisses the palette');
+  assert.equal(await page.evaluate(()=>getSelection().toString()),'important idea','Dismissing the palette keeps the reading selection');
+  assert.equal(await page.locator('.card [data-text-highlight]').count(),0,'Cards do not carry individual highlight buttons');
+  assert.equal(await page.locator('#highlightText').count(),0,'The tray has no added highlight button');
+  await page.keyboard.press('Control+Shift+H');
   await page.locator('#textHighlighter').waitFor({state:'visible'});
   await page.getByRole('button',{name:'Theme highlight',exact:true}).click();
   const themedMark=page.locator('.card.selected mark.card-text-highlight');
@@ -38,6 +49,7 @@ const root=path.resolve(__dirname,'..');
   await page.evaluate(()=>__content.closeEditor());
   for(const action of ['Blue highlight','Remove highlight']){
    await themedMark.evaluate(mark=>{const range=document.createRange();range.selectNodeContents(mark);getSelection().removeAllRanges();getSelection().addRange(range);mark.closest('.card').dispatchEvent(new PointerEvent('pointerup',{bubbles:true}))});
+   await page.keyboard.press('Control+Shift+H');
    await page.locator('#textHighlighter').waitFor({state:'visible'});
    if(action==='Remove highlight')await page.keyboard.press('Backspace');
    else await page.getByRole('button',{name:action,exact:true}).click();
@@ -174,6 +186,22 @@ const root=path.resolve(__dirname,'..');
   });
   assert.equal(migration.md,migration.expected,'Legacy annotations migrate without changing code examples');
   assert.equal(migration.text,'old highlight');assert.equal(migration.count,1);
+  const literalCode=await page.evaluate(()=>{
+   const fence=String.fromCharCode(96).repeat(3);
+   const source=String.raw`// Match slashes / and backslashes \\ without rewriting
+const pattern = /\\\[.*?\\\]/g;
+const replacement = "$& $' $`+'`'+String.raw` $$";
+const latex = "\\(\\frac{a}{b}\\)";`;
+   const mathExample=String.raw`const example = "\\(\\frac{a}{b}\\)";`;
+   const escaped=source.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+   const md='# Literal code\n\n'+fence+'js\n'+source+'\n'+fence+'\n\n'+fence+'js\n'+mathExample+'\n'+fence+'\n\n    '+source.split('\n').join('\n    ')+'\n\n<pre><code>'+escaped+'</code></pre>\n\n`'+String.raw`\\[x\\]`+'`';
+   const n=__content.makeNote(md,0,0,600,false);
+   const result={source,mathExample,blocks:[...n.el.querySelectorAll('pre code')].map(code=>code.textContent),inline:n.el.querySelector('.cardbody p>code')?.textContent,mathBlocks:n.el.querySelectorAll('.ref-math-block').length};
+   __content.deleteNote(n);return result;
+  });
+  assert.deepEqual(literalCode.blocks,[literalCode.source,literalCode.mathExample,literalCode.source,literalCode.source],'Fenced, indented and HTML code preserve slashes, backslashes and replacement sequences exactly');
+  assert.equal(literalCode.inline,String.raw`\\[x\\]`,'Inline code bypasses equation cleanup');
+  assert.equal(literalCode.mathBlocks,0,'Programming-language examples are never converted to equations');
   const editorPosition=await page.evaluate(()=>{
    const md='# Edit selection\n\nRepeated target\n\n'+('Filler paragraph with enough text to make the editor scroll.\n\n'.repeat(80))+'Repeated target\n\nA **formatted** selection here';
    const n=__content.makeNote(md,0,0,600,false);__content.select(n);

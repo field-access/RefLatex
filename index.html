@@ -30,8 +30,8 @@
 <div class="toolbar" id="toolbar" aria-label="Canvas buttons">
  <button class="tool primary" id="new" title="New Markdown card (N)" aria-label="New Markdown card"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
  <button class="tool active" id="hand" title="Navigation: Zoom / Scroll (H)" aria-label="Navigation: Zoom / Scroll"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.4 15.4 5 5M8.3 10.8h5M10.8 8.3v5"/></svg></button>
- <button class="tool" id="center" title="Center and fit all cards (C)" aria-label="Center and fit all cards"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
- <button class="tool" id="arrange" title="Arrange cards (A)" aria-label="Arrange cards"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg></button>
+ <button class="tool" id="center" title="Fit current layout overview (C)" aria-label="Fit current layout overview"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+ <button class="tool" id="arrange" title="Reset reading space and arrange cards (A)" aria-label="Arrange cards"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg></button>
  <div class="background-picker">
   <button class="tool background-select" id="background" title="Background" aria-label="Background" aria-expanded="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 1.25 4.75L18 8l-4.75 1.25L12 14l-1.25-4.75L6 8l4.75-1.25L12 2Z"/><path d="m19 14 .75 2.25L22 17l-2.25.75L19 20l-.75-2.25L16 17l2.25-.75L19 14ZM5 14l.7 2.3L8 17l-2.3.7L5 20l-.7-2.3L2 17l2.3-.7L5 14Z"/></svg></button>
   <div class="background-menu" id="backgroundMenu" role="menu">
@@ -40,23 +40,24 @@
    <button type="button" data-background-choice="ocean" role="menuitem"><svg viewBox="0 0 32 22" aria-hidden="true"><image href="./assets/backgrounds/ocean.webp" width="32" height="22" preserveAspectRatio="xMidYMid slice"/></svg><span>Ocean</span></button>
    <button type="button" data-background-choice="stars" role="menuitem"><svg viewBox="0 0 32 22" aria-hidden="true"><image href="./assets/backgrounds/night_sky_background.webp" width="32" height="22" preserveAspectRatio="xMidYMid slice"/></svg><span>Stars</span></button>
    <button type="button" data-background-choice="village" role="menuitem"><svg viewBox="0 0 32 22" aria-hidden="true"><image href="./assets/backgrounds/village.webp" width="32" height="22" preserveAspectRatio="xMidYMid slice"/></svg><span>Village</span></button>
+   <button type="button" id="pauseVillageBackground" role="menuitem" aria-pressed="false" aria-keyshortcuts="P" hidden><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5v14M15 5v14"/></svg><span>Pause Village</span></button>
   </div>
  </div>
- <span class="divider"></span>
  <button class="tool" id="theme" title="Toggle dark mode (T)" aria-label="Toggle dark mode"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.4 15.1A8.7 8.7 0 0 1 8.9 3.6 8.8 8.8 0 1 0 20.4 15.1Z"/></svg></button>
- <span class="divider"></span>
   <button class="tool" id="saveCanvas" title="Save canvas (Ctrl/Cmd+S)" aria-label="Save canvas"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg></button>
  <div class="canvas-open-picker">
   <button class="tool" id="openCanvas" title="Open canvas (Ctrl/Cmd+O)" aria-label="Open canvas" aria-expanded="false" aria-controls="canvasOpenMenu"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h6l2 2H20v10H4z"/><path d="M12 15V4m-4 4 4-4 4 4"/></svg></button>
-  <div class="canvas-open-menu" id="canvasOpenMenu" hidden><button type="button" id="newBlankCanvas">New blank canvas</button><button type="button" id="openCanvasFile">Open canvas file…</button><div id="recentCanvasOpens" aria-label="Recent canvases"></div></div>
+  <div class="canvas-open-menu" id="canvasOpenMenu" hidden><button type="button" id="newBlankCanvas">New blank canvas</button><button type="button" id="openCanvasFile">Open canvas file…</button><button type="button" id="importMarkdownFiles" title="Add each selected Markdown file as a card">Import Markdown files…</button><div id="recentCanvasOpens" aria-label="Recent canvases"></div></div>
  </div>
  <input id="canvasFile" type="file" accept=".json,application/json" hidden>
+ <input id="markdownFiles" type="file" accept=".md,.markdown,text/markdown" multiple hidden>
  <button class="tool" id="full" title="Fullscreen (F)" aria-label="Fullscreen"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
  <button class="tool" id="toggleIndex" title="Card index (Tab)" aria-label="Card index (Tab)" aria-keyshortcuts="Tab" aria-controls="cardIndex" aria-expanded="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
  <button class="tool" id="help" title="Keyboard shortcuts and help" aria-label="Keyboard shortcuts and help"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9a2.5 2.5 0 1 1 4.6 1.4c-.9 1.1-2.2 1.4-2.2 3M12 17h.01"/></svg></button>
 </div>
 
 <aside class="card-index" id="cardIndex" aria-label="Card index">
+ <div id="indexResize" class="index-resize" role="separator" tabindex="0" aria-label="Resize card index" aria-orientation="vertical" aria-valuemin="200" aria-valuemax="520" aria-valuenow="260" title="Drag to resize index; arrow keys adjust width"></div>
  <header><h2>Card index <span id="indexCount">0</span></h2><button id="closeIndex" aria-label="Close card index" title="Close index (Esc)"><svg class="index-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6M20 4v16"/></svg></button></header>
  <div class="index-view-switch" role="group" aria-label="Card index view">
   <button type="button" data-index-view="list" aria-pressed="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>List</button>
@@ -90,22 +91,73 @@
 
 <div class="help-backdrop" id="helpBackdrop" hidden>
  <section class="help-dialog" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
-  <header class="help-head"><div><h2 id="helpTitle">Keyboard shortcuts</h2><p>Quick controls for your ConceptCards canvas</p></div><button class="tool help-close" id="closeHelp" aria-label="Close help" title="Close help"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></header>
+  <header class="help-head"><div><p class="help-eyebrow">ConceptCards</p><h2 id="helpTitle">Your ideas, in view.</h2><p class="help-description">A visual workspace for Markdown notes and mind maps. Bring your study material onto one canvas, see how it fits together, and focus on one idea at a time.</p></div><button class="tool help-close" id="closeHelp" aria-label="Close help" title="Close help"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></header>
+  <ul class="help-overview" aria-label="What you can do with ConceptCards">
+   <li><span class="help-feature-number" aria-hidden="true">01</span><div><h3>Bring your notes together</h3><p>Import Markdown files or paste text to build a canvas of editable cards.</p></div></li>
+   <li><span class="help-feature-number" aria-hidden="true">02</span><div><h3>Read it. Map it.</h3><p>Switch the same note between a reading card and a mind map. Keep equations, code and tables alongside your ideas.</p></div></li>
+   <li><span class="help-feature-number" aria-hidden="true">03</span><div><h3>See the whole picture</h3><p>Find a topic through search or the card index, zoom out for an overview, then give a card room to read.</p></div></li>
+   <li><span class="help-feature-number" aria-hidden="true">04</span><div><h3>Make a workspace for each subject</h3><p>Save separate canvases, reopen recent work, and export an individual card as a PDF.</p></div></li>
+  </ul>
+  <h3 class="help-shortcuts-title">Keyboard shortcuts</h3>
   <div class="help-grid">
-   <div class="help-group"><h3>Canvas and background</h3>
-    <div><kbd>N</kbd><span>New Markdown card</span></div><div><kbd>H</kbd><span>Switch wheel zoom / scroll</span></div><div><kbd>C</kbd><span>Center and fit all cards</span></div><div><kbd>A</kbd><span>Arrange cards</span></div><div><kbd>B</kbd><span>Toggle controls and index</span></div><div><kbd>Tab</kbd><span>Toggle card index</span></div><div><kbd>F</kbd><span>Toggle fullscreen</span></div><div><kbd>− / =</kbd><span>Zoom out / in</span></div><div><kbd>↑ / ↓</kbd><span>Scroll canvas vertically</span></div><div><kbd>Ctrl/⌘ + ← / →</kbd><span>Scroll canvas horizontally</span></div><div><kbd>S</kbd><span>Cycle background</span></div><div><kbd>P</kbd><span>Pause / resume Village background</span></div><div><kbd>T</kbd><span>Toggle light / dark mode</span></div>
+   <div class="help-group"><h3>Canvas navigation</h3>
+    <div><kbd>C</kbd><span>Fit an overview; keep card order and reading gaps</span></div>
+    <div><kbd>A</kbd><span>Arrange cards in order and reset reading gaps</span></div>
+    <div><kbd>H</kbd><span>Switch the scroll wheel between scrolling and zooming</span></div>
+    <div><kbd>− / =</kbd><span>Zoom out / in</span></div>
+    <div><kbd>↑ / ↓</kbd><span>Scroll the canvas vertically</span></div>
+    <div><kbd>Ctrl/⌘ + ← / →</kbd><span>Scroll the canvas horizontally</span></div>
+    <div><kbd>Page Up / Down</kbd><span>Scroll one page in the card, or the canvas</span></div>
+    <div><kbd>B</kbd><span>Show / hide the toolbar and index</span></div>
+    <div><kbd>Tab</kbd><span>Open / close the index when on the canvas</span></div>
+    <div><kbd>F</kbd><span>Toggle fullscreen; Ctrl/⌘ + Shift + F also works</span></div>
    </div>
-   <div class="help-group"><h3>Selected card</h3>
-    <div><kbd>Space</kbd><span>Fit card; press again to read. Maps always fit.</span></div><div><kbd>← / →</kbd><span>Previous / next card; restores its last position and zoom</span></div><div><kbd>Page Up / Down</kbd><span>Scroll up / down one page</span></div><div><kbd>Home / End</kbd><span>Select first / last card</span></div><div><kbd>K</kbd><span>Switch Markdown / Markmap</span></div><div><kbd>M</kbd><span>Open Markmap in a new window</span></div><div><kbd>O</kbd><span>Open card in a new window</span></div><div><kbd>E</kbd><span>Edit card</span></div><div><kbd>1–9, 0</kbd><span>Text size: 50, 60, 70, 80, 90, 100, 110, 125, 140, 160%</span></div><div><kbd>[ / ]</kbd><span>Decrease / increase card width</span></div><div><kbd>Shift + C</kbd><span>Cycle card theme</span></div><div><kbd>V / Shift + V</kbd><span>Cycle font forward / backward</span></div><div><kbd>Ctrl/⌘ + D</kbd><span>Duplicate card</span></div><div><kbd>Backspace</kbd><span>Clear selected highlight</span></div><div><kbd>Delete</kbd><span>Delete card</span></div>
+   <div class="help-group"><h3>Cards and reading</h3>
+    <div><kbd>N</kbd><span>Open the editor for a new Markdown card</span></div>
+    <div><kbd>Space</kbd><span>Add gaps around the selected card and fit it; press again to read. Maps always fit.</span></div>
+    <div><kbd>← / →</kbd><span>Previous / next card; restore its reading position and zoom</span></div>
+    <div><kbd>Home / End</kbd><span>Select and focus the first / last card</span></div>
+    <div><kbd>E</kbd><span>Edit the card at the selected text</span></div>
+    <div><kbd>K</kbd><span>Switch the card between Markdown and Markmap</span></div>
+    <div><kbd>O</kbd><span>Open the reading card in a new window</span></div>
+    <div><kbd>M</kbd><span>Open the card as a Markmap in a new window</span></div>
+    <div><kbd>Ctrl/⌘ + D</kbd><span>Duplicate the selected card</span></div>
+    <div><kbd>Delete</kbd><span>Delete the selected card</span></div>
+   </div>
+   <div class="help-group"><h3>Appearance and highlights</h3>
+    <div><kbd>1–9</kbd><span>Text size: 50, 60, 70, 80, 90, 100, 110, 125, 140%</span></div>
+    <div><kbd>0</kbd><span>160% text size; 4 restores the default 80%</span></div>
+    <div><kbd>[ / ]</kbd><span>Decrease / increase card width and refocus it</span></div>
+    <div><kbd>V / Shift + V</kbd><span>Next / previous card font</span></div>
+    <div><kbd>Shift + C</kbd><span>Next card colour theme</span></div>
+    <div><kbd>Ctrl/⌘ + Shift + H</kbd><span>Reopen the palette for selected text; selection also opens it</span></div>
+    <div><kbd>Backspace</kbd><span>Remove the selected highlight; keep the text</span></div>
+    <div><kbd>T</kbd><span>Switch light / dark mode</span></div>
+    <div><kbd>S</kbd><span>Next canvas background</span></div>
+    <div><kbd>P</kbd><span>Pause / play Village, when Village is selected</span></div>
    </div>
    <div class="help-group"><h3>Files and editing</h3>
-    <div><kbd>Ctrl/⌘ + Enter</kbd><span>Paste into editor / apply edited card</span></div><div><kbd>Ctrl/⌘ + S</kbd><span>Save current canvas file</span></div><div><kbd>Ctrl/⌘ + O</kbd><span>Open saved canvas</span></div><div><kbd>Ctrl/⌘ + Z</kbd><span>Undo</span></div><div><kbd>Ctrl/⌘ + Shift + Z</kbd><span>Redo</span></div><div><kbd>Ctrl/⌘ + Y</kbd><span>Redo</span></div><div><kbd>Esc</kbd><span>Close editor, menu, help or navigation settings</span></div>
-    <p>The Open menu has New blank canvas and recent subject canvases. Save canvas downloads a JSON file directly. Use a card’s download button for PDF.</p>
+    <div><kbd>Ctrl/⌘ + S</kbd><span>Download the current canvas as JSON</span></div>
+    <div><kbd>Ctrl/⌘ + O</kbd><span>Open the menu for files, recent canvases and a new canvas</span></div>
+    <div><kbd>Ctrl/⌘ + Enter</kbd><span>Paste the clipboard into the editor; apply the card while editing</span></div>
+    <div><kbd>Ctrl/⌘ + Z</kbd><span>Undo</span></div>
+    <div><kbd>Ctrl/⌘ + Shift + Z</kbd><span>Redo; Ctrl/⌘ + Y also works</span></div>
+    <div><kbd>Esc</kbd><span>Dismiss the active editor, menu, highlight palette, help or navigation settings</span></div>
    </div>
-   <div class="help-group"><h3>Inside the card index</h3>
-    <div><kbd>Ctrl/⌘ + F</kbd><span>Search canvas; Enter opens first match, Esc clears</span></div>
-    <div><kbd>↑ / ↓</kbd><span>Move between visible entries</span></div><div><kbd>← / →</kbd><span>Collapse / expand subtopics</span></div><div><kbd>Home / End</kbd><span>Focus first / last visible entry</span></div><div><kbd>Alt + ↑ / ↓</kbd><span>Reorder card when its drag handle is focused</span></div><div><kbd>Tab / Esc</kbd><span>Close index</span></div>
-    <p>Select text in a card to highlight it with the theme color or yellow, green, blue, or pink. Select a highlight and press Backspace or choose Clear to remove it. Drag index handles to reorder cards. Letter shortcuts stay inactive while typing.</p>
+   <div class="help-group"><h3>Card index and search</h3>
+    <div><kbd>Ctrl/⌘ + F</kbd><span>Open the index and focus canvas search</span></div>
+    <div><kbd>Enter</kbd><span>Open the first result while searching</span></div>
+    <div><kbd>Esc</kbd><span>Clear the search; close the index when an entry is focused</span></div>
+    <div><kbd>↑ / ↓</kbd><span>Focus the previous / next visible entry</span></div>
+    <div><kbd>← / →</kbd><span>Collapse / expand subtopics; move between tiles in Palette view</span></div>
+    <div><kbd>Home / End</kbd><span>Focus the first / last visible list entry</span></div>
+    <div><kbd>Alt + ↑ / ↓</kbd><span>Reorder the card when its drag handle is focused</span></div>
+    <div><kbd>Tab</kbd><span>Close the index when an entry is focused</span></div>
+   </div>
+   <div class="help-group"><h3>Index width — resize edge focused</h3>
+    <div><kbd>← / →</kbd><span>Narrow / widen the index by 20 pixels</span></div>
+    <div><kbd>Shift + ← / →</kbd><span>Narrow / widen by 40 pixels</span></div>
+    <div><kbd>Home / End</kbd><span>Set the smallest / largest index width</span></div>
    </div>
   </div>
  </section>
@@ -126,9 +178,9 @@
  <button id="copy"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h2"/></svg><span>Copy Markdown</span></button><button id="remove"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3"/></svg><span>Delete</span></button>
 </div>
 
-<script src="canvas-files.js?v=5" defer></script>
+<script src="canvas-files.js?v=7" defer></script>
 <script src="text-highlights.js"></script>
 <script src="app.js" defer></script>
-<script src="village.js?v=8" defer></script>
+<script src="village.js?v=9" defer></script>
 </body>
 </html>

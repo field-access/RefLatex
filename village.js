@@ -4,6 +4,7 @@
  const reduced=matchMedia('(prefers-reduced-motion: reduce)');
  const paper=new Image();
  const pauseButton=document.getElementById('pauseBackground');
+ const menuPauseButton=document.getElementById('pauseVillageBackground');
  let userPaused=localStorage.getItem('reflatex-background-paused')==='true';
  let worker=null,image=null,motion=null,next=null,url=null,x=0,width=0,generation=0,seed='';
  let loading=false,loadFailed=false,showing=false;
@@ -37,9 +38,15 @@
  }
  function sync(){
   canvas.classList.toggle('background-user-paused',userPaused);
+  const villageActive=canvas.dataset.background==='village';
   pauseButton.disabled=canvas.dataset.background!=='village'||reduced.matches;
   pauseButton.textContent=userPaused?'Resume background':'Pause background';
   pauseButton.setAttribute('aria-pressed',String(userPaused));
+  menuPauseButton.hidden=!villageActive;
+  menuPauseButton.disabled=reduced.matches;
+  menuPauseButton.querySelector('span').textContent=userPaused?'Play Village':'Pause Village';
+  menuPauseButton.querySelector('path').setAttribute('d',userPaused?'m9 5 10 7-10 7V5Z':'M9 5v14M15 5v14');
+  menuPauseButton.setAttribute('aria-pressed',String(userPaused));
   if(canvas.dataset.background!=='village'||reduced.matches){if(worker)stop();return}
   // Classic scripts can load beside file:// pages; blob workers have a valid origin.
   if(!window.conceptVillageWorkerSource){
@@ -100,6 +107,7 @@
   userPaused=!userPaused;
   localStorage.setItem('reflatex-background-paused',String(userPaused));sync();
  };
+ menuPauseButton.onclick=()=>pauseButton.click();
  new MutationObserver(sync).observe(document.body,{attributes:true,attributeFilter:['class']});
  document.addEventListener('visibilitychange',sync);reduced.addEventListener('change',sync);
  let resizeTimer;addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{stop();sync()},300)});

@@ -64,6 +64,7 @@ const root=path.resolve(__dirname,'..');
    assert.ok(sample.error<1e-7);
   }
   assert.ok(pinchSensitivity.fitError<1e-7,'Fit-to-pinch keeps the visible cursor anchor');
+  page.once('dialog',dialog=>dialog.type()==='beforeunload'?dialog.accept():dialog.dismiss());
   await page.reload({waitUntil:'networkidle'});
   assert.equal(await page.locator('#nav-pinch').inputValue(),'3','Expanded pinch sensitivity survives reload');
   await page.evaluate(()=>{const slider=document.querySelector('#nav-pinch');slider.value=1;slider.dispatchEvent(new Event('input',{bubbles:true}));__test.interruptCamera();__test.setCameraImmediate(640,400,1)});
