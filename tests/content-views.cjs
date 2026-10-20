@@ -17,6 +17,38 @@ const root=path.resolve(__dirname,'..');
   await page.goto(`http://127.0.0.1:${server.address().port}`,{waitUntil:'networkidle'});
   assert.equal(await page.locator('#defaultCardFont').inputValue(),'poppins');
   assert.equal(await page.locator('.zoom-settings').count(),0,'Settings moved to the navigation tray');
+  const deletionSelection=await page.evaluate(()=>{
+   const cards=Array.from({length:5},(_,i)=>__content.makeNote(`# Visit ${i}`,0,0,600,false));
+   const [a,b,c,d,unvisited]=cards,selected=()=>__content.state.selected?.id??null;
+   __content.select(a);__content.select(b);__content.select(c);__content.select(a);
+   __content.deleteNote(a);const first=selected();
+   __content.select(d);__content.deleteNote(c);const unaffected=selected();
+   __content.deleteNote(d);const next=selected();
+   __content.select(null);__content.select(b);__content.deleteNote(b);const exhausted=selected();
+   __content.deleteNote(unvisited);
+   return {first,expectedFirst:c.id,unaffected,expectedUnaffected:d.id,next,expectedNext:b.id,exhausted};
+  });
+  assert.equal(deletionSelection.first,deletionSelection.expectedFirst,'Deleting a revisited card returns to the last visited card, not the final canvas card');
+  assert.equal(deletionSelection.unaffected,deletionSelection.expectedUnaffected,'Deleting another card preserves the current selection');
+  assert.equal(deletionSelection.next,deletionSelection.expectedNext,'Deleted visits are skipped');
+  assert.equal(deletionSelection.exhausted,null,'No visited survivor leaves the canvas selected');
+  const controlIds=await page.evaluate(()=>{
+   const a=__content.makeNote('# Selected card\n\nReading.',350,100,400,false),b=__content.makeNote('# Other card\n\nReading.',780,100,400,false);
+   a.el.dataset.testControls='selected';b.el.dataset.testControls='other';
+   __content.select(a);__content.setCameraImmediate(0,0,1);return [a.id,b.id];
+  });
+  const selectedControls=page.locator('[data-test-controls="selected"] [data-edit]');
+  const otherControls=page.locator('[data-test-controls="other"] [data-edit]');
+  const otherBounds=await page.locator('[data-test-controls="other"] .cardbar').boundingBox();
+  await page.mouse.move(otherBounds.x+100,otherBounds.y+10);
+  assert.ok(await selectedControls.isVisible(),'Selected card controls stay visible');
+  assert.ok(await otherControls.isHidden(),'Hovering an unselected card does not reveal controls');
+  await page.mouse.click(1200,800);
+  assert.equal(await page.evaluate(()=>__content.state.selected),null,'Clicking the canvas clears card selection');
+  await page.mouse.move(400,110);
+  assert.ok(await selectedControls.isHidden(),'Canvas selection hides controls even when hovering a card');
+  assert.ok(await otherControls.isHidden());
+  await page.evaluate(ids=>{for(const id of ids)__content.deleteNote(__content.state.notes.find(n=>n.id===id))},controlIds);
   const stableHeaders=await page.evaluate(()=>{
    const results=[];
    for(const dark of [false,true]){
@@ -33,7 +65,7 @@ const root=path.resolve(__dirname,'..');
   });
   for(const row of stableHeaders){
    assert.deepEqual(row.after,row.before,`Selection keeps reading position: ${JSON.stringify(row)}`);
-   assert.equal(row.radius,'0px');assert.equal(row.shadow,'none');assert.equal(row.outline,'none');assert.equal(row.font,'poppins');
+   assert.equal(row.radius,'4px');assert.equal(row.shadow,'none');assert.equal(row.outline,'none');assert.equal(row.font,'poppins');
   }
   const legacyFonts=await page.evaluate(()=>['cinzel','mono-typewriter','mono-azeret'].map(font=>{
    const n=__content.makeNote('Legacy note',0,0,600,false,null,font),value=n.font;__content.deleteNote(n);return value;
@@ -414,6 +446,28 @@ const latex = "\\(\\frac{a}{b}\\)";`;
   });
   assert.equal(palette.title,'Subject 90: a longer card title');
   assert.ok(palette.titleVisible&&palette.fullyVisible&&palette.firstVisible&&palette.compact,'Numbered tiles stay square and reveal the title in a hover tooltip');
+  const paletteThemes=await page.evaluate(async()=>{
+   const notes=['default','purple','warm','ocean','forest','sunset','slate'].map(theme=>__content.makeNote('# '+theme,0,0,600,false,null,'mono','80',theme));
+   document.querySelector('[data-index-view="palette"]').click();
+   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+   const rows=[];
+   for(const dark of [false,true]){
+    document.body.classList.toggle('dark',dark);
+    for(const n of notes){
+     const entry=document.querySelector(`[data-index-card-id="${n.id}"]`),style=getComputedStyle(entry),cardStyle=getComputedStyle(n.el);
+     const expected=style.getPropertyValue(n.mapColor==='default'?'--ink':dark?'--card-accent-dark':'--card-accent').trim();
+     __content.select(n);const selected=getComputedStyle(entry);
+     rows.push({theme:entry.dataset.mapColor,expected,accent:style.getPropertyValue('--tile-accent').trim(),cardAccent:cardStyle.getPropertyValue(dark?'--card-accent-dark':'--card-accent').trim(),tileAccent:style.getPropertyValue(dark?'--card-accent-dark':'--card-accent').trim(),outline:selected.outlineStyle,shadow:selected.boxShadow,background:selected.backgroundColor});
+    }
+   }
+   const select=notes[0].el.querySelector('[data-map-color]');select.value='ocean';select.dispatchEvent(new Event('change'));
+   const updated=document.querySelector(`[data-index-card-id="${notes[0].id}"]`).dataset.mapColor;
+   document.body.classList.remove('dark');document.querySelector('[data-index-view="list"]').click();notes.forEach(__content.deleteNote);
+   return {rows,updated};
+  });
+  for(const row of paletteThemes.rows){assert.equal(row.accent,row.expected,'Palette follows the theme in both appearances');assert.equal(row.cardAccent,row.tileAccent,'Cards and tiles share theme colors');assert.equal(row.outline,'none');assert.ok(row.shadow.includes('inset'),'Selection uses an inset border');}
+  assert.equal(paletteThemes.updated,'ocean','Changing a card theme updates its tile immediately');
+  assert.equal(new Set(paletteThemes.rows.slice(0,7).map(row=>row.background)).size,7,'Themes have distinct tile fills');
   const typography=await page.evaluate(async()=>{
    const n=__content.makeNote('# Main heading\n\nBody text\n\n## Section\n\n### Topic\n\n#### Detail\n\n##### Minor\n\n###### Note',0,0,600,false,null,'sans','125');
    const headings=[...n.el.querySelectorAll('.cardbody h1,.cardbody h2,.cardbody h3,.cardbody h4,.cardbody h5,.cardbody h6')];
@@ -450,6 +504,9 @@ const latex = "\\(\\frac{a}{b}\\)";`;
   await expand.click();
   assert.equal(await expand.getAttribute('aria-expanded'),'true');
   assert.deepEqual(await page.locator(`#index-topics-${topicId} .index-subtopic`).allTextContents(),['First','Repeated','Repeated']);
+  assert.ok((await page.locator('#indexEntries [data-card-id] span').evaluateAll(labels=>labels.map(el=>getComputedStyle(el).fontWeight))).every(weight=>weight==='700'),'All index titles are bold');
+  assert.ok((await page.locator(`#index-topics-${topicId} .index-subtopic`).evaluateAll(labels=>labels.map(el=>getComputedStyle(el).fontWeight))).every(weight=>weight==='400'),'Index subtitles use regular weight');
+  assert.equal(await page.locator('#indexEntries [data-card-id] svg').count(),0,'Card type icons are removed');
   const nestedExpand=page.getByRole('button',{name:'Subtopics: First',exact:true});
   assert.equal(await nestedExpand.getAttribute('aria-expanded'),'false');
   await nestedExpand.click();assert.equal(await nestedExpand.getAttribute('aria-expanded'),'true');
@@ -476,7 +533,7 @@ const latex = "\\(\\frac{a}{b}\\)";`;
   await page.evaluate(()=>document.body.classList.remove('toolbar-hidden'));
   const header=await card.locator('.cardbar').boundingBox(),actions=await card.locator('.cardactions').boundingBox();
   assert.ok(actions.y+actions.height<=header.y+header.height,'Controls fit inside header');
-  assert.equal(await card.evaluate(el=>getComputedStyle(el).borderRadius),'0px');
+  assert.equal(await card.evaluate(el=>getComputedStyle(el).borderRadius),'4px');
   if(process.env.HEADER_SCREENSHOT){
    await page.evaluate(id=>{
     const n=__content.state.notes.find(n=>n.id===id),s=__content.state;
@@ -499,6 +556,33 @@ const latex = "\\(\\frac{a}{b}\\)";`;
    assert.ok(Math.abs(frame.top-frame.bottom)<1.1,`${type} vertical fit is balanced: ${JSON.stringify(frame)}`);
    assert.ok(frame.top>=23.9&&frame.left>=frame.indexRight+23.9&&frame.right<=frame.trayLeft-23.9,`${type} fits between panels: ${JSON.stringify(frame)}`);
    if(type==='map'){
+    const fitted=await page.evaluate(id=>{
+     const n=__content.state.notes.find(n=>n.id===id),r=n.el.getBoundingClientRect(),v=__content.focusViewport();
+     return {width:r.width,height:r.height,view:v};
+    },frameId);
+    assert.ok(Math.abs(fitted.width-fitted.view.width)<1.1&&Math.abs(fitted.height-fitted.view.height)<1.1,'Focused map fills both viewport dimensions');
+    for(const indexWidth of [200,420]){
+     await page.evaluate(async ({id,width})=>{
+      document.querySelector('#cardIndex').style.width=width+'px';
+      __content.select(__content.state.notes.find(n=>n.id===id));await __content.focusSelected('readable');
+     },{id:frameId,width:indexWidth});
+     const refitted=await page.evaluate(id=>{
+      const r=__content.state.notes.find(n=>n.id===id).el.getBoundingClientRect(),v=__content.focusViewport();
+      return {left:r.left,top:r.top,width:r.width,height:r.height,view:v,step:__content.state.spaceFocusStep};
+     },frameId);
+     assert.equal(refitted.step,1,'Map reading focus uses the fit action');
+     assert.ok(Math.abs(refitted.left-refitted.view.left)<1.1&&Math.abs(refitted.top-refitted.view.top)<1.1&&Math.abs(refitted.width-refitted.view.width)<1.1&&Math.abs(refitted.height-refitted.view.height)<1.1,'Map refits when the index changes width');
+    }
+    await page.setViewportSize({width:2200,height:1200});
+    await page.evaluate(async()=>__content.focusSelected());
+    const wideFit=await page.evaluate(()=>{
+     const n=__content.state.selected,r=n.el.getBoundingClientRect(),v=__content.focusViewport();
+     return {width:r.width,height:r.height,view:v,cardWidth:n.mapWidth,cardHeight:n.mapHeight};
+    });
+    assert.ok(wideFit.cardWidth<=1600&&wideFit.cardHeight<=1200,'Focused map respects card size limits');
+    assert.ok(Math.abs(wideFit.width-wideFit.view.width)<1.1&&Math.abs(wideFit.height-wideFit.view.height)<1.1,'Wide screens retain the viewport aspect ratio');
+    await page.setViewportSize({width:1280,height:900});
+    await page.evaluate(async()=>{document.querySelector('#cardIndex').style.width='';await __content.focusSelected('fit')});
     const header=await page.evaluate(id=>{
      const n=__content.state.notes.find(n=>n.id===id),bar=n.el.querySelector('.cardbar'),body=n.el.querySelector('.cardbody');
      return {height:bar.offsetHeight,body:body.offsetHeight,card:n.el.clientHeight};
@@ -574,10 +658,14 @@ const latex = "\\(\\frac{a}{b}\\)";`;
    ['Intro paragraph\n\nSecond-level *heading*\n----------------------','Second-level heading'],
    ['#\n\n## Useful title','Useful title'],
    ['    # Code only\n\n```md\n## Also code\n```\n\n## Real title','Real title'],
+   ['Intro\n\n### First *heading*\n\n# Later H1','First heading'],
+   ['```md\n# Not a title\n```\n\n#### First H4\n\n## Later H2','First H4'],
+   ['###### First H6\n\n# Later H1','First H6'],
    ['No heading here',`Card ${result.id}`]
   ]){
    await page.evaluate(md=>{const n=__content.state.notes[0];n.md=md;__content.updateCardHeading(n)},md);
    await page.waitForFunction(title=>document.querySelector('#indexEntries button[data-card-id] span').textContent===title,title);
+   if(title!==`Card ${result.id}`)assert.equal(await page.locator('.card .map-title').textContent(),title,'Card and index use the same first heading');
   }
   await page.locator('#closeIndex').click();assert.ok(await page.locator('#cardIndex').isHidden());
   await page.locator('#toggleIndex').click();assert.ok(await page.locator('#cardIndex').isVisible());
@@ -603,6 +691,11 @@ const latex = "\\(\\frac{a}{b}\\)";`;
   await page.getByRole('textbox',{name:'Edit card heading'}).fill('Revised');
   await page.keyboard.press('Enter');
   assert.equal(await page.evaluate(()=>__content.state.notes[0].md),'Intro\n\n## Revised\n\nBody stays');
+  await page.evaluate(()=>{const n=__content.state.notes[0];n.md='Intro\n\n### Early title\n\n# Later title\n\nBody stays';__content.updateCardHeading(n)});
+  await page.waitForFunction(()=>document.querySelector('#indexEntries button[data-card-id] span').textContent==='Early title');
+  await page.locator('.index-rename').click();
+  await page.getByRole('textbox',{name:'Edit card heading'}).fill('Revised H3');await page.keyboard.press('Enter');
+  assert.equal(await page.evaluate(()=>__content.state.notes[0].md),'Intro\n\n### Revised H3\n\n# Later title\n\nBody stays','Renaming preserves the title heading level and the rest of the Markdown');
   for(const html of result.popups){
    for(const script of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))new vm.Script(script[1]);
    assert.ok(html.includes('data-font-size="125"'));assert.ok(html.includes('styles.css'));
@@ -616,6 +709,21 @@ const latex = "\\(\\frac{a}{b}\\)";`;
   const cardHtml=result.popups[20]; // dark ocean
   await preview.setContent(strip(cardHtml),{waitUntil:'networkidle'});
   assert.ok(await preview.evaluate(()=>document.querySelector('.card').getBoundingClientRect().right<=innerWidth));
+  await preview.evaluate(()=>{
+   const body=document.querySelector('.cardbody');
+   for(let i=0;i<100;i++){const p=document.createElement('p');p.textContent=`Long document paragraph ${i+1}. Reading continues down the page.`;body.append(p)}
+  });
+  for(const width of [1280,390]){
+   await preview.setViewportSize({width,height:844});
+   const sizing=await preview.evaluate(()=>{
+    const card=document.querySelector('.card'),body=card.querySelector('.cardbody');
+    return {height:card.offsetHeight,viewport:innerHeight,cardLimit:getComputedStyle(card).maxHeight,bodyLimit:getComputedStyle(body).maxHeight,bodyOverflow:getComputedStyle(body).overflowY,pageHeight:document.scrollingElement.scrollHeight};
+   });
+   assert.equal(sizing.cardLimit,'none');assert.equal(sizing.bodyLimit,'none');assert.equal(sizing.bodyOverflow,'visible');
+   assert.ok(sizing.height>sizing.viewport*3&&sizing.pageHeight>sizing.height,'Long Markdown uses full document height');
+   await preview.evaluate(()=>window.scrollTo(0,document.scrollingElement.scrollHeight));
+   assert.ok(await preview.evaluate(()=>{const r=document.querySelector('.cardbody').lastElementChild.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight}),'Page scrolling reaches the last paragraph on desktop and mobile');
+  }
   if(process.env.TEST_SCREENSHOT)await preview.screenshot({path:process.env.TEST_SCREENSHOT});
   const mapHtml=result.popups[21];
   await preview.setContent(strip(mapHtml),{waitUntil:'networkidle'});

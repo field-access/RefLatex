@@ -40,6 +40,7 @@ const state={
  undo:[],redo:[],historyLock:false,raf:0,saveTimer:0,hideTimer:0,
 };
 const readingSession={cards:new Map(),rows:[]};
+const cardVisits=new Set();
 function resetReadingSession(){readingSession.cards.clear();readingSession.rows=[];state.layoutMode='compact'}
 function restoreReadingSession(ids=[]){
  readingSession.cards.clear();readingSession.rows=[];
@@ -983,7 +984,11 @@ function render(md){
 }
 function cardMarkdownParts(md){
  const source=String(md).replace(/^\uFEFF/,"");
- const match=/^(?:[ \t]*\r?\n)*[ \t]*#\s+([^\r\n]+?)[ \t]*#*[ \t]*(?:\r?\n|$)/.exec(source);
+ if(window.marked?.lexer){
+  const heading=marked.lexer(source).find(token=>token.type==="heading"&&token.text.trim());
+  return {title:heading?.text.trim()||"",body:source};
+ }
+ const match=/^(?:[ \t]*\r?\n)*[ \t]*#{1,6}\s+([^\r\n]+?)[ \t]*#*[ \t]*(?:\r?\n|$)/.exec(source);
  return match
   ? {title:match[1].trim(),body:source.slice(match[0].length)}
   : {title:"",body:source};
@@ -1028,12 +1033,13 @@ function markmapOptions(n){
  };
 }
 function mapViewportSize(){
+ const view=focusViewport();
+ const scale=Math.max(1,view.width/1600,view.height/1200);
  return {
-  // Map dimensions describe the card itself, not canvas world units at the
-  // current camera zoom. Keeping them viewport-based prevents huge cards when
-  // the canvas happens to be zoomed far out.
-  width:Math.max(Math.min(300,Math.max(200,innerWidth-24)),Math.min(1600,Math.floor(innerWidth-80))),
-  height:Math.max(320,Math.min(1600,Math.round(innerHeight*.94)))
+  // Match the usable viewport's aspect ratio, including the index and tray.
+  // Scale both dimensions together when the card size limit is reached.
+  width:Math.max(Math.min(300,Math.max(200,innerWidth-24)),Math.min(1600,Math.round(view.width/scale))),
+  height:Math.max(320,Math.min(1200,Math.round(view.height/scale)))
  };
 }
 const PEN_PAN_GAIN=1.7;
@@ -1489,7 +1495,7 @@ function indexHeading(md,id,fallback=''){
  if(window.marked){
   const content=document.createElement("template");
   content.innerHTML=safeMarkdown(String(md));
-  for(const heading of content.content.querySelectorAll("h1,h2")){
+  for(const heading of content.content.querySelectorAll("h1,h2,h3,h4,h5,h6")){
    const label=heading.textContent.trim();
    if(label)return label;
   }
@@ -1505,7 +1511,7 @@ function indexHeading(md,id,fallback=''){
    continue;
   }
   if(fence)continue;
-  const heading=/^ {0,3}#{1,2}\s+(.+?)(?:\s+#+)?\s*$/.exec(line);
+  const heading=/^ {0,3}#{1,6}\s+(.+?)(?:\s+#+)?\s*$/.exec(line);
   if(heading){
    const text=document.createElement("div");text.innerHTML=safeMarkdown(heading[1]);
    return text.textContent.trim()||`Card ${id}`;
@@ -1523,7 +1529,7 @@ function editIndexHeading(n){
  const tokens=window.marked?.lexer(String(n.md))||[];
  let offset=0,range=null;
  for(const token of tokens){
-  if(token.type==="heading"&&token.depth<=2&&token.text.trim()){
+  if(token.type==="heading"&&token.text.trim()){
    range={start:offset,end:offset+token.raw.length,depth:token.depth,ending:token.raw.match(/(?:\r?\n)+$/)?.[0]||""};break;
   }
   offset+=token.raw.length;
@@ -1560,7 +1566,11 @@ function editIndexHeading(n){
  form.append(input,saveButton,cancel);row.replaceChildren(form);input.focus();input.select();
 }
 function indexSubtopics(n){
- if(n.type!=="map")return [...n.el.querySelectorAll(".cardbody h1,.cardbody h2,.cardbody h3,.cardbody h4,.cardbody h5,.cardbody h6")].filter(el=>!(n.el.classList.contains("has-title")&&el===n.el.querySelector(".cardbody").firstElementChild&&el.tagName==="H1")).map(el=>({label:el.textContent.trim(),depth:Number(el.tagName.slice(1))-1,el}));
+ if(n.type!=="map"){
+  const headings=[...n.el.querySelectorAll(".cardbody h1,.cardbody h2,.cardbody h3,.cardbody h4,.cardbody h5,.cardbody h6")];
+  const title=headings.find(el=>el.textContent.trim());
+  return headings.filter(el=>el!==title&&el.textContent.trim()).map(el=>({label:el.textContent.trim(),depth:Number(el.tagName.slice(1))-1,el}));
+ }
  if(!n.mapInstance||!n.mapIndexRoot)return [];
  const topics=[];
  const visit=(node,ancestors)=>{
@@ -1652,17 +1662,14 @@ function renderCardIndex(){
   const label=document.createElement("span");label.textContent=n.indexTitle;button.title=n.indexTitle;
   button.dataset.cardTitle=n.indexTitle;button.setAttribute("aria-label",`${i+1}: ${n.indexTitle}`);
   if($("#cardIndex").dataset.view==="palette")button.removeAttribute("title");
-  const icon=document.createElementNS("http://www.w3.org/2000/svg","svg");
-  icon.setAttribute("viewBox","0 0 24 24");icon.setAttribute("aria-hidden","true");icon.classList.add("index-icon");
-  icon.innerHTML=ICON_PATHS[n.type==="map"?"map":"file"];
-  button.append(icon,label);button.setAttribute("aria-current",String(state.selected===n));
+  button.append(label);button.setAttribute("aria-current",String(state.selected===n));
   const row=document.createElement("div");row.className="index-row";row.draggable=true;
   const edit=document.createElement("button");edit.type="button";edit.className="index-rename";
   edit.innerHTML=ICONS.edit;edit.title="Edit heading";edit.setAttribute("aria-label",`Edit heading: ${n.indexTitle}`);
   edit.onclick=()=>editIndexHeading(n);
   row.append(button,edit);
   const entry=document.createElement("div");entry.className="index-entry";entry.dataset.indexCardId=n.id;entry.append(row);
-  entry.style.setProperty("--index-card-color",(MAP_PALETTES[n.mapColor]||MAP_PALETTES.default)[0]);
+  entry.dataset.mapColor=n.mapColor||"default";
   const grip=document.createElement("button");grip.type="button";grip.className="index-reorder";grip.draggable=true;grip.innerHTML=ICONS.grip;
   grip.setAttribute("aria-label",`Reorder: ${n.indexTitle}`);grip.title="Drag to reorder · Alt + ↑ / ↓";
   row.append(grip);
@@ -1944,6 +1951,7 @@ function select(n){
  if(state.selected!==n)state.spaceFocusStep=0;
  state.selected?.el.classList.remove("selected");
  state.selected=n;if(n){
+  cardVisits.delete(n);cardVisits.add(n);
   n.el.classList.add("selected");
   n.el.querySelectorAll('img').forEach(image=>{if(image.loading==='lazy')image.loading='eager'});
  }
@@ -2721,6 +2729,7 @@ async function quickPaste(){
  }
 }
 function disposeCard(n){
+ cardVisits.delete(n);
  readingSession.cards.delete(n.id);
  readingSession.rows=[];
  n.mapCameraCleanup?.();n.mapCameraCleanup=null;
@@ -2728,8 +2737,14 @@ function disposeCard(n){
  try{n.mapInstance?.destroy?.()}catch{}
  n.mapInstance=null;n.el.remove();
 }
-function deleteNote(n){history();disposeCard(n);state.notes=state.notes.filter(x=>x!==n);if(state.selected===n)state.selected=null;
- empty();save()}
+function deleteNote(n){
+ history();
+ const wasSelected=state.selected===n;
+ if(wasSelected)select(null);
+ disposeCard(n);state.notes=state.notes.filter(x=>x!==n);
+ if(wasSelected)select([...cardVisits].at(-1)||null);
+ empty();save();
+}
 async function copyNote(){
  if(!state.selected)return;
  try{await navigator.clipboard.writeText(state.selected.md)}catch{}
@@ -2783,8 +2798,14 @@ function layoutCards(){
   h:sum.h+d.h+Math.max(minimumGap,d.beforeY,d.afterY)+extraGap
  }),{w:0,h:0});
  const idealRows=Math.sqrt(count*average.w/(aspect*average.h));
+ // Long documents must not turn the board into a single horizontal strip.
+ // Bound the row length by card count and the usable viewport, then retain
+ // the dimension-based choice among the remaining balanced layouts.
+ const maximumColumns=Math.max(2,Math.ceil(Math.sqrt(count*aspect)));
+ const minimumRows=count>2?Math.max(2,Math.ceil(count/maximumColumns)):1;
  let best=null;
- const candidates=new Set(Array.from({length:6},(_,i)=>Math.max(1,Math.min(count,Math.floor(idealRows)-2+i))));
+ const firstCandidate=Math.max(minimumRows,Math.floor(idealRows)-2);
+ const candidates=new Set(Array.from({length:6},(_,i)=>Math.min(count,firstCandidate+i)));
  for(const rowCount of candidates){
   const base=Math.floor(count/rowCount),extra=count%rowCount;
   let start=0;
@@ -2832,11 +2853,12 @@ function arrange(record=true,reset=true){
 function scheduleArrange(){
  requestAnimationFrame(()=>arrange(false,false));
 }
-const backgrounds=["light","sun","ocean","stars","village"];
+const backgrounds=["light","cream","sand","sun","ocean","stars","village"];
 const backgroundLabels={
  light:"Light",
- stars:"Stars",
+ cream:"Cream",sand:"Sand",
  sun:"Sun",
+ stars:"Stars",
  ocean:"Ocean",
  village:"Village"
 };
@@ -2856,10 +2878,6 @@ function setBackground(name){
 function cycleBackground(){
  const current=backgrounds.indexOf(canvas.dataset.background||"light");
  setBackground(backgrounds[(current+1)%backgrounds.length]);
- showControls();
-}
-function toggleSunStarBackground(){
- setBackground(canvas.dataset.background==="sun"?"stars":"sun");
  showControls();
 }
 function toggleToolbar(force){
@@ -3029,6 +3047,7 @@ function focusViewport(){
 async function focusSelected(mode="readable",options={}){
   const n=state.selected;
   if(!n)return;
+  if(n.type==="map")mode="fit";
   state.overviewActive=false;
   state.spaceFocusStep=mode==="fit"?1:2;
   const fitMap=n.type==="map"&&mode==="fit";
@@ -3120,7 +3139,7 @@ function openCardTab(n){
   .map(link=>`<link rel="stylesheet" href="${escapeHtml(link.href)}">`).join("");
  const dark=document.body.classList.contains("dark");
  const width=Math.max(300,Math.min(1600,n.el.offsetWidth||600));
- const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="stylesheet" href="${stylesheet}">${supportingStyles}${fontLink}<style>html,body{min-height:100%;margin:0}body{min-height:100vh;display:grid;place-items:center;padding:24px;box-sizing:border-box;background:var(--canvas);color:var(--ink)}.card.card-window{min-width:0;position:relative;left:auto;top:auto;width:min(${width}px,calc(100vw - 48px));max-width:100%;max-height:calc(100vh - 48px);overflow:hidden;box-sizing:border-box}.card-window .cardbar{cursor:default}.card-window .cardactions,.card-window .resize{display:none!important}.card-window .cardbody{max-height:calc(100vh - 112px);overflow:auto}@media(max-width:600px){body{padding:12px}.card.card-window{width:100%;max-height:calc(100vh - 24px)}.card-window .cardbody{max-height:calc(100vh - 88px)}}</style></head><body class="${dark?"dark":""}"><article class="card card-window${heading?" has-title":""}" data-map-color="${theme}" data-font="${font}" data-font-size="${size}" style="--card-font-family:${escapeHtml(fontStack)}">${titleHtml}<div class="cardbody">${renderCardMarkdown(n.md,n.highlights)}</div></article></body></html>`;
+ const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="stylesheet" href="${stylesheet}">${supportingStyles}${fontLink}<style>html,body{height:auto;min-height:100%;margin:0}html{overflow-x:hidden;overflow-y:auto}body{min-height:100vh;display:grid;align-items:start;justify-items:center;padding:24px;box-sizing:border-box;overflow:visible;background:var(--canvas);color:var(--ink)}.card.card-window{min-width:0;position:relative;left:auto;top:auto;width:min(${width}px,calc(100vw - 48px));max-width:100%;max-height:none;overflow:visible;box-sizing:border-box}.card-window .cardbar{cursor:default}.card-window .cardactions,.card-window .resize{display:none!important}.card-window .cardbody{height:auto;max-height:none;overflow:visible}@media(max-width:600px){body{padding:12px}.card.card-window{width:100%}}</style></head><body class="${dark?"dark":""}"><article class="card card-window${heading?" has-title":""}" data-map-color="${theme}" data-font="${font}" data-font-size="${size}" style="--card-font-family:${escapeHtml(fontStack)}">${titleHtml}<div class="cardbody">${renderCardMarkdown(n.md,n.highlights)}</div></article></body></html>`;
  const tab=window.open();
  if(!tab){alert("Allow pop-ups to open this card.");return}
  tab.document.write(html);tab.document.close();
@@ -3176,6 +3195,8 @@ function setCardColorTheme(n,color,record=true){
  if(record)history();
  n.mapColor=next;
  n.el.dataset.mapColor=next;
+ const indexEntry=$("#indexEntries").querySelector(`[data-index-card-id="${CSS.escape(String(n.id))}"]`);
+ if(indexEntry)indexEntry.dataset.mapColor=next;
  const selectEl=n.el.querySelector("[data-map-color]");
  if(selectEl){selectEl.value=next;syncCardSelect(selectEl)}
  if(n.type==="map")n.mapReady=renderMap(n);

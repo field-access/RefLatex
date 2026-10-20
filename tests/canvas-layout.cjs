@@ -16,6 +16,31 @@ const root=path.resolve(__dirname,'..');
   page.on('pageerror',error=>errors.push(error.message));
   await page.route('https://**/*',route=>route.request().url().includes('/marked@')?route.fulfill({path:path.join(path.dirname(require.resolve('marked')),'marked.umd.js'),contentType:'text/javascript'}):route.abort());
   await page.goto(`http://127.0.0.1:${server.address().port}`,{waitUntil:'networkidle'});
+  // Long documents previously persuaded Arrange to use one horizontal row.
+  for(const width of [1440,900])for(const count of [3,12]){
+   await page.setViewportSize({width,height:900});
+   await page.evaluate(count=>{
+    for(let i=0;i<count;i++)__layout.makeNote(`# Long document ${i+1}\n\n`+Array(60).fill('Academic reading material.').join('\n\n'),0,0,540+i%3*40,false,null,'mono');
+   },count);
+   await page.keyboard.press('a');await page.waitForTimeout(150);
+   const board=await page.evaluate(()=>{
+    const t=__layout,rows=new Map();
+    for(const n of t.state.notes){if(!rows.has(n.y))rows.set(n.y,[]);rows.get(n.y).push(n)}
+    return [...rows.values()].map(row=>row.map(n=>({id:n.id,x:n.x,y:n.y,w:n.el.offsetWidth,h:n.el.offsetHeight})));
+   });
+   assert.ok(board.length>=2,'Long cards wrap into multiple rows');
+   const rowCounts=board.map(row=>row.length);
+   assert.ok(Math.max(...rowCounts)-Math.min(...rowCounts)<=1,'Rows distribute cards evenly');
+   const ids=await page.evaluate(()=>__layout.state.notes.map(n=>n.id));
+   assert.deepEqual(board.flat().map(n=>n.id),ids,'Wrapped rows preserve index order');
+   for(let r=0;r<board.length;r++){
+    const row=board[r];
+    for(let i=1;i<row.length;i++)assert.equal(row[i].x-row[i-1].x-row[i-1].w,24);
+    if(r)assert.equal(row[0].y-board[r-1][0].y-Math.max(...board[r-1].map(n=>n.h)),24);
+   }
+   await page.evaluate(()=>{for(const n of [...__layout.state.notes])__layout.deleteNote(n);__layout.state.nextId=1});
+  }
+  await page.setViewportSize({width:1440,height:900});
   await page.evaluate(()=>{
    const t=__layout;
    for(let i=0;i<24;i++)t.makeNote(`# Card ${i+1}\n\n`+Array(2+i%4).fill('Readable Markdown content.').join('\n\n'),i*2000,0,480+(i%3)*80,false,null,'mono');
