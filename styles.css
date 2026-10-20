@@ -692,7 +692,6 @@ body.fullscreen.controls .toolbar{transform:translateY(-50%)}
 .card[data-font] .cardbody,.card[data-font] .cardbody :is(p,li,table,th,td){font-family:var(--card-font-family,ui-monospace,SFMono-Regular,Consolas,monospace)}
 .card[data-font] .cardbody h1,.card[data-font] .cardbody h2,.card[data-font] .cardbody h3,.card[data-font] .cardbody h4,.card[data-font] .cardbody h5,.card[data-font] .cardbody h6{font-family:inherit}
 .card[data-font="mono-code"] .cardbody{font-feature-settings:"liga" 1;letter-spacing:-.025em}
-.card[data-font="mono-typewriter"] .cardbody{letter-spacing:.01em}
 .card[data-font="mono-courier"] .cardbody{letter-spacing:.035em}
 .card[data-font-size="110"] .cardbody{--card-font-scale:1.1}
 .card[data-font-size="125"] .cardbody{--card-font-scale:1.25}
@@ -1111,13 +1110,21 @@ body:not(.dark) .cardbody pre.line-numbered .hljs-section{color:var(--syntax-met
 .cardbody pre,.cardbody code{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 .zoom input.zlabel{width:60px;border:0;background:transparent;color:inherit;text-align:right;font:inherit;padding:4px 0}
 .zoom input.zlabel::-webkit-inner-spin-button{appearance:none}
-.zoom-settings{position:relative;font-size:12px}
-.zoom-settings summary{cursor:pointer;padding:7px;list-style:none}
-.zoom-settings-panel{position:absolute;bottom:42px;right:0;width:245px;padding:16px;background:var(--paper);color:var(--ink);border:1px solid var(--border);border-radius:12px;box-shadow:0 6px 24px #0002}
-.zoom-settings-panel label{display:grid;grid-template-columns:1fr auto;gap:6px;margin-bottom:14px}
-.zoom-settings-panel input{grid-column:1/-1;width:100%;accent-color:#7669d3}
-.zoom-settings-panel p{font-size:11px;line-height:1.5;color:var(--muted);margin:12px 0 0}
-.zoom:focus-within,.zoom:has(details[open]){opacity:1!important;pointer-events:auto!important;transform:none!important}
+/* Global preferences live beside the navigation tray, without canvas effects. */
+.global-settings{position:fixed;z-index:250;right:80px;top:50%;transform:translateY(-50%);width:310px;max-width:calc(100vw - 32px);max-height:calc(100dvh - 32px);overflow:auto;padding:18px;background:var(--paper);color:var(--ink);border:1px solid var(--border);border-radius:6px;box-shadow:0 3px 12px #0002;font:12px/1.5 var(--ui-font)}
+.global-settings[hidden]{display:none}
+.global-settings header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.global-settings h2{margin:0;font-size:15px;font-weight:600}
+.global-settings h3{margin:18px 0 12px;font-size:11px;font-weight:600;color:var(--muted)}
+.global-settings header button{border:0;background:transparent;color:var(--muted);font-size:22px;line-height:24px;width:28px;height:28px}
+.global-settings label{display:grid;grid-template-columns:1fr auto;gap:6px;margin-bottom:14px}
+.global-settings input{grid-column:1/-1;width:100%;accent-color:var(--accent)}
+.global-settings select{grid-column:1/-1;width:100%;padding:8px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);font:inherit}
+.global-settings output{color:var(--muted);font-variant-numeric:tabular-nums}
+.global-settings .settings-note{margin:0;color:var(--muted);font-size:11px}
+.global-settings>button{padding:6px 10px;border:1px solid var(--border);border-radius:3px;background:transparent;color:var(--ink);font:inherit}
+@media(max-width:600px){.global-settings{right:16px}}
+.zoom:focus-within{opacity:1!important;pointer-events:auto!important;transform:none!important}
 
 /* Broad blurred shadows on every code block multiply raster work on a board.
    Keep the existing colored surfaces, borders, syntax colors and text. */
@@ -1231,32 +1238,44 @@ body.index-resizing,body.index-resizing *{cursor:ew-resize!important;user-select
 .card-index nav .index-edit button[type="submit"]{background:var(--ink);color:var(--paper);border-color:transparent}
 @media(prefers-reduced-motion:reduce){.index-row{transition:none}}
 
-/* Shared interface typography and a consistent two-row card header. */
+/* A stable, flat header keeps selection from moving the reading surface. */
 body,.toolbar,.zoom,.editor,.context,.help,.card-index,.custom-select-menu{font-family:var(--ui-font)}
 button,input,select,textarea{font-family:inherit}
-.card{--header-height:40px;container-type:inline-size}
-.card,.card[data-map-color="default"]{border-radius:16px}
-.card.selected.has-title{--header-height:80px}
-.card:not(.has-title){--header-height:12px}
-.card.selected:not(.has-title){--header-height:44px}
-.card .cardbar,.card.selected.has-title .cardbar,.card.selected:not(.has-title) .cardbar{height:var(--header-height);border-radius:16px 16px 0 0}
-.card.has-title .map-title{left:20px;right:20px;top:10px;font:600 14px/20px var(--ui-font);letter-spacing:-.01em}
+.card{--header-height:56px;container-type:inline-size}
+.card,.card[data-map-color="default"]{border-radius:0;box-shadow:none}
+.card.selected{outline:none;box-shadow:none}
+.card:not(.has-title){--header-height:32px}
+.card .cardbar,.card:not(.has-title) .cardbar,.card.selected.has-title .cardbar,.card.selected:not(.has-title) .cardbar{height:var(--header-height);border-radius:0;background:var(--paper)!important;border-bottom:1px solid color-mix(in srgb,var(--ink) 12%,transparent)!important}
+.card.has-title .map-title{left:16px;right:16px;top:4px;max-width:none;font:500 12px/16px var(--ui-font);letter-spacing:0}
 .card.has-title .map-title::after{display:none}
-.card .cardactions{top:40px;left:16px;right:16px;height:28px;gap:3px;justify-content:flex-start;flex-wrap:nowrap}
-.card:not(.has-title) .cardactions{top:8px}
+.card .cardactions,.card.selected .cardactions,.card.selected.has-title .cardactions{display:flex;top:24px;left:16px;right:16px;height:28px;gap:3px;justify-content:flex-start;flex-wrap:nowrap}
+.card .cardactions{visibility:hidden}
+.card.selected .cardactions,.card:hover .cardactions,.card:focus-within .cardactions{visibility:visible}
+.card:not(.has-title) .cardactions,.card.selected:not(.has-title) .cardactions{top:2px}
 .card .cardactions>.custom-select{height:28px}
-.card .cardactions .custom-select[data-control="view"]{width:96px}
-.card .cardactions .custom-select[data-control="theme"]{width:86px}
-.card .cardactions .custom-select[data-control="font"],.card .cardactions .custom-select[data-control="map-font"]{width:108px}
-.card .cardactions .custom-select[data-control="size"]{width:64px;margin-right:auto}
-.custom-select-trigger{height:28px!important;border-radius:6px!important;box-shadow:none;font:500 12px/1.2 var(--ui-font)!important}
-.card .cardactions>button{flex:0 0 28px;width:28px;height:28px;border-radius:6px;color:var(--ink)}
-.card .cardactions>button:hover{background:color-mix(in srgb,var(--ink) 9%,transparent);color:var(--ink)}
-.map-card .cardbody,.map-card.selected.has-title .cardbody,.map-card.selected:not(.has-title) .cardbody{height:calc(100% - var(--header-height))}
-.card .resize.right{top:16px;bottom:16px;width:14px;touch-action:none;z-index:9}
-.card .resize.right{right:0}
+.card .cardactions .custom-select[data-control="theme"]{width:80px}
+.card .cardactions .custom-select[data-control="font"],.card .cardactions .custom-select[data-control="map-font"]{width:100px}
+.card .cardactions .custom-select[data-control="size"]{width:66px;margin-right:auto}
+.custom-select-trigger{height:28px!important;border-radius:3px!important;box-shadow:none;font:400 11px/1.2 var(--ui-font)!important}
+.card .cardactions>button{flex:0 0 28px;width:28px;height:28px;border-radius:3px;color:var(--muted)}
+.card .cardactions>button:hover{background:color-mix(in srgb,var(--ink) 7%,transparent);color:var(--ink)}
+.map-card .cardbody,.map-card:not(.has-title) .cardbody,.map-card.selected.has-title .cardbody,.map-card.selected:not(.has-title) .cardbody{height:calc(100% - var(--header-height))}
+.card .resize.right{top:16px;bottom:16px;width:14px;touch-action:none;z-index:9;right:0}
 .card .resize.right::after{display:none}
-.card .resize:hover::after,.card.selected .resize::after{background:color-mix(in srgb,var(--ink) 24%,transparent)}
+.card .resize:hover::after{background:color-mix(in srgb,var(--ink) 24%,transparent)}
+@container(max-width:580px){
+ .card .cardbar,.card.selected.has-title .cardbar{height:88px}
+ .card:not(.has-title) .cardbar,.card.selected:not(.has-title) .cardbar{height:64px}
+ .card .cardactions,.card.selected .cardactions,.card.selected.has-title .cardactions{flex-wrap:wrap;height:60px;row-gap:4px;left:12px;right:12px}
+ .card .cardactions>.custom-select{flex:0 0 calc((100% - 37px)/3);width:auto!important;margin-right:0!important}
+ .map-card .cardbody,.map-card.selected.has-title .cardbody{height:calc(100% - 88px)}
+ .map-card:not(.has-title) .cardbody,.map-card.selected:not(.has-title) .cardbody{height:calc(100% - 64px)}
+}
+.card:not(.map-card) .cardbody{line-height:1.65;font-weight:400;padding:18px 24px 24px;cursor:text}
+.card.card-window .cardbar{height:26px}
+.card.card-window:not(.has-title) .cardbar{height:0;border:0!important}
+.card.map-window .cardbody{height:100%}
+
 /* Quiet icon buttons with a single optical size across the interface. */
 .toolbar,.zoom{border-radius:10px}
 .toolbar .tool,.toolbar .background-select{border:0;border-radius:6px;background:transparent;color:var(--muted)}
@@ -1270,38 +1289,10 @@ button,input,select,textarea{font-family:inherit}
 .card-index nav .index-expand{display:grid;place-items:center}
 .index-expand .icon{width:12px;height:12px;transition:transform .12s ease}
 .index-expand[aria-expanded="true"] .icon{transform:rotate(90deg)}
-.zoom-settings summary{display:grid;place-items:center;border-radius:5px;color:var(--muted)}
-.zoom-settings summary .icon{width:16px;height:16px}
-.zoom-settings summary:hover{background:color-mix(in srgb,var(--ink) 7%,transparent);color:var(--ink)}
-@container(max-width:550px){
- .card.selected.has-title .cardbar{height:112px}
- .card.selected:not(.has-title) .cardbar{height:76px}
- .card .cardactions{flex-wrap:wrap;height:auto;row-gap:6px;left:12px;right:12px}
- .card .cardactions>.custom-select{flex:0 0 calc((100% - 9px)/4);width:auto!important}
- .map-card.selected.has-title .cardbody{height:calc(100% - 112px)}
- .map-card.selected:not(.has-title) .cardbody{height:calc(100% - 76px)}
-}
-
 /* The neutral theme follows the app's light/dark appearance. */
 body:not(.dark) .card[data-map-color="default"]{--paper:#fff;--ink:#272622;--map-surface:#fff;background:#fff;color:#272622;border-color:#d8dce2}
 body:not(.dark) .card[data-map-color="default"] .cardbar{background:#f7f8fa;border-bottom-color:#e3e6eb}
 body:not(.dark) .card[data-map-color="default"] .map-pane{background:#fff;color:#272622}
-.map-card.has-title{--header-height:32px}
-.map-card.selected.has-title{--header-height:64px}
-.map-card.selected:not(.has-title){--header-height:36px}
-.map-card.has-title .map-title{top:6px;left:16px;right:16px;max-width:none}
-.map-card.has-title .cardactions{top:30px}
-.map-card:not(.has-title) .cardactions{top:4px}
-.map-card .cardbody,.map-card.selected.has-title .cardbody,.map-card.selected:not(.has-title) .cardbody{height:calc(100% - var(--header-height))}
-@container(max-width:550px){
- .map-card.selected.has-title{--header-height:98px}
- .map-card.selected:not(.has-title){--header-height:70px}
- .map-card.selected.has-title .cardbar{height:98px}
- .map-card.selected:not(.has-title) .cardbar{height:70px}
- .map-card.selected.has-title .cardbody{height:calc(100% - 98px)}
- .map-card.selected:not(.has-title) .cardbody{height:calc(100% - 70px)}
-}
-
 .card[data-font-size="160"] .cardbody{--card-font-scale:1.6}
 
 /* Markdown rhythm follows the current card text size. */

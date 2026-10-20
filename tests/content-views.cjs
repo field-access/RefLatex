@@ -15,6 +15,50 @@ const root=path.resolve(__dirname,'..');
   const page=await browser.newPage({viewport:{width:1280,height:900}});
   await page.route('https://**/*',r=>r.request().url().includes('/marked@')?r.fulfill({path:path.join(path.dirname(require.resolve('marked')),'marked.umd.js'),contentType:'text/javascript'}):r.abort());
   await page.goto(`http://127.0.0.1:${server.address().port}`,{waitUntil:'networkidle'});
+  assert.equal(await page.locator('#defaultCardFont').inputValue(),'poppins');
+  assert.equal(await page.locator('.zoom-settings').count(),0,'Settings moved to the navigation tray');
+  const stableHeaders=await page.evaluate(()=>{
+   const results=[];
+   for(const dark of [false,true]){
+    document.body.classList.toggle('dark',dark);
+    for(const type of ['note','map'])for(const title of ['# Academic note\n\nReadable text.','Readable text.'])for(const width of [300,550,600,700]){
+     const n=type==='note'?__content.makeNote(title,0,0,width,false):__content.makeMap(title,0,0,width,600,false);
+     const measure=()=>({height:n.el.offsetHeight,header:n.el.querySelector('.cardbar').offsetHeight,body:n.el.querySelector('.cardbody').offsetTop});
+     __content.select(null);const before=measure();__content.select(n);const after=measure(),style=getComputedStyle(n.el);
+     results.push({type,dark,width,before,after,radius:style.borderRadius,shadow:style.boxShadow,outline:style.outlineStyle,font:n.font});
+     __content.deleteNote(n);
+    }
+   }
+   document.body.classList.remove('dark');return results;
+  });
+  for(const row of stableHeaders){
+   assert.deepEqual(row.after,row.before,`Selection keeps reading position: ${JSON.stringify(row)}`);
+   assert.equal(row.radius,'0px');assert.equal(row.shadow,'none');assert.equal(row.outline,'none');assert.equal(row.font,'poppins');
+  }
+  const legacyFonts=await page.evaluate(()=>['cinzel','mono-typewriter','mono-azeret'].map(font=>{
+   const n=__content.makeNote('Legacy note',0,0,600,false,null,font),value=n.font;__content.deleteNote(n);return value;
+  }));
+  assert.deepEqual(legacyFonts,['poppins','mono','mono']);
+  assert.ok(!(await page.locator('#defaultCardFont option').allTextContents()).some(name=>['Cinzel','Space Mono','Azeret Mono'].includes(name)));
+  const flip=await page.evaluate(()=>{
+   const md='# Flip test\n\nKeep **Markdown** and $x^2$ unchanged.',n=__content.makeNote(md,0,0,600,false);
+   const button=n.el.querySelector('[data-view]');button.click();const map={type:n.type,label:button.getAttribute('aria-label')};
+   button.click();const note={type:n.type,label:button.getAttribute('aria-label'),md:n.md,dropdowns:n.el.querySelectorAll('select[data-view]').length};
+   __content.deleteNote(n);return {md,map,note};
+  });
+  assert.equal(flip.map.type,'map');assert.equal(flip.map.label,'Switch to Markdown (K)');
+  assert.equal(flip.note.type,'note');assert.equal(flip.note.label,'Switch to Markmap (K)');assert.equal(flip.note.md,flip.md);assert.equal(flip.note.dropdowns,0);
+  await page.locator('#settings').click();await page.locator('#defaultCardFont').selectOption('lora');
+  assert.equal(await page.evaluate(()=>localStorage.getItem('reflatex-default-font')),'lora');
+  await page.keyboard.press('Escape');assert.ok(await page.locator('#globalSettings').isHidden());
+  await page.reload({waitUntil:'networkidle'});
+  assert.equal(await page.locator('#defaultCardFont').inputValue(),'lora','Default font persists across reopening');
+  const customDefaults=await page.evaluate(()=>{
+   const note=__content.makeNote('New note',0,0,600,false),map=__content.makeMap('# New map',0,0,700,600,false);
+   const select=document.querySelector('#defaultCardFont');select.value='poppins';select.dispatchEvent(new Event('change'));
+   const result=[note.font,map.font];__content.deleteNote(note);__content.deleteNote(map);return result;
+  });
+  assert.deepEqual(customDefaults,['lora','lora'],'Saved default applies to new cards; changing it preserves existing fonts');
   await page.route('**/test-web-image.svg',route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20"><rect width="40" height="20" fill="blue"/></svg>'}));
   const highlightId=await page.evaluate(()=>{
    const n=__content.makeNote('# Highlights\n\nRemember this important idea.',0,0,600,false,null,'mono','80','ocean');__content.select(n);
@@ -432,7 +476,7 @@ const latex = "\\(\\frac{a}{b}\\)";`;
   await page.evaluate(()=>document.body.classList.remove('toolbar-hidden'));
   const header=await card.locator('.cardbar').boundingBox(),actions=await card.locator('.cardactions').boundingBox();
   assert.ok(actions.y+actions.height<=header.y+header.height,'Controls fit inside header');
-  assert.equal(await card.evaluate(el=>getComputedStyle(el).borderRadius),'16px');
+  assert.equal(await card.evaluate(el=>getComputedStyle(el).borderRadius),'0px');
   if(process.env.HEADER_SCREENSHOT){
    await page.evaluate(id=>{
     const n=__content.state.notes.find(n=>n.id===id),s=__content.state;
@@ -459,7 +503,7 @@ const latex = "\\(\\frac{a}{b}\\)";`;
      const n=__content.state.notes.find(n=>n.id===id),bar=n.el.querySelector('.cardbar'),body=n.el.querySelector('.cardbody');
      return {height:bar.offsetHeight,body:body.offsetHeight,card:n.el.clientHeight};
     },frameId);
-    assert.equal(header.height,64,'Selected map header stays compact');
+    assert.equal(header.height,56,'Selected map header stays compact');
     assert.equal(await page.evaluate(id=>__content.state.notes.find(n=>n.id===id).size,frameId),'80','New maps default to 80%');
     assert.ok(Math.abs(header.body+header.height-header.card)<=1,'Map body fills space below compact header');
    }

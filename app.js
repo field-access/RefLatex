@@ -93,6 +93,7 @@ function addReadingCard(n){
 const MAP_COLORS=["default","purple","warm","ocean","forest","sunset","slate"];
 function randomCardTheme(){return MAP_COLORS[1+Math.floor(Math.random()*(MAP_COLORS.length-1))]}
 const ICON_PATHS={
+ flip:'<path d="M4 7h15m-4-4 4 4-4 4M20 17H5m4-4-4 4 4 4"/>',
  highlight:'<path d="m14 4 6 6-8 8-6-6 8-8Zm-8 8-2 7 7-2M3 22h12"/>',
  zoom:'<circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5 5M8 10.5h5m-2.5-2.5v5"/>',
  pan:'<path d="M12 4v16M4 12h16m-11-5 3-3 3 3m-6 10 3 3 3-3M7 9l-3 3 3 3m10-6 3 3-3 3"/>',
@@ -124,18 +125,22 @@ const ICON_PATHS={
 };
 const ICONS=Object.fromEntries(Object.entries(ICON_PATHS).map(([name,paths])=>[name,`<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${paths}</svg>`]));
 // Static controls and generated card controls use the same local icon set.
-for(const [id,name] of Object.entries({new:'plus',hand:'zoom',center:'center',arrange:'arrange',background:'background',theme:'moon',saveCanvas:'save',openCanvas:'open',full:'fullscreen',toggleIndex:'sidebar',help:'help',closeIndex:'collapse',minus:'minus',plus:'plus',close:'close',edit:'edit',duplicate:'duplicate',copy:'copy',remove:'delete',edge:'sidebar'})){
+for(const [id,name] of Object.entries({new:'plus',hand:'zoom',center:'center',arrange:'arrange',background:'background',theme:'moon',saveCanvas:'save',openCanvas:'open',full:'fullscreen',toggleIndex:'sidebar',help:'help',settings:'settings',closeIndex:'collapse',minus:'minus',plus:'plus',close:'close',edit:'edit',duplicate:'duplicate',copy:'copy',remove:'delete',edge:'sidebar'})){
  const svg=document.getElementById(id)?.querySelector('svg');
  if(svg)svg.outerHTML=ICONS[name];
 }
-const navigationSettings=document.querySelector('.zoom-settings summary');
-if(navigationSettings)navigationSettings.innerHTML=ICONS.settings;
 function setButtonIcon(button,name,label){
  if(!button)return;
  button.innerHTML=ICONS[name];
  if(label){button.title=label;button.setAttribute("aria-label",label)}
 }
+function updateViewButton(el,type){
+ const button=el.querySelector("[data-view]");
+ setButtonIcon(button,"flip",type==="map"?"Switch to Markdown (K)":"Switch to Markmap (K)");
+ if(button)button.dataset.view=type;
+}
 function setCardActionIcons(el,type){
+ updateViewButton(el,type);
  const mapOpen=el.querySelector("[data-map-open]");
  setButtonIcon(mapOpen,"mapOpen","Open Markmap in new window (M)");
  mapOpen?.classList.remove("map-only");
@@ -162,8 +167,8 @@ const MAP_PALETTES={
 };
 const CARD_FONT_GROUPS=[
  ["Monospace",[
-  ["mono","Mono"],["mono-code","JetBrains Mono"],["mono-typewriter","Space Mono"],["mono-fira","Fira Code"],["mono-courier","Courier Prime"],
-  ["mono-dm","DM Mono"],["mono-azeret","Azeret Mono"],["mono-victor","Victor Mono"]
+  ["mono","Mono"],["mono-code","JetBrains Mono"],["mono-fira","Fira Code"],["mono-courier","Courier Prime"],
+  ["mono-dm","DM Mono"],["mono-victor","Victor Mono"]
  ]],
  ["Sans serif",[
   ["dm-sans","DM Sans"],["poppins","Poppins"],["raleway","Raleway"],
@@ -175,9 +180,6 @@ const CARD_FONT_GROUPS=[
   ["bodoni","Bodoni Moda"]
  ]],
  ["Rounded",[["comfortaa","Comfortaa"],["fredoka","Fredoka"],["varela-round","Varela Round"]]],
- ["Display",[
-  ["cinzel","Cinzel"]
- ]],
  ["Handwritten",[
   ["comic-sans","Comic Sans"],
   ["comic-neue","Comic Neue"],["coming-soon","Coming Soon"],["itim","Itim"],
@@ -187,26 +189,25 @@ const CARD_FONT_GROUPS=[
 ];
 const CARD_FONTS=CARD_FONT_GROUPS.flatMap(([,fonts])=>fonts);
 const MAP_FONTS=CARD_FONTS.map(([value])=>value);
-const readyCardFonts=new Set(["mono","comic-sans"]);
-function randomCardFont(){
- const ready=[...readyCardFonts];return ready[Math.floor(Math.random()*ready.length)];
-}
+let defaultFontPreference="poppins";
+function newCardFont(){return defaultFontPreference}
 const LEGACY_CARD_FONTS={
- sans:"dm-sans","josefin-sans":"nunito","editorial-serif":"lora","bebas-neue":"cinzel",
+ cinzel:"poppins","mono-typewriter":"mono","mono-azeret":"mono",
+ sans:"dm-sans","josefin-sans":"nunito","editorial-serif":"lora","bebas-neue":"poppins",
  "dancing-script":"hand-patrick",sacramento:"hand-patrick",satisfy:"comic-sans","marck-script":"hand-patrick",
  hand:"hand-patrick",caveat:"hand-patrick","hand-caveat":"hand-patrick","hand-script":"hand-patrick",
  "hand-soft":"hand-patrick","hand-bold":"hand-kalam","hand-marker":"hand-kalam",
- "mono-terminal":"mono-typewriter","mono-inconsolata":"mono-fira","mono-roboto":"mono-code","mono-source":"mono-code","mono-ubuntu":"mono-typewriter",
+ "mono-terminal":"mono","mono-inconsolata":"mono-fira","mono-roboto":"mono-code","mono-source":"mono-code","mono-ubuntu":"mono",
  serif:"lora",editorial:"lora",humanist:"nunito",maiandra:"nunito",inter:"dm-sans",
  "nunito-sans":"nunito",manrope:"dm-sans","space-grotesk":"league-spartan",outfit:"poppins",rubik:"dm-sans",archivo:"dm-sans",rounded:"quicksand",
  montserrat:"dm-sans",playfair:"fraunces",merriweather:"lora",
- oswald:"league-spartan","dm-serif-display":"fraunces",anton:"cinzel",shrikhand:"cinzel","abril-fatface":"cinzel"
+ oswald:"league-spartan","dm-serif-display":"fraunces",anton:"poppins",shrikhand:"poppins","abril-fatface":"poppins"
 };
 
 const GOOGLE_FONT_SPECS={
- "mono-code":["JetBrains+Mono","wght@400;500;600"],"mono-typewriter":["Space+Mono","wght@400;700"],
+ "mono-code":["JetBrains+Mono","wght@400;500;600"],
  "mono-fira":["Fira+Code","wght@400;500;600"],"mono-courier":["Courier+Prime","wght@400;700"],
- "mono-dm":["DM+Mono","wght@400;500"],"mono-azeret":["Azeret+Mono","wght@400;500;600"],"mono-victor":["Victor+Mono","wght@400;500;600"],
+ "mono-dm":["DM+Mono","wght@400;500"],"mono-victor":["Victor+Mono","wght@400;500;600"],
  "dm-sans":["DM+Sans","wght@400;500;600;700"],poppins:["Poppins","wght@400;500;600;700"],
  raleway:["Raleway","wght@400;500;600;700"],"josefin-sans":["Josefin+Sans","wght@400;500;600;700"],nunito:["Nunito","wght@400;500;600;700"],
  quicksand:["Quicksand","wght@400;500;600;700"],"league-spartan":["League+Spartan","wght@400;500;600;700"],
@@ -214,7 +215,7 @@ const GOOGLE_FONT_SPECS={
  alegreya:["Alegreya","wght@400;500;600;700"],cormorant:["Cormorant+Garamond","wght@400;500;600;700"],
  fraunces:["Fraunces","wght@400;500;600;700"],bodoni:["Bodoni+Moda","wght@400;500;600;700"],
  comfortaa:["Comfortaa","wght@400;500;600;700"],fredoka:["Fredoka","wght@400;500;600;700"],"varela-round":["Varela+Round","wght@400"],
- "bebas-neue":["Bebas+Neue","wght@400"],cinzel:["Cinzel","wght@400;500;600;700"],
+ "bebas-neue":["Bebas+Neue","wght@400"],
  "comic-neue":["Comic+Neue","wght@400;700"],"coming-soon":["Coming+Soon","wght@400"],itim:["Itim","wght@400"],
  "hand-kalam":["Kalam","wght@300;400;700"],"hand-patrick":["Patrick+Hand","wght@400"],"dancing-script":["Dancing+Script","wght@400;500;600;700"],
  sacramento:["Sacramento","wght@400"],satisfy:["Satisfy","wght@400"],"marck-script":["Marck+Script","wght@400"]
@@ -234,8 +235,7 @@ function ensureFontLoaded(font){
   link.onload=async()=>{
    try{
     const family=mapFontStack(key).split(",")[0];
-    const faces=await Promise.all([document.fonts.load(`400 18px ${family}`),document.fonts.load(`700 28px ${family}`)]);
-    if(faces.some(fonts=>fonts.length))readyCardFonts.add(key);
+    await Promise.all([document.fonts.load(`400 18px ${family}`),document.fonts.load(`700 28px ${family}`)]);
    }catch{}
    resolve();
   };
@@ -264,8 +264,8 @@ function createCardFontGroups(){
 function mapFontStack(font){
  const stacks={
   mono:'ui-monospace,SFMono-Regular,Consolas,monospace',
-  "mono-code":'"JetBrains Mono","Cascadia Code","Fira Code",Consolas,ui-monospace,monospace',"mono-typewriter":'"Space Mono","Courier New",Courier,monospace',"mono-fira":'"Fira Code",ui-monospace,monospace',"mono-courier":'"Courier Prime","Courier New",Courier,monospace',
-  "mono-dm":'"DM Mono",ui-monospace,monospace',"mono-azeret":'"Azeret Mono",ui-monospace,monospace',"mono-victor":'"Victor Mono",ui-monospace,monospace',
+  "mono-code":'"JetBrains Mono","Cascadia Code","Fira Code",Consolas,ui-monospace,monospace',"mono-fira":'"Fira Code",ui-monospace,monospace',"mono-courier":'"Courier Prime","Courier New",Courier,monospace',
+  "mono-dm":'"DM Mono",ui-monospace,monospace',"mono-victor":'"Victor Mono",ui-monospace,monospace',
   sans:'ui-sans-serif,system-ui,sans-serif',"dm-sans":'"DM Sans",ui-sans-serif,system-ui,sans-serif',poppins:'"Poppins",ui-sans-serif,system-ui,sans-serif',
   comfortaa:'"Comfortaa",ui-sans-serif,system-ui,sans-serif',fredoka:'"Fredoka",ui-sans-serif,system-ui,sans-serif',"varela-round":'"Varela Round",ui-sans-serif,system-ui,sans-serif',
   raleway:'"Raleway",ui-sans-serif,system-ui,sans-serif',"josefin-sans":'"Josefin Sans",ui-sans-serif,system-ui,sans-serif',
@@ -273,7 +273,7 @@ function mapFontStack(font){
   slab:'"Roboto Slab",Georgia,serif',"editorial-serif":'Cambria,Georgia,"Times New Roman",serif',
   lora:'"Lora",Georgia,serif',alegreya:'"Alegreya",Georgia,serif',
   cormorant:'"Cormorant Garamond",Georgia,serif',fraunces:'"Fraunces",Georgia,serif',bodoni:'"Bodoni Moda",Georgia,serif',
-  "bebas-neue":'"Bebas Neue",Impact,sans-serif',cinzel:'"Cinzel",Georgia,serif',
+  "bebas-neue":'"Bebas Neue",Impact,sans-serif',
   "comic-sans":'"Comic Sans MS","Comic Sans",cursive',
   "comic-neue":'"Comic Neue","Comic Sans MS",cursive',"coming-soon":'"Coming Soon","Comic Sans MS",cursive',itim:'"Itim","Comic Sans MS",cursive',
   "hand-kalam":'"Kalam",cursive',"hand-patrick":'"Patrick Hand",cursive',"dancing-script":'"Dancing Script",cursive',
@@ -452,6 +452,30 @@ document.addEventListener("click",e=>{
 window.addEventListener("resize",()=>{if(activeCardMenu)placeCardMenu(activeCardMenu.menu,activeCardMenu.trigger)});
 const editorMapFont=$("#mapFont");
 editorMapFont.replaceChildren(...createCardFontGroups());
+const globalSettings=$("#globalSettings"),settingsButton=$("#settings"),defaultCardFont=$("#defaultCardFont");
+try{const saved=localStorage.getItem("reflatex-default-font");if(saved)defaultFontPreference=normalizeCardFont(saved)}catch{}
+defaultCardFont.replaceChildren(...createCardFontGroups());
+defaultCardFont.value=defaultFontPreference;
+ensureFontLoaded(defaultFontPreference);
+defaultCardFont.addEventListener("change",()=>{
+ defaultFontPreference=normalizeCardFont(defaultCardFont.value);
+ try{localStorage.setItem("reflatex-default-font",defaultFontPreference)}catch{}
+ ensureFontLoaded(defaultFontPreference);
+});
+function closeGlobalSettings(){
+ globalSettings.hidden=true;settingsButton.setAttribute("aria-expanded","false");
+ settingsButton.focus({preventScroll:true});showControls();
+}
+settingsButton.onclick=()=>{
+ if(!globalSettings.hidden){closeGlobalSettings();return}
+ closeCardMenu();globalSettings.hidden=false;settingsButton.setAttribute("aria-expanded","true");
+ showControls();defaultCardFont.focus({preventScroll:true});
+};
+$("#closeGlobalSettings").onclick=closeGlobalSettings;
+document.addEventListener("pointerdown",e=>{
+ if(!globalSettings.hidden&&!globalSettings.contains(e.target)&&!settingsButton.contains(e.target))closeGlobalSettings();
+});
+
 editor.querySelectorAll(".map-options select").forEach(enhanceCustomSelect);
 
 function showControls(){
@@ -459,7 +483,7 @@ function showControls(){
   state.controlsVisible=true;
   clearTimeout(state.hideTimer);
   state.hideTimer=setTimeout(()=>{
-    if(!editor.classList.contains("open") && !context.classList.contains("open")){
+    if(!editor.classList.contains("open") && !context.classList.contains("open") && globalSettings.hidden){
       document.body.classList.add("controls-hidden");
       state.controlsVisible=false;
     }
@@ -472,7 +496,7 @@ function wakeControls(){
  if(state.controlsVisible&&now-lastPointerWake<500)return;
  lastPointerWake=now;showControls();
 }
-document.querySelectorAll(".toolbar,.zoom,.editor").forEach(panel=>{
+document.querySelectorAll(".toolbar,.zoom,.editor,#globalSettings").forEach(panel=>{
  panel.addEventListener("pointerenter",showControls);
  panel.addEventListener("focusin",showControls);
 });
@@ -1252,8 +1276,7 @@ function setCardType(n,type,record=true){
  }
  n.el.dataset.mapColor=n.mapColor||"default";
  updateCardHeading(n);
- const view=n.el.querySelector("[data-view]");
- if(view){view.value=type;syncCardSelect(view)}
+ updateViewButton(n.el,type);
  const body=n.el.querySelector(".cardbody");
  if(type==="map"){
   n.mapReady=renderMap(n);
@@ -2100,7 +2123,7 @@ async function importMarkdownFiles(fileList){
   const readable=contents.some(result=>result.status==='fulfilled');
   if(readable){
    history();
-   const font=state.selected?.font||'mono';
+   const font=newCardFont();
    for(const [i,result] of contents.entries())if(result.status==='fulfilled'){
     makeNote(result.value,0,0,600,false,null,font,'80',randomCardTheme(),'modern',null,null,[],files[i].name);
    }
@@ -2120,7 +2143,7 @@ function normalizeCardSize(size){
  if(value==='180')return '160';
  return ['50','60','70','80','90','100','110','125','140','160'].includes(value)?value:'80';
 }
-function makeNote(md,x,y,w=600,record=true,id=null,font=randomCardFont(),size="80",mapColor=randomCardTheme(),mapFont="modern",mapWidth=null,mapHeight=null,highlights=[],sourceName=''){
+function makeNote(md,x,y,w=600,record=true,id=null,font=newCardFont(),size="80",mapColor=randomCardTheme(),mapFont="modern",mapWidth=null,mapHeight=null,highlights=[],sourceName=''){
  if(record)history();
  const minWidth=Math.min(300,Math.max(200,innerWidth-24));
  const width=Math.max(minWidth,Math.min(1200,w||600));
@@ -2129,7 +2152,7 @@ const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size:normaliz
  state.nextId=Math.max(state.nextId,n.id+1);
  const el=document.createElement("article");
  el.className="card";el.style.left=x+"px";el.style.top=y+"px";el.style.width=width+"px";
- el.innerHTML=`<div class="cardbar"><div class="map-title"></div></div><div class="cardactions"><select data-view aria-label="Card view" title="Card view"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-map-color aria-label="Card color theme" title="Card color theme"><option value="default">Midnight</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select><select data-font aria-label="Font" title="Font (V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option><option value="slab">Slab</option><option value="humanist">Humanist</option><option value="rounded">Rounded</option><option value="editorial">Editorial</option><option value="hand">Handwritten</option><option value="hand-soft">Hand Soft</option><option value="hand-bold">Hand Bold</option><option value="hand-marker">Hand Marker</option><option value="hand-script">Hand Script</option></select><select data-size aria-label="Card font size" title="Card font size"><option value="50">50%</option><option value="60">60%</option><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option></select><button data-map-open class="map-only"></button><button data-card-open></button><button data-edit></button><button data-delete></button></div>
+ el.innerHTML=`<div class="cardbar"><div class="map-title"></div></div><div class="cardactions"><button type="button" data-view></button><select data-map-color aria-label="Card color theme" title="Card color theme"><option value="default">Midnight</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select><select data-font aria-label="Font" title="Font (V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option><option value="slab">Slab</option><option value="humanist">Humanist</option><option value="rounded">Rounded</option><option value="editorial">Editorial</option><option value="hand">Handwritten</option><option value="hand-soft">Hand Soft</option><option value="hand-bold">Hand Bold</option><option value="hand-marker">Hand Marker</option><option value="hand-script">Hand Script</option></select><select data-size aria-label="Card font size" title="Card font size"><option value="50">50%</option><option value="60">60%</option><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option></select><button data-map-open class="map-only"></button><button data-card-open></button><button data-edit></button><button data-delete></button></div>
  <div class="resize right" data-side="right"></div><div class="resize bottom" data-side="bottom" title="Resize map height"></div>
  <div class="cardbody">${renderCardMarkdown(n.md,n.highlights)}</div>`;
  setCardActionIcons(el,"note");
@@ -2138,7 +2161,6 @@ const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size:normaliz
  el.dataset.mapColor=n.mapColor||"default";
  applyMapFont(n);
  el.querySelector("[data-map-color]").value=n.mapColor||"default";
- el.querySelector("[data-view]").value="note";
  populateCardFontSelect(el,font);
  el.dataset.fontSize=normalizeCardSize(size);
  el.querySelector("[data-size]").value=el.dataset.fontSize;
@@ -2161,7 +2183,7 @@ const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size:normaliz
  el.querySelector("[data-delete]").onclick=()=>deleteNote(n);
  el.querySelector("[data-map-open]").onclick=()=>openMapTab(n);
  el.querySelector("[data-card-open]").onclick=()=>openCardTab(n);
- el.querySelector("[data-view]").onchange=e=>setCardType(n,e.target.value);
+ el.querySelector("[data-view]").onclick=()=>setCardType(n,n.type==="map"?"note":"map");
  el.querySelector("[data-map-color]").onchange=e=>{
   setCardColorTheme(n,e.target.value);
  };
@@ -2180,7 +2202,7 @@ const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size:normaliz
  empty();
  return n;
 }
-function makeMap(md,x,y,w=null,h=null,record=true,id=null,mapColor=randomCardTheme(),mapFont=randomCardFont(),size="80",highlights=[],sourceName=''){
+function makeMap(md,x,y,w=null,h=null,record=true,id=null,mapColor=randomCardTheme(),mapFont=newCardFont(),size="80",highlights=[],sourceName=''){
  if(record)history();
  const viewport=mapViewportSize();
  const width=Math.max(Math.min(300,Math.max(200,innerWidth-24)),Math.min(1600,w||viewport.width));
@@ -2193,10 +2215,9 @@ const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type
  el.dataset.mapColor=n.mapColor;
  applyMapFont(n);
  el.dataset.font=n.font;
- el.innerHTML=`<div class="cardbar"><div class="map-title"></div></div><div class="cardactions"><select data-view aria-label="Card view" title="Card view"><option value="note">Markdown</option><option value="map">Markmap</option></select><select data-map-color aria-label="Card color theme" title="Card color theme"><option value="default">Midnight</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select><select data-font aria-label="Font" title="Font (V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option></select><select data-size aria-label="Card font size" title="Card font size (1–9, 0)"><option value="50">50%</option><option value="60">60%</option><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option></select><button data-map-open></button><button data-card-open></button><button data-edit></button><button data-delete></button></div><div class="resize right" data-side="right"></div><div class="resize bottom" data-side="bottom" title="Resize map height"></div><div class="cardbody"><div class="map-loading">Rendering mind map…</div></div>`;
+ el.innerHTML=`<div class="cardbar"><div class="map-title"></div></div><div class="cardactions"><button type="button" data-view></button><select data-map-color aria-label="Card color theme" title="Card color theme"><option value="default">Midnight</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select><select data-font aria-label="Font" title="Font (V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option></select><select data-size aria-label="Card font size" title="Card font size (1–9, 0)"><option value="50">50%</option><option value="60">60%</option><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option></select><button data-map-open></button><button data-card-open></button><button data-edit></button><button data-delete></button></div><div class="resize right" data-side="right"></div><div class="resize bottom" data-side="bottom" title="Resize map height"></div><div class="cardbody"><div class="map-loading">Rendering mind map…</div></div>`;
  setCardActionIcons(el,"map");
  n.el=el;applyCardFont(n,n.font);updateCardHeading(n);world.appendChild(el);state.notes.push(n);readingSession.rows=[];
- el.querySelector("[data-view]").value="map";
  el.querySelector("[data-map-color]").value=n.mapColor;
  populateCardFontSelect(el,n.font);
  el.querySelector("[data-size]").value=n.size;
@@ -2216,7 +2237,7 @@ const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type
  el.querySelector("[data-card-open]").onclick=()=>openCardTab(n);
  el.querySelector("[data-edit]").onclick=()=>editNote(n);
  el.querySelector("[data-delete]").onclick=()=>deleteNote(n);
- el.querySelector("[data-view]").onchange=e=>setCardType(n,e.target.value);
+ el.querySelector("[data-view]").onclick=()=>setCardType(n,n.type==="map"?"note":"map");
  el.querySelector("[data-map-color]").onchange=e=>{
   setCardColorTheme(n,e.target.value);
  };
@@ -2620,7 +2641,7 @@ function openEditor(mode="note",n=null){
  state.editorMode=mode;
  source.value=n?.md||"";
  $("#mapColor").value=n?.mapColor||randomCardTheme();
- $("#mapFont").value=normalizeCardFont(n?.font||n?.mapFont||"mono");
+ $("#mapFont").value=normalizeCardFont(n?.font||n?.mapFont||newCardFont());
  syncCardSelect($("#mapColor"));
  syncCardSelect($("#mapFont"));
  $("#applyCard").textContent=n?"Update card":"Place card";
@@ -2660,8 +2681,8 @@ function applyEditor(type=state.editorMode){
   const p=worldPoint(innerWidth/2,innerHeight/2);
   const size=mapViewportSize();
   const n=type==="map"
-   ? makeMap(md,p.x-size.width/2,p.y-size.height/2,size.width,size.height,true,null,$("#mapColor").value,randomCardFont())
-   : makeNote(md,p.x-300,p.y-150,600,true,null,randomCardFont(),"80",$("#mapColor").value,$("#mapFont").value);
+   ? makeMap(md,p.x-size.width/2,p.y-size.height/2,size.width,size.height,true,null,$("#mapColor").value,$("#mapFont").value)
+   : makeNote(md,p.x-300,p.y-150,600,true,null,$("#mapFont").value,"80",$("#mapColor").value,$("#mapFont").value);
   select(n);inserted=true;
  }
  closeEditor();
@@ -3189,11 +3210,8 @@ window.addEventListener("keydown",e=>{
    if(e.key==="Escape"){e.preventDefault();closeHelp()}
    return;
  }
- const settings=$(".zoom-settings");
- if(e.key==="Escape"&&settings.open){
-  e.preventDefault();settings.open=false;
-  settings.querySelector("summary").focus({preventScroll:true});
-  return;
+ if(e.key==="Escape"&&!globalSettings.hidden){
+  e.preventDefault();closeGlobalSettings();return;
  }
  const mod=e.ctrlKey||e.metaKey;
  if(mod&&!e.shiftKey&&e.key.toLowerCase()==='f'&&!editor.classList.contains('open')){
@@ -3201,7 +3219,8 @@ window.addEventListener("keydown",e=>{
  }
  const editing=document.activeElement===source ||
    document.activeElement?.tagName==="INPUT" ||
-   document.activeElement?.tagName==="TEXTAREA";
+   document.activeElement?.tagName==="TEXTAREA" ||
+   document.activeElement?.tagName==="SELECT";
  const customSelectFocused=document.activeElement?.closest?.(".custom-select-trigger,.custom-select-menu");
 
  showControls();
