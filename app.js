@@ -17,17 +17,36 @@ try{
 const zoomLabel=$("#zoomLabel");
 let lastZoomLabel="";
 let cameraInputFrame=0,indexFrame=0,wheelScrollTimer=0;
-// Skip offscreen paint but retain accurate layout for fit, arrange and editing.
+// Reading culls distant cards. Overview retains a composited board instead:
+// observing every transformed card and toggling visibility invalidates that
+// cache precisely when the user needs inexpensive navigation.
+let cardVisibility=null,overviewRendering=false,overviewCullingPaused=false;
 if(window.IntersectionObserver){
- const visibility=new IntersectionObserver(entries=>{
-  for(const {target,isIntersecting} of entries)target.classList.toggle("offscreen",!isIntersecting);
- },{root:canvas,rootMargin:"400px"});
+ cardVisibility=new IntersectionObserver(entries=>{
+  if(overviewCullingPaused)return;
+  for(const {target,isIntersecting} of entries)target.classList.toggle('offscreen',!isIntersecting);
+ },{root:canvas,rootMargin:'400px'});
  new MutationObserver(records=>{
   for(const record of records){
-   for(const el of record.addedNodes)if(el.nodeType===1)visibility.observe(el);
-   for(const el of record.removedNodes)if(el.nodeType===1)visibility.unobserve(el);
+   for(const el of record.addedNodes)if(el.nodeType===1&&!overviewCullingPaused)cardVisibility.observe(el);
+   for(const el of record.removedNodes)if(el.nodeType===1)cardVisibility.unobserve(el);
   }
  }).observe(world,{childList:true});
+}
+function updateOverviewRendering(){
+ // Hysteresis prevents toggling rendering modes around one zoom threshold.
+ const next=state.overviewActive||state.scale<(overviewRendering?.6:.45);
+ // Free-form zoom still needs culling for distant cards. Only a fitted
+ // overview suspends geometry observation, since it shows the whole board.
+ const pauseCulling=state.overviewActive;
+ if(next!==overviewRendering){overviewRendering=next;world.dataset.bitmapCache=String(next);if(next)world.style.willChange='transform'}
+ if(pauseCulling===overviewCullingPaused)return;
+ overviewCullingPaused=pauseCulling;
+ if(pauseCulling){cardVisibility?.disconnect();world.dataset.overviewRender='true'}
+ else{
+  state.selected?.el.classList.remove('offscreen');world.dataset.overviewRender='false';
+  for(const n of state.notes)cardVisibility?.observe(n.el);
+ }
 }
 if(window.marked?.setOptions) marked.setOptions({gfm:true,breaks:true});
 
@@ -92,6 +111,37 @@ function addReadingCard(n){
  readingSession.cards.set(n.id,n);state.layoutMode='reading';
 }
 const MAP_COLORS=["default","purple","warm","ocean","forest","sunset","slate"];
+function validCardColor(color){return MAP_COLORS.includes(color)||/^#[0-9a-f]{6}$/i.test(color)}
+function cardColorValue(color){return /^#[0-9a-f]{6}$/i.test(color)?color:(MAP_PALETTES[color]||MAP_PALETTES.default)[0]}
+function cardPalette(color){return /^#[0-9a-f]{6}$/i.test(color)?[color,...[15,30,45,60].map(p=>`color-mix(in srgb, ${color}, white ${p}%)`)]:MAP_PALETTES[color]||MAP_PALETTES.default}
+function customColorStyle(color){return /^#[0-9a-f]{6}$/i.test(color)?`--custom-card-color:${color};--card-accent:${color};--card-accent-dark:color-mix(in srgb,${color},white 35%);`:''}
+function applyCardColor(el,color){
+ if(!el)return;el.dataset.customColor=String(/^#[0-9a-f]{6}$/i.test(color));
+ if(el.dataset.customColor==='true'){el.style.setProperty('--custom-card-color',color);el.style.setProperty('--card-accent',color);el.style.setProperty('--card-accent-dark',`color-mix(in srgb,${color},white 35%)`)}
+ else for(const key of ['--custom-card-color','--card-accent','--card-accent-dark'])el.style.removeProperty(key);
+}
+function setColorPreset(select,color){
+ if(!select)return;
+ let custom=select.querySelector('option[data-custom-color]');
+ if(/^#[0-9a-f]{6}$/i.test(color)){if(!custom){custom=document.createElement('option');custom.dataset.customColor='true';select.append(custom)}custom.value=color;custom.textContent='Custom'}
+ select.value=color;syncCardSelect(select);
+}
+let cardColorDialog=null;
+function openCardColorPicker(n,anchor){
+ cardColorDialog?.remove();closeCardMenu();
+ const color=cardColorValue(n?.mapColor||$('#mapColor').value),panel=document.createElement('section');panel.className='card-color-dialog';panel.setAttribute('role','dialog');panel.setAttribute('aria-label','Custom card color');
+ panel.innerHTML='<header><b>Custom color</b><button type="button" aria-label="Close color picker">×</button></header><label>Pick a color<input type="color" aria-label="Choose custom color"></label><label>Hex color<input type="text" aria-label="Hex color" maxlength="7" spellcheck="false"></label><p role="status" hidden>Enter a six-digit hex color, such as #8b5cf6.</p><button type="button" class="color-apply">Apply color</button>';
+ const wheel=panel.querySelector('input[type="color"]'),hex=panel.querySelector('input[type="text"]');wheel.value=hex.value=color;
+ const close=()=>{panel.remove();if(cardColorDialog===panel)cardColorDialog=null;anchor?.focus({preventScroll:true})};
+ wheel.oninput=()=>{hex.value=wheel.value};hex.oninput=()=>{if(/^#[0-9a-f]{6}$/i.test(hex.value))wheel.value=hex.value};
+ const apply=()=>{const value=hex.value.trim().toLowerCase();if(!/^#[0-9a-f]{6}$/i.test(value)){panel.querySelector('p').hidden=false;return}if(n)setCardColorTheme(n,value);else{setColorPreset($('#mapColor'),value);$('#editorCardColor').value=value}close()};
+ panel.querySelector('.color-apply').onclick=apply;panel.querySelector('header button').onclick=close;
+ panel.onkeydown=e=>{e.stopPropagation();if(e.key==='Escape'){e.preventDefault();close()}else if(e.key==='Enter'){e.preventDefault();apply()}};
+ document.body.append(panel);cardColorDialog=panel;
+ const box=anchor?.getBoundingClientRect(),left=box?.left??innerWidth/2-125,top=box?.bottom??innerHeight/2-100;
+ panel.style.left=Math.max(8,Math.min(innerWidth-258,left))+'px';panel.style.top=Math.max(8,Math.min(innerHeight-panel.offsetHeight-8,top+6))+'px';hex.focus();hex.select();
+}
+document.addEventListener('pointerdown',e=>{if(cardColorDialog&&!cardColorDialog.contains(e.target)&&!e.target.closest('[data-card-color-button]')){cardColorDialog.remove();cardColorDialog=null}});
 function randomCardTheme(){return MAP_COLORS[1+Math.floor(Math.random()*(MAP_COLORS.length-1))]}
 const ICON_PATHS={
  flip:'<path d="M4 7h15m-4-4 4 4-4 4M20 17H5m4-4-4 4 4 4"/>',
@@ -395,6 +445,9 @@ function openCardMenu(wrap){
   });
   menu.appendChild(item);
  }
+ if(select.matches('[data-map-color],#mapColor')){
+  const custom=document.createElement('button');custom.type='button';custom.className='custom-select-option';custom.dataset.value='custom';custom.textContent='Custom color…';custom.setAttribute('role','option');custom.onclick=()=>openCardColorPicker(state.notes.find(n=>n.el===card)||null,trigger);menu.append(custom);
+ }
  document.body.appendChild(menu);
  trigger.setAttribute("aria-expanded","true");trigger.setAttribute("aria-controls",menu.id);
  wrap.classList.add("menu-open");
@@ -451,6 +504,8 @@ document.addEventListener("click",e=>{
  if(activeCardMenu&&!activeCardMenu.menu.contains(e.target)&&!activeCardMenu.wrap.contains(e.target))closeCardMenu();
 });
 window.addEventListener("resize",()=>{if(activeCardMenu)placeCardMenu(activeCardMenu.menu,activeCardMenu.trigger)});
+$('#editorCardColor').onchange=e=>setColorPreset($('#mapColor'),e.target.value);
+$('#mapColor').addEventListener('change',()=>{$('#editorCardColor').value=cardColorValue($('#mapColor').value)});
 const editorMapFont=$("#mapFont");
 editorMapFont.replaceChildren(...createCardFontGroups());
 const globalSettings=$("#globalSettings"),settingsButton=$("#settings"),defaultCardFont=$("#defaultCardFont");
@@ -757,7 +812,7 @@ function textHighlightSpans(md){
  if(!String(md).includes('card-text-highlight'))return spans;
  // Ignore literal examples inside code while keeping source offsets intact.
  const source=String(md)
-  .replace(/(^|\n)([ \t]*)(```+|~~~+)([^\n]*)\n([\s\S]*?)(?:\n[ \t]*\3[ \t]*)(?=\n|$)/g,block=>block.replace(/[^\n]/g,' '))
+  .replace(/(^|\n)([ \t]*)(```+|~~~+)([^\n]*)\n([\s\S]*?)(?:\n[ \t]*\3[ \t]*\r?)(?=\n|$)/g,block=>block.replace(/[^\n]/g,' '))
   .replace(/(^|\n)((?:[ \t]{4}.*(?:\n|$))+)/g,block=>block.replace(/[^\n]/g,' '))
   .replace(/(`+)[\s\S]*?\1/g,code=>code.replace(/[^\n]/g,' '));
  for(const match of source.matchAll(/<mark\b[^>]*>|<\/mark\s*>/gi)){
@@ -772,7 +827,9 @@ function textHighlightSpans(md){
 }
 
 function render(md){
-  let text=String(md);
+  // Normalize line endings for rendering only. Windows clipboard text must
+  // enter the same protected code path without changing the stored Markdown.
+  let text=String(md).replace(/\r\n?/g,"\n");
   const blockCodes=[];
   const inlineCodes=[];
   const math=[];
@@ -995,8 +1052,11 @@ function cardMarkdownParts(md){
 }
 function sourceTitle(n){return typeof n.sourceName==='string'?n.sourceName.replace(/\.(?:md|markdown)$/i,''):''}
 function updateCardHeading(n){
+ applyCardColor(n.el,n.mapColor);
  const title=n.el?.querySelector(".map-title");
  if(!title)return;
+ const stamp=n.el.querySelector('.card-timestamp');
+ if(stamp){stamp.hidden=!n.createdAt;if(n.createdAt){const date=new Date(n.createdAt);stamp.dateTime=n.createdAt;stamp.textContent=date.toLocaleDateString(undefined,{day:'numeric',month:'short'})+' · '+date.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});stamp.title='Created '+date.toLocaleString()}}
  const heading=cardMarkdownParts(n.md).title;
  if(heading){
   const parsed=document.createElement("div");
@@ -1022,7 +1082,7 @@ function migrateCardHighlights(n){
  for(const edit of edits.sort((a,b)=>b.start-a.start))n.md=n.md.slice(0,edit.start)+n.md.slice(edit.end);
 }
 function markmapOptions(n){
- const colors=MAP_PALETTES[n.mapColor]||MAP_PALETTES.default;
+ const colors=cardPalette(n.mapColor);
  const depth=node=>node.state?.depth||0;
  return {
   color:node=>colors[depth(node)%colors.length],
@@ -1268,7 +1328,7 @@ function setCardType(n,type,record=true){
  state.spaceFocusStep=0;
  n.el.classList.toggle("map-card",type==="map");
  if(type==="map"){
-  n.mapColor=MAP_COLORS.includes(n.mapColor)?n.mapColor:"default";
+  n.mapColor=validCardColor(n.mapColor)?n.mapColor:"default";
   applyMapFont(n);
   const size=mapViewportSize();
   n.mapWidth=size.width;
@@ -1306,6 +1366,7 @@ function setCardType(n,type,record=true){
  save();
 }
 function apply(){
+ updateOverviewRendering();
  if(state.pan){paintCanvasDrag();return}
  if(!Number.isFinite(state.x)||!Number.isFinite(state.y)||!Number.isFinite(state.scale)){
   state.x=innerWidth/2;state.y=innerHeight/2;state.scale=1;
@@ -1378,7 +1439,7 @@ let motionHintTimer=0;
 // Keep overview bitmaps cached, including after navigation settles. Reading
 // releases the cache so HTML/SVG text can rasterize at its final reading scale.
 function beginCameraMotion(){
- const hint=state.overviewActive?'transform':state.pan?'translate':'transform';
+ const hint=overviewRendering||state.overviewActive?'transform':state.pan?'translate':'transform';
  if(world.style.willChange!==hint)world.style.willChange=hint;
  if(!document.body.classList.contains("camera-moving")){
   document.body.classList.add("camera-moving");
@@ -1397,7 +1458,7 @@ function finishCameraMotion(){
  if(state.pan||state.raf||cameraInputFrame||fallbackWheelTimer)return;
  clearTimeout(motionHintTimer);motionHintTimer=0;
  document.body.classList.remove("camera-moving");
- if(!state.overviewActive&&world.style.willChange)world.style.willChange="";
+ if(!overviewRendering&&!state.overviewActive&&world.style.willChange)world.style.willChange="";
  save();
 }
 function animate(responseMs=32){
@@ -1454,24 +1515,24 @@ function zoom(f,cx=innerWidth/2,cy=innerHeight/2){
  zoomPrecise(f,cx,cy);
  clearTimeout(state.saveTimer);state.saveTimer=setTimeout(save,180);
 }
-function snapshot(){return JSON.stringify({x:state.x,y:state.y,scale:state.scale,nextId:state.nextId,layoutMode:state.layoutMode,overviewActive:state.overviewActive,readingCards:[...readingSession.cards.keys()],notes:state.notes.map(n=>({id:n.id,md:n.md,x:n.x,y:n.y,w:n.type==="map"?(n.mapWidth||n.width||n.el.offsetWidth):(n.width||n.el.offsetWidth),h:n.mapHeight,mapWidth:n.mapWidth,mapHeight:n.mapHeight,font:n.font||"mono",size:n.size||"80",type:n.type||"note",mapColor:n.mapColor||"default",highlights:n.highlights||[],mapFont:n.mapFont||"modern",sourceName:n.sourceName||undefined}))})}
+function snapshot(){return JSON.stringify({x:state.x,y:state.y,scale:state.scale,nextId:state.nextId,layoutMode:state.layoutMode,overviewActive:state.overviewActive,groups:indexGroups,readingCards:[...readingSession.cards.keys()],notes:state.notes.map(n=>({id:n.id,md:n.md,x:n.x,y:n.y,w:n.type==="map"?(n.mapWidth||n.width||n.el.offsetWidth):(n.width||n.el.offsetWidth),h:n.mapHeight,mapWidth:n.mapWidth,mapHeight:n.mapHeight,font:n.font||"mono",size:n.size||"80",type:n.type||"note",mapColor:n.mapColor||"default",highlights:n.highlights||[],mapFont:n.mapFont||"modern",sourceName:n.sourceName||undefined,createdAt:n.createdAt}))})}
 function history(){
  if(state.historyLock)return;
  const s=snapshot();
  if(state.undo.at(-1)!==s){state.undo.push(s);if(state.undo.length>80)state.undo.shift();state.redo=[]}
 }
 function restore(s){
- const d=JSON.parse(s);state.historyLock=true;
+ const d=JSON.parse(s);state.historyLock=true;restoreIndexGroups(d.groups);
  state.layoutMode=d.layoutMode==='reading'?'reading':'compact';state.overviewActive=d.overviewActive===true;
  state.notes.forEach(disposeCard);state.notes=[];state.selected=null;
  (d.notes||[]).forEach(n=>n.type==="map"
-  ? makeMap(n.md,n.x,n.y,n.w,n.h,false,n.id,n.mapColor,n.mapFont,n.size,n.highlights,n.sourceName)
-  : makeNote(n.md,n.x,n.y,n.w,false,n.id,n.font,n.size,n.mapColor,n.mapFont,n.mapWidth,n.mapHeight,n.highlights,n.sourceName));
+  ? makeMap(n.md,n.x,n.y,n.w,n.h,false,n.id,n.mapColor,n.mapFont,n.size,n.highlights,n.sourceName,n.createdAt??null)
+  : makeNote(n.md,n.x,n.y,n.w,false,n.id,n.font,n.size,n.mapColor,n.mapFont,n.mapWidth,n.mapHeight,n.highlights,n.sourceName,n.createdAt??null));
  state.x=Number.isFinite(d.x)?d.x:innerWidth/2;
  state.y=Number.isFinite(d.y)?d.y:innerHeight/2;
  state.scale=clampScale(Number.isFinite(d.scale)?d.scale:1);
  restoreReadingSession(d.readingCards);
- state.nextId=d.nextId||state.nextId;sync();apply();world.style.willChange=state.overviewActive?'transform':'';
+ state.nextId=d.nextId||state.nextId;sync();apply();world.style.willChange=overviewRendering?'transform':'';
  state.historyLock=false;save();empty();
 }
 function undo(){if(!state.undo.length)return;state.redo.push(snapshot());restore(state.undo.pop())}
@@ -1647,17 +1708,86 @@ function reorderIndexCard(id,targetId,after=false){
  if(!source||!target||source===target)return;
  const notes=state.notes.filter(n=>n!==source),position=notes.indexOf(target)+(after?1:0);
  notes.splice(position,0,source);
- if(notes.every((n,i)=>n===state.notes[i]))return;
- history();state.notes=notes;layoutCards();save();
+ const group=indexGroups.find(g=>g.cards.includes(target.id)),oldGroup=indexGroups.find(g=>g.cards.includes(source.id));
+ if(notes.every((n,i)=>n===state.notes[i])&&group===oldGroup)return;
+ history();
+ if(group!==oldGroup){for(const g of indexGroups)g.cards=g.cards.filter(id=>id!==source.id);if(group)group.cards.push(source.id)}
+ state.notes=notes;layoutCards();save();
  if(indexFrame){cancelAnimationFrame(indexFrame);indexFrame=0}
  renderCardIndex();
+}
+const GROUP_COLORS=['#f97316','#ec4899','#8b5cf6','#3b82f6','#06b6d4','#22c55e','#eab308','#ef4444'];
+function randomGroupColor(){const unused=GROUP_COLORS.filter(color=>!indexGroups.some(g=>g.color===color)),colors=unused.length?unused:GROUP_COLORS;return colors[Math.floor(Math.random()*colors.length)]}
+let indexGroups=[],indexAnchor=null;
+const indexSelection=new Set();
+function restoreIndexGroups(groups){
+ indexSelection.clear();indexAnchor=null;
+ indexGroups=Array.isArray(groups)?groups.filter(g=>g&&typeof g.id==='string').map(g=>({id:g.id,name:String(g.name||'Group').slice(0,80),color:/^#[0-9a-f]{6}$/i.test(g.color)?g.color:'#8094ac',collapsed:g.collapsed===true,cards:Array.isArray(g.cards)?g.cards:[]})):[];
+}
+function groupChange(action){history();action();save();renderCardIndex()}
+function paintIndexSelection(){
+ const notes=new Map(state.notes.map(n=>[String(n.id),n]));
+ for(const entry of $('#indexEntries').querySelectorAll('.index-entry')){
+  const n=notes.get(entry.dataset.indexCardId),picked=Boolean(n&&indexSelection.has(n.id));
+  entry.classList.toggle('group-picked',picked);entry.querySelector('[data-card-id]')?.setAttribute('aria-pressed',String(picked));
+ }
+ for(const header of $('#indexEntries').querySelectorAll('.index-group-header[data-group-id]')){
+  const g=indexGroups.find(g=>g.id===header.dataset.groupId),cards=state.notes.filter(n=>g?.cards.includes(n.id));
+  header.classList.toggle('group-picked',cards.length>0&&cards.every(n=>indexSelection.has(n.id)));
+ }
+}
+function selectIndexCard(n,event){
+ const add=event.ctrlKey||event.metaKey;
+ if(event.shiftKey){
+  const entries=[...$('#indexEntries').querySelectorAll('.index-entry:not([hidden])')].map(entry=>state.notes.find(n=>String(n.id)===entry.dataset.indexCardId)).filter(Boolean);
+  const anchor=entries.findIndex(card=>card.id===indexAnchor),end=entries.indexOf(n);
+  if(!add)indexSelection.clear();
+  if(anchor>=0&&end>=0)for(const card of entries.slice(Math.min(anchor,end),Math.max(anchor,end)+1))indexSelection.add(card.id);
+  else{indexSelection.add(n.id);indexAnchor=n.id}
+ }else if(add){if(indexSelection.has(n.id))indexSelection.delete(n.id);else indexSelection.add(n.id);indexAnchor=n.id}
+ else{indexSelection.clear();indexSelection.add(n.id);indexAnchor=n.id}
+ paintIndexSelection();
+}
+function toggleIndexGrouping(){
+ const cards=state.notes.filter(n=>indexSelection.has(n.id));
+ if(!cards.length&&state.selected){cards.push(state.selected);indexSelection.add(state.selected.id)}
+ if(!cards.length)return;
+ const group=indexGroups.find(g=>cards.every(n=>g.cards.includes(n.id)));
+ groupChange(()=>{
+  for(const g of indexGroups)g.cards=g.cards.filter(id=>!indexSelection.has(id));
+  indexGroups=indexGroups.filter(g=>g.cards.length);
+  if(!group)indexGroups.push({id:crypto.randomUUID(),name:'New group',color:randomGroupColor(),collapsed:false,cards:cards.map(n=>n.id)});
+ });
+}
+function indexGroupingKey(e){
+ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='g'&&!e.altKey&&!e.shiftKey&&!editor.classList.contains('open')&&!e.target.closest?.('input,textarea,select,[contenteditable="true"]')){
+  e.preventDefault();e.stopPropagation();toggleIndexGrouping();return true;
+ }
+ return false;
+}
+function indexGroupHeader(group){
+ const header=document.createElement('div');header.className='index-group-header';header.dataset.groupId=group.id;header.style.setProperty('--group-color',group.color);header.tabIndex=0;header.title='Click to select group · Ctrl/⌘+G to ungroup';header.addEventListener('keydown',e=>{if(e.target.matches('input'))e.stopPropagation()});header.onclick=e=>{if(e.target.closest('input,button,details'))return;const cards=state.notes.filter(n=>group.cards.includes(n.id));if(!e.ctrlKey&&!e.metaKey)indexSelection.clear();for(const n of cards)indexSelection.add(n.id);indexAnchor=cards[0]?.id??null;paintIndexSelection()};
+ const name=document.createElement('input');name.value=group.name;name.maxLength=80;name.setAttribute('aria-label','Group name');name.onchange=()=>groupChange(()=>{group.name=name.value.trim()||'Group'});
+ const color=document.createElement('input');color.type='color';color.value=group.color;color.title='Group color';color.setAttribute('aria-label','Group color');color.onchange=()=>groupChange(()=>{group.color=color.value});
+ const toggle=document.createElement('button');toggle.type='button';toggle.className='index-group-toggle';toggle.innerHTML=ICONS.chevron;toggle.setAttribute('aria-label','Toggle group');toggle.setAttribute('aria-expanded',String(!group.collapsed));toggle.onclick=()=>groupChange(()=>{group.collapsed=!group.collapsed});
+ const count=document.createElement('span');count.className='index-group-count';count.textContent=state.notes.filter(n=>group.cards.includes(n.id)).length;
+ const menu=document.createElement('details');menu.className='index-group-options';
+ const summary=document.createElement('summary');summary.textContent='⋯';summary.title='Group options';summary.setAttribute('aria-label','Group options');
+ const panel=document.createElement('div');panel.className='index-group-menu';const label=document.createElement('label');label.textContent='Group color';label.append(color);panel.append(label);menu.append(summary,panel);
+ header.append(toggle,name,count,menu);return header;
 }
 function renderCardIndex(){
  hidePaletteTitle();
  const list=$("#indexEntries"),fragment=document.createDocumentFragment();
- for(const [i,n] of state.notes.entries()){
+ const membership=new Map();for(const group of indexGroups)for(const id of group.cards)membership.set(id,group);
+ const positions=new Map(state.notes.map((n,i)=>[n.id,i]));
+ const ordered=[...indexGroups.flatMap(g=>state.notes.filter(n=>membership.get(n.id)===g)),...state.notes.filter(n=>!membership.has(n.id))];
+ let lastGroup=null;
+ for(const n of ordered){
+  const i=positions.get(n.id),group=membership.get(n.id);
+  if(group!==lastGroup){if(group)fragment.append(indexGroupHeader(group));else if(lastGroup){const label=document.createElement('div');label.className='index-group-header index-ungrouped';label.textContent='Ungrouped';fragment.append(label)}lastGroup=group}
   if(n.indexSource!==n.md){n.indexSource=n.md;n.indexTitle=indexHeading(n.md,n.id,sourceTitle(n))}
-  const button=document.createElement("button");button.type="button";button.dataset.cardId=n.id;
+  const button=document.createElement("button");button.type="button";button.dataset.cardId=n.id;button.draggable=true;
   button.dataset.indexNumber=String(i+1);
   const label=document.createElement("span");label.textContent=n.indexTitle;button.title=n.indexTitle;
   button.dataset.cardTitle=n.indexTitle;button.setAttribute("aria-label",`${i+1}: ${n.indexTitle}`);
@@ -1669,7 +1799,8 @@ function renderCardIndex(){
   edit.onclick=()=>editIndexHeading(n);
   row.append(button,edit);
   const entry=document.createElement("div");entry.className="index-entry";entry.dataset.indexCardId=n.id;entry.append(row);
-  entry.dataset.mapColor=n.mapColor||"default";
+  entry.dataset.mapColor=n.mapColor||"default";applyCardColor(entry,n.mapColor);
+  if(group){entry.dataset.groupId=group.id;entry.style.setProperty('--group-color',group.color)}
   const grip=document.createElement("button");grip.type="button";grip.className="index-reorder";grip.draggable=true;grip.innerHTML=ICONS.grip;
   grip.setAttribute("aria-label",`Reorder: ${n.indexTitle}`);grip.title="Drag to reorder · Alt + ↑ / ↓";
   row.append(grip);
@@ -1685,7 +1816,7 @@ function renderCardIndex(){
   }
   fragment.appendChild(entry);
  }
- list.replaceChildren(fragment);$("#indexCount").textContent=state.notes.length;
+ list.replaceChildren(fragment);paintIndexSelection();$("#indexCount").textContent=state.notes.length;
  $("#indexEmpty").hidden=state.notes.length>0;
  applyCanvasSearch();
  revealIndexSelection();
@@ -1734,20 +1865,22 @@ function applyCanvasSearch(){
  const query=$("#canvasSearch").value.trim().toLocaleLowerCase();
  const terms=query.split(/\s+/).filter(Boolean);
  highlightCanvasSearch();
- const entries=$("#indexEntries").children;
+ const entries=$('#indexEntries').children,groups=new Map(indexGroups.map(g=>[g.id,g]));
  let matches=0;
- if(!terms.length){
-  for(const entry of entries)if(entry.hidden)entry.hidden=false;
-  $("#searchStatus").hidden=true;return;
- }
  const notes=new Map(state.notes.map(n=>[String(n.id),n]));
  for(const entry of entries){
   const n=notes.get(entry.dataset.indexCardId);if(!n)continue;
   if(n.searchSource!==n.md){n.searchSource=n.md;n.searchText=String(n.md).toLocaleLowerCase()}
   const match=terms.every(term=>n.searchText.includes(term));
-  if(entry.hidden===match)entry.hidden=!match;
+  entry.hidden=!match||(!terms.length&&groups.get(entry.dataset.groupId)?.collapsed===true);
   if(match)matches++;
  }
+ for(const header of $('#indexEntries').querySelectorAll('.index-group-header')){
+  let entry=header.nextElementSibling,matching=false;
+  while(entry&&!entry.classList.contains('index-group-header')){if(!entry.hidden)matching=true;entry=entry.nextElementSibling}
+  header.hidden=terms.length>0&&!matching;
+ }
+ if(!terms.length){$('#searchStatus').hidden=true;return}
  const status=$("#searchStatus");status.hidden=false;
  status.textContent=matches?matches+' of '+state.notes.length+' cards':'No matching cards';
  hidePaletteTitle();
@@ -1790,15 +1923,15 @@ function setIndexView(view){
  hidePaletteTitle();
  const mode=view==="palette"?"palette":"list";
  $("#cardIndex").dataset.view=mode;
- document.querySelectorAll("[data-index-view]").forEach(button=>button.setAttribute("aria-pressed",String(button.dataset.indexView===mode)));
+  const flip=$('#indexViewFlip');flip.dataset.indexView=mode==='palette'?'list':'palette';flip.title=mode==='palette'?'Switch to list view':'Switch to palette view';flip.setAttribute('aria-label',flip.title);flip.setAttribute('aria-pressed',String(mode==='palette'));flip.innerHTML=mode==='palette'?'<svg class="index-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>':ICONS.arrange;
  $("#indexEntries").querySelectorAll("[data-card-id]").forEach(button=>{if(mode==="palette")button.removeAttribute("title");else button.title=button.dataset.cardTitle});
  try{localStorage.setItem("reflatex-index-view",mode)}catch{}
  revealIndexSelection();
 }
-document.querySelectorAll("[data-index-view]").forEach(button=>button.onclick=()=>setIndexView(button.dataset.indexView));
+$('#indexViewFlip').onclick=()=>setIndexView($('#indexViewFlip').dataset.indexView);
 try{setIndexView(localStorage.getItem("reflatex-index-view"))}catch{setIndexView("list")}
 function clearIndexDrop(){
- indexDropTarget?.classList.remove("index-drop-before","index-drop-after");indexDropTarget=null;
+ indexDropTarget?.classList.remove("index-drop-before","index-drop-after","index-group-drop");indexDropTarget=null;
 }
 $("#indexEntries").addEventListener("dragstart",e=>{
  const entry=e.target.closest(".index-entry");
@@ -1808,6 +1941,8 @@ $("#indexEntries").addEventListener("dragstart",e=>{
 });
 $("#indexEntries").addEventListener("dragover",e=>{
  if(indexDragId===null)return;
+ const header=e.target.closest('.index-group-header');
+ if(header){e.preventDefault();e.dataTransfer.dropEffect='move';clearIndexDrop();indexDropTarget=header;header.classList.add('index-group-drop');return}
  const entry=e.target.closest(".index-entry");
  if(!entry||entry.dataset.indexCardId===indexDragId){clearIndexDrop();return}
  e.preventDefault();e.dataTransfer.dropEffect="move";clearIndexDrop();
@@ -1817,6 +1952,10 @@ $("#indexEntries").addEventListener("dragover",e=>{
 });
 $("#indexEntries").addEventListener("drop",e=>{
  if(indexDragId===null||!indexDropTarget)return;
+ if(indexDropTarget.classList.contains('index-group-header')){
+  e.preventDefault();const group=indexGroups.find(g=>g.id===indexDropTarget.dataset.groupId),n=state.notes.find(n=>String(n.id)===indexDragId);
+  clearIndexDrop();indexDragId=null;if(n)groupChange(()=>{for(const g of indexGroups)g.cards=g.cards.filter(id=>id!==n.id);if(group)group.cards.push(n.id)});return;
+ }
  e.preventDefault();const target=indexDropTarget.dataset.indexCardId,after=indexDropAfter,id=indexDragId;
  clearIndexDrop();indexDragId=null;reorderIndexCard(id,target,after);
 });
@@ -1887,6 +2026,7 @@ window.addEventListener('resize',()=>setIndexWidth(indexWidth));
 $("#toggleIndex").onclick=()=>setIndexOpen($("#cardIndex").hidden);
 $("#closeIndex").onclick=()=>{setIndexOpen(false);$("#toggleIndex").focus()};
 $("#cardIndex").addEventListener("keydown",e=>{
+ if(indexGroupingKey(e))return;
  e.stopPropagation();
  if($("#cardIndex").dataset.view==="palette"&&!e.altKey&&["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(e.key)){
   const buttons=[...$("#indexEntries").querySelectorAll("button[data-card-id]")];
@@ -1930,6 +2070,7 @@ $("#cardIndex").addEventListener("keydown",e=>{
 $("#indexEntries").addEventListener("click",e=>{
  const button=e.target.closest("button[data-card-id]");if(!button)return;
  const n=state.notes.find(note=>String(note.id)===button.dataset.cardId);if(!n)return;
+ selectIndexCard(n,e);if(e.ctrlKey||e.metaKey||e.shiftKey){e.preventDefault();return}
  if(innerWidth<700)setIndexOpen(false);
  select(n);focusSelected("readable").then(()=>{if(state.selected===n)highlightCanvasSearch(true)});
 });
@@ -1974,7 +2115,7 @@ function canvasPayload(){
   nextId:state.nextId,
   layoutMode:state.layoutMode,
   overviewActive:state.overviewActive,
-  readingCards:[...readingSession.cards.keys()],
+  groups:indexGroups,readingCards:[...readingSession.cards.keys()],
   notes:state.notes.map(n=>({
    id:n.id,
    markdown:n.md,
@@ -1988,13 +2129,13 @@ function canvasPayload(){
    font:n.font||"mono",
    size:n.size||"80",
    mapColor:n.mapColor||"default",
-   highlights:n.highlights||[],mapFont:n.mapFont||"modern",sourceName:n.sourceName||undefined
+   highlights:n.highlights||[],mapFont:n.mapFont||"modern",sourceName:n.sourceName||undefined,createdAt:n.createdAt
   }))
  };
 }
 function canvasContentSignature(data=canvasPayload()){
  // Navigation alone does not make a saved canvas dirty.
- const content=JSON.stringify({notes:data.notes,readingCards:data.readingCards});
+ const content=JSON.stringify({notes:data.notes,groups:data.groups||[],readingCards:data.readingCards});
  // Store a compact fingerprint instead of duplicating large canvases in
  // localStorage. This runs only when saving, opening or leaving the page.
  let a=2166136261,b=2654435761;
@@ -2044,6 +2185,7 @@ function openCanvasFile(file){
    if(!data || !Array.isArray(data.notes)){
     throw new Error("Invalid ConceptCards canvas file");
    }
+   restoreIndexGroups(data.groups);
    state.layoutMode=data.layoutMode==='reading'?'reading':'compact';state.overviewActive=data.overviewActive===true;
 
    state.historyLock=true;
@@ -2056,8 +2198,8 @@ function openCanvasFile(file){
     const x=Number.isFinite(n.x)?n.x:0,y=Number.isFinite(n.y)?n.y:0;
     const width=Number.isFinite(n.width)?n.width:600,id=Number.isFinite(n.id)?n.id:null;
     n.type==="map"
-      ? makeMap(n.markdown,x,y,width,Number.isFinite(n.height)?n.height:640,false,id,n.mapColor,n.mapFont,n.size,n.highlights,n.sourceName)
-      : makeNote(n.markdown,x,y,width,false,id,typeof n.font==="string"?n.font:"mono",n.size,n.mapColor,n.mapFont,n.mapWidth,n.mapHeight,n.highlights,n.sourceName);
+      ? makeMap(n.markdown,x,y,width,Number.isFinite(n.height)?n.height:640,false,id,n.mapColor,n.mapFont,n.size,n.highlights,n.sourceName,n.createdAt??null)
+      : makeNote(n.markdown,x,y,width,false,id,typeof n.font==="string"?n.font:"mono",n.size,n.mapColor,n.mapFont,n.mapWidth,n.mapHeight,n.highlights,n.sourceName,n.createdAt??null);
    });
 
    state.nextId=Number.isFinite(data.nextId)
@@ -2081,7 +2223,7 @@ function openCanvasFile(file){
 
    sync();
    apply();
-   world.style.willChange=state.overviewActive?'transform':'';
+   world.style.willChange=overviewRendering?'transform':'';
    empty();
    markCanvasSaved();
    save();
@@ -2102,6 +2244,7 @@ function openCanvasFile(file){
  });
 }
 function newBlankCanvas(){
+ restoreIndexGroups([]);
  interruptCamera();clearTimeout(state.saveTimer);closeEditor();
  state.notes.forEach(disposeCard);state.notes=[];state.selected=null;
  state.nextId=1;state.undo=[];state.redo=[];state.historyLock=false;state.spaceFocusStep=0;
@@ -2151,16 +2294,16 @@ function normalizeCardSize(size){
  if(value==='180')return '160';
  return ['50','60','70','80','90','100','110','125','140','160'].includes(value)?value:'80';
 }
-function makeNote(md,x,y,w=600,record=true,id=null,font=newCardFont(),size="80",mapColor=randomCardTheme(),mapFont="modern",mapWidth=null,mapHeight=null,highlights=[],sourceName=''){
+function makeNote(md,x,y,w=600,record=true,id=null,font=newCardFont(),size="80",mapColor=randomCardTheme(),mapFont="modern",mapWidth=null,mapHeight=null,highlights=[],sourceName='',createdAt=new Date().toISOString()){
  if(record)history();
  const minWidth=Math.min(300,Math.max(200,innerWidth-24));
  const width=Math.max(minWidth,Math.min(1200,w||600));
-const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size:normalizeCardSize(size),width,type:"note",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:normalizeCardFont(font),mapWidth:Number.isFinite(mapWidth)?Math.max(minWidth,Math.min(1600,mapWidth)):null,mapHeight:Number.isFinite(mapHeight)?Math.max(320,Math.min(1200,mapHeight)):null,highlights,sourceName:typeof sourceName==='string'?sourceName:'',el:null};
+const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size:normalizeCardSize(size),width,type:"note",mapColor:validCardColor(mapColor)?mapColor:"default",mapFont:normalizeCardFont(font),mapWidth:Number.isFinite(mapWidth)?Math.max(minWidth,Math.min(1600,mapWidth)):null,mapHeight:Number.isFinite(mapHeight)?Math.max(320,Math.min(1200,mapHeight)):null,createdAt:typeof createdAt==='string'&&Number.isFinite(Date.parse(createdAt))?createdAt:null,highlights,sourceName:typeof sourceName==='string'?sourceName:'',el:null};
  migrateCardHighlights(n);
  state.nextId=Math.max(state.nextId,n.id+1);
  const el=document.createElement("article");
  el.className="card";el.style.left=x+"px";el.style.top=y+"px";el.style.width=width+"px";
- el.innerHTML=`<div class="cardbar"><div class="map-title"></div></div><div class="cardactions"><button type="button" data-view></button><select data-map-color aria-label="Card color theme" title="Card color theme"><option value="default">Midnight</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select><select data-font aria-label="Font" title="Font (V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option><option value="slab">Slab</option><option value="humanist">Humanist</option><option value="rounded">Rounded</option><option value="editorial">Editorial</option><option value="hand">Handwritten</option><option value="hand-soft">Hand Soft</option><option value="hand-bold">Hand Bold</option><option value="hand-marker">Hand Marker</option><option value="hand-script">Hand Script</option></select><select data-size aria-label="Card font size" title="Card font size"><option value="50">50%</option><option value="60">60%</option><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option></select><button data-map-open class="map-only"></button><button data-card-open></button><button data-edit></button><button data-delete></button></div>
+ el.innerHTML=`<div class="cardbar"><div class="map-title"></div><time class="card-timestamp"></time></div><div class="cardactions"><button type="button" data-view></button><button type="button" data-card-color-button aria-label="Choose card color" title="Custom card color"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16Z"/></svg></button><input type="color" data-card-color hidden aria-label="Card color"><select data-map-color aria-label="Color presets" title="Color presets"><option value="default">Midnight</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select><select data-font aria-label="Font" title="Font (V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option><option value="slab">Slab</option><option value="humanist">Humanist</option><option value="rounded">Rounded</option><option value="editorial">Editorial</option><option value="hand">Handwritten</option><option value="hand-soft">Hand Soft</option><option value="hand-bold">Hand Bold</option><option value="hand-marker">Hand Marker</option><option value="hand-script">Hand Script</option></select><select data-size aria-label="Card font size" title="Card font size"><option value="50">50%</option><option value="60">60%</option><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option></select><button data-map-open class="map-only"></button><button data-card-open></button><button data-edit></button><button data-delete></button></div>
  <div class="resize right" data-side="right"></div><div class="resize bottom" data-side="bottom" title="Resize map height"></div>
  <div class="cardbody">${renderCardMarkdown(n.md,n.highlights)}</div>`;
  setCardActionIcons(el,"note");
@@ -2168,7 +2311,7 @@ const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size:normaliz
  el.style.setProperty("--card-font-family",mapFontStack(n.font));
  el.dataset.mapColor=n.mapColor||"default";
  applyMapFont(n);
- el.querySelector("[data-map-color]").value=n.mapColor||"default";
+ setColorPreset(el.querySelector("[data-map-color]"),n.mapColor||"default");el.querySelector("[data-card-color]").value=cardColorValue(n.mapColor);el.querySelector("[data-card-color]").onchange=e=>setCardColorTheme(n,e.target.value);el.querySelector("[data-card-color-button]").onclick=e=>openCardColorPicker(n,e.currentTarget);
  populateCardFontSelect(el,font);
  el.dataset.fontSize=normalizeCardSize(size);
  el.querySelector("[data-size]").value=el.dataset.fontSize;
@@ -2210,12 +2353,12 @@ const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size:normaliz
  empty();
  return n;
 }
-function makeMap(md,x,y,w=null,h=null,record=true,id=null,mapColor=randomCardTheme(),mapFont=newCardFont(),size="80",highlights=[],sourceName=''){
+function makeMap(md,x,y,w=null,h=null,record=true,id=null,mapColor=randomCardTheme(),mapFont=newCardFont(),size="80",highlights=[],sourceName='',createdAt=new Date().toISOString()){
  if(record)history();
  const viewport=mapViewportSize();
  const width=Math.max(Math.min(300,Math.max(200,innerWidth-24)),Math.min(1600,w||viewport.width));
  const height=Math.max(320,h||viewport.height);
-const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type:"map",mapColor:MAP_COLORS.includes(mapColor)?mapColor:"default",mapFont:normalizeCardFont(mapFont),font:normalizeCardFont(mapFont),size:normalizeCardSize(size),highlights,sourceName:typeof sourceName==='string'?sourceName:'',el:null,mapInstance:null};
+const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type:"map",mapColor:validCardColor(mapColor)?mapColor:"default",mapFont:normalizeCardFont(mapFont),font:normalizeCardFont(mapFont),size:normalizeCardSize(size),createdAt:typeof createdAt==='string'&&Number.isFinite(Date.parse(createdAt))?createdAt:null,highlights,sourceName:typeof sourceName==='string'?sourceName:'',el:null,mapInstance:null};
  migrateCardHighlights(n);
  state.nextId=Math.max(state.nextId,n.id+1);
  const el=document.createElement("article");
@@ -2223,10 +2366,10 @@ const n={id:id??state.nextId++,md,x,y,width,mapWidth:width,mapHeight:height,type
  el.dataset.mapColor=n.mapColor;
  applyMapFont(n);
  el.dataset.font=n.font;
- el.innerHTML=`<div class="cardbar"><div class="map-title"></div></div><div class="cardactions"><button type="button" data-view></button><select data-map-color aria-label="Card color theme" title="Card color theme"><option value="default">Midnight</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select><select data-font aria-label="Font" title="Font (V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option></select><select data-size aria-label="Card font size" title="Card font size (1–9, 0)"><option value="50">50%</option><option value="60">60%</option><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option></select><button data-map-open></button><button data-card-open></button><button data-edit></button><button data-delete></button></div><div class="resize right" data-side="right"></div><div class="resize bottom" data-side="bottom" title="Resize map height"></div><div class="cardbody"><div class="map-loading">Rendering mind map…</div></div>`;
+ el.innerHTML=`<div class="cardbar"><div class="map-title"></div><time class="card-timestamp"></time></div><div class="cardactions"><button type="button" data-view></button><button type="button" data-card-color-button aria-label="Choose card color" title="Custom card color"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16Z"/></svg></button><input type="color" data-card-color hidden aria-label="Card color"><select data-map-color aria-label="Color presets" title="Color presets"><option value="default">Midnight</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select><select data-font aria-label="Font" title="Font (V)"><option value="serif">Serif</option><option value="sans">Sans</option><option value="mono">Mono</option></select><select data-size aria-label="Card font size" title="Card font size (1–9, 0)"><option value="50">50%</option><option value="60">60%</option><option value="70">70%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option><option value="140">140%</option><option value="160">160%</option></select><button data-map-open></button><button data-card-open></button><button data-edit></button><button data-delete></button></div><div class="resize right" data-side="right"></div><div class="resize bottom" data-side="bottom" title="Resize map height"></div><div class="cardbody"><div class="map-loading">Rendering mind map…</div></div>`;
  setCardActionIcons(el,"map");
  n.el=el;applyCardFont(n,n.font);updateCardHeading(n);world.appendChild(el);state.notes.push(n);readingSession.rows=[];
- el.querySelector("[data-map-color]").value=n.mapColor;
+ setColorPreset(el.querySelector("[data-map-color]"),n.mapColor);el.querySelector("[data-card-color]").value=cardColorValue(n.mapColor);el.querySelector("[data-card-color]").onchange=e=>setCardColorTheme(n,e.target.value);el.querySelector("[data-card-color-button]").onclick=e=>openCardColorPicker(n,e.currentTarget);
  populateCardFontSelect(el,n.font);
  el.querySelector("[data-size]").value=n.size;
  el.dataset.fontSize=n.size;
@@ -2274,11 +2417,12 @@ window.addEventListener("pointermove",e=>{
 
 });
 // During a drag the scale/base transform stays fixed. Only this independent
-// screen-space translation changes, keeping zoom bookkeeping off the hot path.
+// The same cached transform handles pan and zoom, avoiding a second
+// independent translation property that Chromium composites less efficiently.
 function paintCanvasDrag(){
  panApplyFrame=0;
  const pan=state.pan;
- if(pan)world.style.translate=`${state.x-pan.x}px ${state.y-pan.y}px`;
+ if(pan)world.style.transform=`translate(${state.x}px,${state.y}px) scale(${state.scale})`;
 }
 function updateCanvasDrag(e){
  const pan=state.pan;
@@ -2648,7 +2792,7 @@ function openEditor(mode="note",n=null){
  state.editId=n?.id??null;
  state.editorMode=mode;
  source.value=n?.md||"";
- $("#mapColor").value=n?.mapColor||randomCardTheme();
+ setColorPreset($("#mapColor"),n?.mapColor||randomCardTheme());$("#editorCardColor").value=cardColorValue($("#mapColor").value);
  $("#mapFont").value=normalizeCardFont(n?.font||n?.mapFont||newCardFont());
  syncCardSelect($("#mapColor"));
  syncCardSelect($("#mapFont"));
@@ -2681,7 +2825,7 @@ function applyEditor(type=state.editorMode){
   else if(type==="map")n.mapReady=renderMap(n);
   else n.el.querySelector(".cardbody").innerHTML=renderCardMarkdown(n.md,n.highlights);
   updateCardHeading(n);
-  n.el.dataset.mapColor=n.mapColor;
+  n.el.dataset.mapColor=n.mapColor;applyCardColor(n.el,n.mapColor);setColorPreset(n.el.querySelector("[data-map-color]"),n.mapColor);n.el.querySelector("[data-card-color]").value=cardColorValue(n.mapColor);
   applyMapFont(n);
 
   select(n);
@@ -2704,15 +2848,15 @@ function openMapTab(n){
   const stylesheet=escapeHtml(new URL("styles.css",location.href).href);
   const size=normalizeCardSize(n.size);
   const darkMode=document.body.classList.contains("dark");
-  const theme=MAP_COLORS.includes(n.mapColor)?n.mapColor:"default";
+  const theme=validCardColor(n.mapColor)?n.mapColor:"default";
   const fontStylesheet=googleFontStylesheetUrl(n.mapFont);
   const fontLink=fontStylesheet?`<link rel="stylesheet" href="${fontStylesheet}">`:"";
   const rainbow=["#e76f51","#f4a261","#e9c46a","#6b9b67","#299c97","#4e7bc5","#a16bb3","#d5668a"];
-  const colors=(MAP_PALETTES[theme]||MAP_PALETTES.default);
+  const colors=cardPalette(theme);
   const colorPayload=JSON.stringify(colors);
   const highlightPayload=JSON.stringify(n.highlights||[]).replace(/</g,"\\u003c");
   const highlightScript=escapeHtml(new URL("text-highlights.js",location.href).href);
-  const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>${fontLink}<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css"><link rel="stylesheet" href="${stylesheet}"><style>html,body{height:100%;margin:0}.card.map-window{position:fixed;inset:0;width:100%;height:100%;min-width:0;max-width:none;min-height:0;border:0;border-radius:0}.map-window .cardbody{height:100%;padding:0}.map-window .map-pane{height:100%;background:transparent}.map-window .map-pane>svg{width:100%;height:100%}</style></head><body class="${darkMode?"dark":""}"><article class="card map-card map-window" data-map-color="${theme}" data-font="${normalizeCardFont(n.mapFont)}" data-font-size="${size}" style="--card-font-family:${escapeHtml(fontStack)};--map-font-family:${escapeHtml(fontStack)}"><div class="cardbody"><div class="map-pane"><svg id="map"></svg></div></div></article><script src="https://cdn.jsdelivr.net/npm/d3@7"><\/script><script src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18.12"><\/script><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/highlight.min.js"><\/script><script src="${highlightScript}"><\/script><script>const md=${payload};const colors=${colorPayload};const highlights=${highlightPayload};const root=new markmap.Transformer().transform(md).root;const depth=node=>node.state?.depth||0;const svg=document.querySelector("#map");const map=markmap.Markmap.create(svg,{autoFit:false,duration:350,maxWidth:300,spacingHorizontal:82,spacingVertical:15,color:node=>colors[depth(node)%colors.length],lineWidth:node=>depth(node)===1?3.6:depth(node)===2?2.25:1.55,style:id=>"#"+id+" .markmap-link{stroke-linecap:round;stroke-linejoin:round}"});${enableMapCameraFrames.toString()};let mapNavigation={drag:1};try{mapNavigation=JSON.parse(localStorage.getItem("reflatex-navigation")||"{}")}catch{}enableMapCameraFrames(svg,map,mapNavigation);(async()=>{await document.fonts.ready;await map.setData(root);svg.querySelectorAll("pre code").forEach(code=>{if(window.hljs){try{hljs.highlightElement(code)}catch{}}});ConceptTextHighlights.paint(document.querySelector(".map-pane"),highlights);await map.fit()})().catch(error=>{document.querySelector(".map-pane").textContent="Could not render this map: "+error.message});<\/script></body></html>`;
+  const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>${fontLink}<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css"><link rel="stylesheet" href="${stylesheet}"><style>html,body{height:100%;margin:0}.card.map-window{position:fixed;inset:0;width:100%;height:100%;min-width:0;max-width:none;min-height:0;border:0;border-radius:0}.map-window .cardbody{height:100%;padding:0}.map-window .map-pane{height:100%;background:transparent}.map-window .map-pane>svg{width:100%;height:100%}</style></head><body class="${darkMode?"dark":""}"><article class="card map-card map-window" data-map-color="${theme}" data-custom-color="${/^#[0-9a-f]{6}$/i.test(theme)}" data-font="${normalizeCardFont(n.mapFont)}" data-font-size="${size}" style="${customColorStyle(theme)}--card-font-family:${escapeHtml(fontStack)};--map-font-family:${escapeHtml(fontStack)}"><div class="cardbody"><div class="map-pane"><svg id="map"></svg></div></div></article><script src="https://cdn.jsdelivr.net/npm/d3@7"><\/script><script src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18.12"><\/script><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/highlight.min.js"><\/script><script src="${highlightScript}"><\/script><script>const md=${payload};const colors=${colorPayload};const highlights=${highlightPayload};const root=new markmap.Transformer().transform(md).root;const depth=node=>node.state?.depth||0;const svg=document.querySelector("#map");const map=markmap.Markmap.create(svg,{autoFit:false,duration:350,maxWidth:300,spacingHorizontal:82,spacingVertical:15,color:node=>colors[depth(node)%colors.length],lineWidth:node=>depth(node)===1?3.6:depth(node)===2?2.25:1.55,style:id=>"#"+id+" .markmap-link{stroke-linecap:round;stroke-linejoin:round}"});${enableMapCameraFrames.toString()};let mapNavigation={drag:1};try{mapNavigation=JSON.parse(localStorage.getItem("reflatex-navigation")||"{}")}catch{}enableMapCameraFrames(svg,map,mapNavigation);(async()=>{await document.fonts.ready;await map.setData(root);svg.querySelectorAll("pre code").forEach(code=>{if(window.hljs){try{hljs.highlightElement(code)}catch{}}});ConceptTextHighlights.paint(document.querySelector(".map-pane"),highlights);await map.fit()})().catch(error=>{document.querySelector(".map-pane").textContent="Could not render this map: "+error.message});<\/script></body></html>`;
   const tab=window.open();if(!tab){alert("Allow pop-ups to open this mind map.");return}
   tab.document.write(html);tab.document.close();
 }
@@ -2792,21 +2936,17 @@ function layoutCards(){
  for(const [n,d] of dimensions){if(n.type==='map')n.mapWidth=d.w;else n.width=d.w}
  const count=notes.length,viewport=focusViewport();
  for(const [n,d] of dimensions){const p=readingSession.cards.has(n.id)?readingPadding(d.w,d.h,viewport):{x:0,y:0};d.beforeX=d.afterX=p.x;d.beforeY=d.afterY=p.y}
- const aspect=Math.max(.6,Math.min(1.6,viewport.width/viewport.height));
- const average=[...dimensions.values()].reduce((sum,d)=>({
-  w:sum.w+d.w+Math.max(minimumGap,d.beforeX,d.afterX)+extraGap,
-  h:sum.h+d.h+Math.max(minimumGap,d.beforeY,d.afterY)+extraGap
- }),{w:0,h:0});
- const idealRows=Math.sqrt(count*average.w/(aspect*average.h));
- // Long documents must not turn the board into a single horizontal strip.
- // Bound the row length by card count and the usable viewport, then retain
- // the dimension-based choice among the remaining balanced layouts.
- const maximumColumns=Math.max(2,Math.ceil(Math.sqrt(count*aspect)));
- const minimumRows=count>2?Math.max(2,Math.ceil(count/maximumColumns)):1;
+ // Evaluate actual row bounds against the usable screen, including panels.
+ // Tall outliers make average-height estimates unreliable: measure each
+ // candidate using its tallest card per row, with no fixed column ceiling.
+ const availableWidth=Math.max(1,viewport.width-48),availableHeight=Math.max(1,viewport.height-48);
+ const totalHeight=[...dimensions.values()].reduce((sum,d)=>sum+d.h,0);
  let best=null;
- const firstCandidate=Math.max(minimumRows,Math.floor(idealRows)-2);
- const candidates=new Set(Array.from({length:6},(_,i)=>Math.min(count,firstCandidate+i)));
- for(const rowCount of candidates){
+ for(let rowCount=count>2?2:1;rowCount<=count;rowCount++){
+  // Every row must accommodate its tallest card. This cheap lower bound
+  // skips layouts that cannot beat the best fit before allocating any rows.
+  const minimumHeight=totalHeight/Math.ceil(count/rowCount)+(rowCount-1)*minimumGap;
+  if(best&&minimumHeight/availableHeight>best.score+1e-6)continue;
   const base=Math.floor(count/rowCount),extra=count%rowCount;
   let start=0;
   const rows=Array.from({length:rowCount},(_,i)=>{
@@ -2816,8 +2956,11 @@ function layoutCards(){
   });
   for(const [i,row] of rows.entries())row.gap=i===rows.length-1?0:Math.max(minimumGap,...row.cards.map(n=>dimensions.get(n).afterY),...rows[i+1].cards.map(n=>dimensions.get(n).beforeY))+extraGap;
   const width=Math.max(...rows.map(row=>row.width)),height=rows.reduce((h,row)=>h+row.height+row.gap,0);
-  const score=Math.abs(Math.log(width/height/aspect));
-  if(!best||score<best.score)best={rows,height,score};
+  // Minimize the limiting fit dimension to keep overview cards as large as
+  // possible. Prefer fuller screen coverage when fit scales are equal.
+  const score=Math.max(width/availableWidth,height/availableHeight);
+  const coverage=(width/availableWidth)*(height/availableHeight)/(score*score);
+  if(!best||score<best.score-1e-6||(Math.abs(score-best.score)<1e-6&&coverage>best.coverage))best={rows,height,score,coverage};
  }
  let rowTop=-best.height/2;
  for(const row of best.rows){
@@ -3126,8 +3269,8 @@ async function focusSelected(mode="readable",options={}){
 function openCardTab(n){
  const heading=cardMarkdownParts(n.md).title||sourceTitle(n);
  const title=escapeHtml(heading||"ConceptCards card");
- const titleHtml=heading?`<div class="cardbar"><div class="map-title">${escapeHtml(heading)}</div></div>`:`<div class="cardbar"><div class="map-title"></div></div>`;
- const theme=MAP_COLORS.includes(n.mapColor)?n.mapColor:"default";
+ const titleHtml=heading?`<div class="cardbar"><div class="map-title">${escapeHtml(heading)}</div></div>`:`<div class="cardbar"><div class="map-title"></div><time class="card-timestamp"></time></div>`;
+ const theme=validCardColor(n.mapColor)?n.mapColor:"default";
  const font=normalizeCardFont(n.type==="map"?n.mapFont:n.font);
  const fontStack=mapFontStack(font);
  const fontStylesheet=googleFontStylesheetUrl(font);
@@ -3139,7 +3282,7 @@ function openCardTab(n){
   .map(link=>`<link rel="stylesheet" href="${escapeHtml(link.href)}">`).join("");
  const dark=document.body.classList.contains("dark");
  const width=Math.max(300,Math.min(1600,n.el.offsetWidth||600));
- const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="stylesheet" href="${stylesheet}">${supportingStyles}${fontLink}<style>html,body{height:auto;min-height:100%;margin:0}html{overflow-x:hidden;overflow-y:auto}body{min-height:100vh;display:grid;align-items:start;justify-items:center;padding:24px;box-sizing:border-box;overflow:visible;background:var(--canvas);color:var(--ink)}.card.card-window{min-width:0;position:relative;left:auto;top:auto;width:min(${width}px,calc(100vw - 48px));max-width:100%;max-height:none;overflow:visible;box-sizing:border-box}.card-window .cardbar{cursor:default}.card-window .cardactions,.card-window .resize{display:none!important}.card-window .cardbody{height:auto;max-height:none;overflow:visible}@media(max-width:600px){body{padding:12px}.card.card-window{width:100%}}</style></head><body class="${dark?"dark":""}"><article class="card card-window${heading?" has-title":""}" data-map-color="${theme}" data-font="${font}" data-font-size="${size}" style="--card-font-family:${escapeHtml(fontStack)}">${titleHtml}<div class="cardbody">${renderCardMarkdown(n.md,n.highlights)}</div></article></body></html>`;
+ const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="stylesheet" href="${stylesheet}">${supportingStyles}${fontLink}<style>html,body{height:auto;min-height:100%;margin:0}html{overflow-x:hidden;overflow-y:auto}body{min-height:100vh;display:grid;align-items:start;justify-items:center;padding:24px;box-sizing:border-box;overflow:visible;background:var(--canvas);color:var(--ink)}.card.card-window{min-width:0;position:relative;left:auto;top:auto;width:min(${width}px,calc(100vw - 48px));max-width:100%;max-height:none;overflow:visible;box-sizing:border-box}.card-window .cardbar{cursor:default}.card-window .cardactions,.card-window .resize{display:none!important}.card-window .cardbody{height:auto;max-height:none;overflow:visible}@media(max-width:600px){body{padding:12px}.card.card-window{width:100%}}</style></head><body class="${dark?"dark":""}"><article class="card card-window${heading?" has-title":""}" data-map-color="${theme}" data-custom-color="${/^#[0-9a-f]{6}$/i.test(theme)}" data-font="${font}" data-font-size="${size}" style="${customColorStyle(theme)}--card-font-family:${escapeHtml(fontStack)}">${titleHtml}<div class="cardbody">${renderCardMarkdown(n.md,n.highlights)}</div></article></body></html>`;
  const tab=window.open();
  if(!tab){alert("Allow pop-ups to open this card.");return}
  tab.document.write(html);tab.document.close();
@@ -3190,15 +3333,15 @@ function cycleCardTheme(){
 
 function setCardColorTheme(n,color,record=true){
  if(!n?.el)return;
- const next=MAP_COLORS.includes(color)?color:"default";
+ const next=validCardColor(color)?color:"default";
  if(n.mapColor===next)return;
  if(record)history();
  n.mapColor=next;
- n.el.dataset.mapColor=next;
+ n.el.dataset.mapColor=next;applyCardColor(n.el,next);n.el.querySelector("[data-card-color]").value=cardColorValue(next);
  const indexEntry=$("#indexEntries").querySelector(`[data-index-card-id="${CSS.escape(String(n.id))}"]`);
- if(indexEntry)indexEntry.dataset.mapColor=next;
+ if(indexEntry){indexEntry.dataset.mapColor=next;applyCardColor(indexEntry,next)}
  const selectEl=n.el.querySelector("[data-map-color]");
- if(selectEl){selectEl.value=next;syncCardSelect(selectEl)}
+ if(selectEl)setColorPreset(selectEl,next)
  if(n.type==="map")n.mapReady=renderMap(n);
  save();
 }
@@ -3234,6 +3377,7 @@ window.addEventListener("keydown",e=>{
  if(e.key==="Escape"&&!globalSettings.hidden){
   e.preventDefault();closeGlobalSettings();return;
  }
+ if(indexGroupingKey(e))return;
  const mod=e.ctrlKey||e.metaKey;
  if(mod&&!e.shiftKey&&e.key.toLowerCase()==='f'&&!editor.classList.contains('open')){
   e.preventDefault();setIndexOpen(true);$("#canvasSearch").focus();$("#canvasSearch").select();return;
@@ -3496,6 +3640,7 @@ function load(){
  try{
   const d=JSON.parse(localStorage.getItem("reflatex")||"null");
   if(d){
+   restoreIndexGroups(d.groups);
    state.x=Number.isFinite(d.x)?d.x:innerWidth/2;
    state.y=Number.isFinite(d.y)?d.y:innerHeight/2;
    state.scale=clampScale(Number.isFinite(d.scale)?d.scale:1);
@@ -3504,8 +3649,8 @@ function load(){
    (d.notes||[]).forEach(n=>{
     if(typeof n.md!=="string")return;
     n.type==="map"
-      ? makeMap(n.md,n.x||0,n.y||0,n.w||960,n.h||640,false,n.id,n.mapColor,n.mapFont,n.size,n.highlights,n.sourceName)
-      : makeNote(n.md,n.x||0,n.y||0,n.w||600,false,n.id,typeof n.font==="string"?n.font:"mono",n.size,n.mapColor,n.mapFont,n.mapWidth,n.mapHeight,n.highlights,n.sourceName);
+      ? makeMap(n.md,n.x||0,n.y||0,n.w||960,n.h||640,false,n.id,n.mapColor,n.mapFont,n.size,n.highlights,n.sourceName,n.createdAt??null)
+      : makeNote(n.md,n.x||0,n.y||0,n.w||600,false,n.id,typeof n.font==="string"?n.font:"mono",n.size,n.mapColor,n.mapFont,n.mapWidth,n.mapHeight,n.highlights,n.sourceName,n.createdAt??null);
    })
    restoreReadingSession(d.readingCards);
   }
@@ -3516,7 +3661,7 @@ function load(){
  setBackground(localStorage.getItem("reflatex-background")||"light");
  toggleToolbar(localStorage.getItem("reflatex-toolbar-hidden")!=="1");
  state.hand=false;updateHandUI();
- sync();apply();empty();world.style.willChange=state.overviewActive?'transform':'';
+ sync();apply();empty();world.style.willChange=overviewRendering?'transform':'';
 }
 let resizeFrame=0;
 window.addEventListener("resize",()=>{

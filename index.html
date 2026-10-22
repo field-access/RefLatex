@@ -61,11 +61,7 @@
 
 <aside class="card-index" id="cardIndex" aria-label="Card index">
  <div id="indexResize" class="index-resize" role="separator" tabindex="0" aria-label="Resize card index" aria-orientation="vertical" aria-valuemin="200" aria-valuemax="520" aria-valuenow="260" title="Drag to resize index; arrow keys adjust width"></div>
- <header><h2>Card index <span id="indexCount">0</span></h2><button id="closeIndex" aria-label="Close card index" title="Close index (Esc)"><svg class="index-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6M20 4v16"/></svg></button></header>
- <div class="index-view-switch" role="group" aria-label="Card index view">
-  <button type="button" data-index-view="list" aria-pressed="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>List</button>
-  <button type="button" data-index-view="palette" aria-pressed="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg>Palette</button>
- </div>
+ <header><h2>Card index <span id="indexCount">0</span></h2><button type="button" id="indexViewFlip" data-index-view="palette" aria-label="Switch to palette view" title="Switch to palette view" aria-pressed="false"></button><button id="closeIndex" aria-label="Close card index" title="Close index (Esc)"><svg class="index-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6M20 4v16"/></svg></button></header>
  <label class="canvas-search"><span>Search canvas</span><input id="canvasSearch" type="search" placeholder="Titles or content…" autocomplete="off" aria-keyshortcuts="Control+F Meta+F"></label>
  <p id="searchStatus" role="status" hidden></p>
  <nav id="indexEntries" aria-label="Jump to card"></nav>
@@ -128,6 +124,9 @@
     <div><kbd>K</kbd><span>Switch the card between Markdown and Markmap</span></div>
     <div><kbd>O</kbd><span>Open the reading card in a new window</span></div>
     <div><kbd>M</kbd><span>Open the card as a Markmap in a new window</span></div>
+    <div><kbd>Ctrl/⌘ + click</kbd><span>Toggle card selection in the index</span></div>
+    <div><kbd>Shift + click</kbd><span>Select a range of index cards; Ctrl/⌘ + Shift adds a range</span></div>
+    <div><kbd>Ctrl/⌘ + G</kbd><span>Group selected cards, or ungroup them when they belong to one group</span></div>
     <div><kbd>Ctrl/⌘ + D</kbd><span>Duplicate the selected card</span></div>
     <div><kbd>Delete</kbd><span>Delete the selected card</span></div>
    </div>
@@ -136,7 +135,7 @@
     <div><kbd>0</kbd><span>160% text size; 4 restores the default 80%</span></div>
     <div><kbd>[ / ]</kbd><span>Decrease / increase card width and refocus it</span></div>
     <div><kbd>V / Shift + V</kbd><span>Next / previous card font</span></div>
-    <div><kbd>Shift + C</kbd><span>Next card colour theme</span></div>
+    <div><kbd>Shift + C</kbd><span>Next card color preset</span></div>
     <div><kbd>Ctrl/⌘ + Shift + H</kbd><span>Reopen the palette for selected text; selection also opens it</span></div>
     <div><kbd>Backspace</kbd><span>Remove the selected highlight; keep the text</span></div>
     <div><kbd>T</kbd><span>Switch light / dark mode</span></div>
@@ -174,7 +173,7 @@
  <div class="editorhead"><div><div class="etitle">Markdown source</div><div class="esub">Use the same source as a readable card or a Markmap</div></div><button class="tool" id="close" title="Close editor (Esc)" aria-label="Close editor"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
  <textarea id="source" spellcheck="false"></textarea>
  <div class="map-options" id="mapOptions">
-  <label>Palette <select id="mapColor"><option value="default">Midnight</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select></label>
+  <label>Color <input type="color" id="editorCardColor" aria-label="Card color"><select id="mapColor" aria-label="Color presets"><option value="default">Midnight</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option></select></label>
   <label>Font <select id="mapFont"><option value="modern">Modern</option><option value="editorial">Editorial</option><option value="geometric">Geometric</option><option value="humanist">Humanist</option><option value="mono">Mono</option><option value="rounded">Rounded</option><option value="handwritten">Handwritten</option></select></label>
  </div>
  <div class="editorfoot"><button class="cancel" id="cancel">Cancel</button><button class="apply" id="applyCard">Place card</button><button class="apply map-apply" id="applyMap">Place map</button></div>

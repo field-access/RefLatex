@@ -40,6 +40,38 @@ const root=path.resolve(__dirname,'..');
    }
    await page.evaluate(()=>{for(const n of [...__layout.state.notes])__layout.deleteNote(n);__layout.state.nextId=1});
   }
+  // Mixed-height cards use available horizontal room without a column cap.
+  const screenLayouts=[];
+  for(const viewport of [{width:1800,height:900},{width:900,height:1200}]){
+   await page.setViewportSize(viewport);
+   await page.evaluate(()=>{
+    for(let i=0;i<36;i++){
+     const n=__layout.makeNote(`# Screen-aware ${i}`,0,0,400,false);
+     n.el.style.height=(i%9===0?2600:700)+'px';
+    }
+   });
+   await page.keyboard.press('a');await page.waitForTimeout(200);
+   const result=await page.evaluate(()=>{
+    const t=__layout,notes=t.state.notes,v=t.focusViewport(),b=t.cardBounds();
+    const w=Math.max(1,v.width-48),h=Math.max(1,v.height-48);
+    let optimal=Infinity;
+    for(let count=2;count<=notes.length;count++){
+     let start=0,width=0,height=0;
+     for(let row=0;row<count;row++){
+      const size=Math.floor(notes.length/count)+(row<notes.length%count?1:0),cards=notes.slice(start,start+size);start+=size;
+      width=Math.max(width,cards.reduce((sum,n)=>sum+n.el.offsetWidth,0)+24*(size-1));
+      height+=Math.max(...cards.map(n=>n.el.offsetHeight))+(row?24:0);
+     }
+     optimal=Math.min(optimal,Math.max(width/w,height/h));
+    }
+    return {score:Math.max((b.maxX-b.minX)/w,(b.maxY-b.minY)/h),optimal,columns:Math.max(...notes.map(n=>notes.filter(other=>other.y===n.y).length)),rows:new Set(notes.map(n=>n.y)).size};
+   });
+   assert.ok(Math.abs(result.score-result.optimal)<1e-6,'Arrange maximizes fit scale using actual mixed card heights and available screen');
+   assert.ok(result.rows>1,'Arrange does not create a single horizontal strip');screenLayouts.push(result);
+   await page.evaluate(()=>{for(const n of [...__layout.state.notes])__layout.deleteNote(n);__layout.state.nextId=1});
+  }
+  assert.ok(screenLayouts[0].columns>7,'Wide screens can use more than seven columns');
+  assert.ok(screenLayouts[0].columns>screenLayouts[1].columns,'Portrait screens use fewer columns than wide screens');
   await page.setViewportSize({width:1440,height:900});
   await page.evaluate(()=>{
    const t=__layout;
@@ -138,20 +170,31 @@ const root=path.resolve(__dirname,'..');
   assert.equal(largeOverview.runs,largeReading.runs,'500-card overview performs no layout');
   await page.waitForTimeout(500);
   const camera=await page.evaluate(async()=>{
+   let visibilityWrites=0;const observer=new MutationObserver(records=>{visibilityWrites+=records.length});
+   for(const n of __layout.state.notes)observer.observe(n.el,{attributes:true,attributeFilter:['class']});
    const runs=__layoutRuns,times=[];let last=performance.now();
    for(let i=0;i<90;i++){
     __layout.zoomPrecise(Math.exp(Math.sin(i/16)*.012),720,450);
     await new Promise(requestAnimationFrame);const now=performance.now();times.push(now-last);last=now;
    }
-   times.sort((a,b)=>a-b);return{extraLayouts:__layoutRuns-runs,p95:times[Math.floor(times.length*.95)]};
+   observer.disconnect();times.sort((a,b)=>a-b);return{visibilityWrites,extraLayouts:__layoutRuns-runs,p95:times[Math.floor(times.length*.95)]};
   });
   assert.equal(camera.extraLayouts,0,'Zoom frames never rearrange cards');
+  assert.equal(camera.visibilityWrites,0,'Overview does not toggle card visibility while navigating');
+  assert.equal(await page.locator('.card').first().evaluate(el=>getComputedStyle(el).willChange),'transform','Overview caches individual card bitmaps too');
   await page.waitForTimeout(250);
   assert.equal(await page.locator('#world').evaluate(el=>el.style.willChange),'transform','Settled overview zoom never releases the cache');
   await page.mouse.move(720,450);await page.mouse.down({button:'right'});await page.mouse.move(790,480,{steps:8});await page.mouse.up({button:'right'});
   await page.waitForTimeout(200);
   assert.equal(await page.locator('#world').evaluate(el=>el.style.willChange),'transform','Overview pan also keeps the cache on release');
   const saved=await inspect();
+  await page.evaluate(()=>{__layout.state.overviewActive=false;__layout.setCameraImmediate(100,70,.3)});
+  await page.waitForTimeout(250);
+  assert.equal(await page.locator('#world').evaluate(el=>el.style.willChange),'transform','Manual zoom-out keeps its cache across input pauses');
+  await page.evaluate(()=>__layout.setCameraImmediate(100,70,1));
+  await page.waitForTimeout(250);
+  assert.equal(await page.locator('.card').first().evaluate(el=>getComputedStyle(el).willChange),'auto','Reading scale releases individual bitmap caches');
+  await page.keyboard.press('c');
   await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));
   page.once('dialog',dialog=>dialog.type()==='beforeunload'?dialog.accept():dialog.dismiss());
   await page.reload({waitUntil:'networkidle'});

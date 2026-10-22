@@ -52,8 +52,9 @@ Use **clear headings**, short paragraphs, and meaningful labels. Revisit the boa
   await page.goto(`http://127.0.0.1:${server.address().port}`,{waitUntil:'networkidle'});
  if(process.env.BENCH_STYLE)await page.addStyleTag({content:fs.readFileSync(process.env.BENCH_STYLE,'utf8')});
  if(!layers)await page.addStyleTag({content:'#world{will-change:auto!important}'});
+ if(process.env.BENCH_OVERVIEW==='true'){await page.locator('#arrange').click();await page.waitForTimeout(400)}
  const cdp=await page.context().newCDPSession(page);await cdp.send('Performance.enable');
- let renderLayers=0;cdp.on('LayerTree.layerTreeDidChange',event=>{renderLayers=event.layers?.length||0});await cdp.send('LayerTree.enable');
+ let layerDetails=[],renderLayers=0;cdp.on('LayerTree.layerTreeDidChange',event=>{layerDetails=event.layers||[];renderLayers=layerDetails.length});await cdp.send('LayerTree.enable');
  const metric=async()=>Object.fromEntries((await cdp.send('Performance.getMetrics')).metrics.map(m=>[m.name,m.value]));
  const before=await metric();
  const stats=await page.evaluate(async()=>{
@@ -65,6 +66,7 @@ Use **clear headings**, short paragraphs, and meaningful labels. Revisit the boa
   times.sort((a,b)=>a-b);
   return {backdrop:getComputedStyle(document.querySelector('.cardbody pre')).backdropFilter,p95:times[Math.floor(times.length*.95)],slowFrames:times.filter(t=>t>25).length,nodes:document.querySelectorAll('*').length,tables:document.querySelectorAll('.cardbody table').length};
  });
+ if(process.env.BENCH_REASONS){const details=[];for(const layer of layerDetails.slice(0,15)){const reasons=await cdp.send('LayerTree.compositingReasons',{layerId:layer.layerId});const node=layer.backendNodeId?await cdp.send('DOM.describeNode',{backendNodeId:layer.backendNodeId}):null;details.push({width:layer.width,height:layer.height,node:node?.node?.attributes,...reasons})}console.log(JSON.stringify(details))}
  const after=await metric();
  console.log(JSON.stringify({cardCount,dark,layers,renderLayers,characters:md.length,...stats,taskMs:(after.TaskDuration-before.TaskDuration)*1000,layoutMs:(after.LayoutDuration-before.LayoutDuration)*1000,styleMs:(after.RecalcStyleDuration-before.RecalcStyleDuration)*1000}));
  await page.waitForTimeout(200);
