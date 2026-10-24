@@ -114,6 +114,15 @@ const MAP_COLORS=["default","purple","warm","ocean","forest","sunset","slate"];
 function validCardColor(color){return MAP_COLORS.includes(color)||/^#[0-9a-f]{6}$/i.test(color)}
 function cardColorValue(color){return /^#[0-9a-f]{6}$/i.test(color)?color:(MAP_PALETTES[color]||MAP_PALETTES.default)[0]}
 function cardPalette(color){return /^#[0-9a-f]{6}$/i.test(color)?[color,...[15,30,45,60].map(p=>`color-mix(in srgb, ${color}, white ${p}%)`)]:MAP_PALETTES[color]||MAP_PALETTES.default}
+function mapBranchPalette(color){
+ const hex=cardColorValue(color),rgb=[1,3,5].map(offset=>parseInt(hex.slice(offset,offset+2),16)/255);
+ const [r,g,b]=rgb,max=Math.max(...rgb),min=Math.min(...rgb),delta=max-min;
+ let hue=240;
+ if(delta){hue=max===r?60*((g-b)/delta%6):max===g?60*((b-r)/delta+2):60*((r-g)/delta+4);hue=(hue+360)%360}
+ // A deterministic contrasting hue for each depth, shared by sibling nodes.
+ // CSS adjusts brightness on theme changes without rebuilding any maps.
+ return Array.from({length:12},(_,depth)=>`hsl(${Math.round((hue+depth*55)%360)} 38% var(--map-branch-lightness, 40%))`);
+}
 function customColorStyle(color){return /^#[0-9a-f]{6}$/i.test(color)?`--custom-card-color:${color};--card-accent:${color};--card-accent-dark:color-mix(in srgb,${color},white 35%);`:''}
 function applyCardColor(el,color){
  if(!el)return;el.dataset.customColor=String(/^#[0-9a-f]{6}$/i.test(color));
@@ -1106,7 +1115,7 @@ function migrateCardHighlights(n){
  for(const edit of edits.sort((a,b)=>b.start-a.start))n.md=n.md.slice(0,edit.start)+n.md.slice(edit.end);
 }
 function markmapOptions(n){
- const colors=cardPalette(n.mapColor);
+ const colors=mapBranchPalette(n.mapColor);
  const depth=node=>node.state?.depth||0;
  return {
   color:node=>colors[depth(node)%colors.length],
@@ -2895,7 +2904,7 @@ function openMapTab(n){
   const fontStylesheet=googleFontStylesheetUrl(n.mapFont);
   const fontLink=fontStylesheet?`<link rel="stylesheet" href="${fontStylesheet}">`:"";
   const rainbow=["#e76f51","#f4a261","#e9c46a","#6b9b67","#299c97","#4e7bc5","#a16bb3","#d5668a"];
-  const colors=cardPalette(theme);
+  const colors=mapBranchPalette(theme);
   const colorPayload=JSON.stringify(colors);
   const highlightPayload=JSON.stringify(n.highlights||[]).replace(/</g,"\\u003c");
   const highlightScript=escapeHtml(new URL("text-highlights.js",location.href).href);

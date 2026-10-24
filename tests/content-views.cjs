@@ -6,7 +6,7 @@ const root=path.resolve(__dirname,'..');
   const name=req.url==='/'?'index.html':req.url.slice(1);
   if(!['text-highlights.js','index.html','app.js','styles.css'].includes(name)){res.writeHead(404).end();return}
   let body=fs.readFileSync(path.join(root,name),'utf8');
-  if(name==='app.js')body=body.replace(/\}\)\(\);\s*$/,'window.__content={state,snapshot,restore,undo,renderCardIndex,showTextHighlighter,canvasPayload,resizeSelectedWidth,setCameraImmediate,focusViewport,editNote,closeEditor,makeNote,makeMap,select,focusSelected,layoutCards,updateCardHeading,deleteNote,openMapTab,openCardTab,wrapCodeLines,enableMapCameraFrames,enablePenMapWheel,ensureFontLoaded};})();');
+  if(name==='app.js')body=body.replace(/\}\)\(\);\s*$/,'window.__content={state,markmapOptions,snapshot,restore,undo,renderCardIndex,showTextHighlighter,canvasPayload,resizeSelectedWidth,setCameraImmediate,focusViewport,editNote,closeEditor,makeNote,makeMap,select,focusSelected,layoutCards,updateCardHeading,deleteNote,openMapTab,openCardTab,wrapCodeLines,enableMapCameraFrames,enablePenMapWheel,ensureFontLoaded};})();');
   res.setHeader('Content-Type',name.endsWith('.js')?'text/javascript':name.endsWith('.css')?'text/css':'text/html');res.end(body);
  });
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
@@ -33,6 +33,22 @@ const root=path.resolve(__dirname,'..');
   assert.deepEqual(branchControls.expanded,[0,0,0,0],'Expand opens every nested branch');
   assert.equal(branchControls.renders,2);assert.equal(branchControls.fits,0);
   assert.ok(branchControls.markdown&&branchControls.instance&&branchControls.camera&&branchControls.enabled,'Branch controls preserve Markdown, instance and camera');
+  const hierarchyColors=await page.evaluate(()=>{
+   const n=__content.makeMap('# Colored hierarchy',0,0,800,500,false,null,'ocean');
+   const options=__content.markmapOptions(n),svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+   for(let depth=0;depth<6;depth++){
+    const group=document.createElementNS(svg.namespaceURI,'g');group.classList.add('markmap-node');
+    const circle=document.createElementNS(svg.namespaceURI,'circle');circle.setAttribute('stroke',options.color({state:{depth}}));circle.setAttribute('fill','#fff');group.append(circle);svg.append(group);
+   }
+   n.el.querySelector('.cardbody').append(svg);
+   const circles=[...svg.querySelectorAll('circle')],light=circles.map(circle=>getComputedStyle(circle).stroke),fills=circles.map(circle=>getComputedStyle(circle).fill);
+   document.body.classList.add('dark');const dark=circles.map(circle=>getComputedStyle(circle).stroke);document.body.classList.remove('dark');
+   __content.deleteNote(n);return {light,dark,fills,sibling:options.color({state:{depth:2}})===options.color({state:{depth:2}})};
+  });
+  assert.equal(new Set(hierarchyColors.light).size,6,'Every tested hierarchy depth has a distinct branch color');
+  assert.equal(new Set(hierarchyColors.dark).size,6,'Hierarchical colors remain distinct in dark mode');
+  assert.ok(hierarchyColors.light.every((color,i)=>color!==hierarchyColors.dark[i]),'Light/dark branch contrast updates through CSS');
+  assert.ok(hierarchyColors.fills.every(color=>color!=='rgb(255, 255, 255)'),'Light mode node markers have tinted fills');
   const customId=await page.evaluate(()=>{const n=__content.makeNote('# Custom color',0,0,600,false);__content.select(n);return n.id});
   const picker=page.locator(`[data-index-card-id="${customId}"]`);
   await page.locator('.card [data-card-color-button]').click();
