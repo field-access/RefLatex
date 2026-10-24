@@ -3,3 +3,4 @@
 desktop/
 dist/
 tests/
+.vercel/

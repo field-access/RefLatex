@@ -1,3 +1,4 @@
 .desktop-cache/
 dist/
 desktop/windows/*.log
+.vercel/
