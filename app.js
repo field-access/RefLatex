@@ -190,8 +190,32 @@ function updateViewButton(el,type){
  setButtonIcon(button,"flip",type==="map"?"Switch to Markdown (K)":"Switch to Markmap (K)");
  if(button)button.dataset.view=type;
 }
+async function setAllMapBranches(n,collapsed){
+ if(n?.type!=='map')return;
+ await n.mapReady;
+ const map=n.mapInstance,root=n.mapIndexRoot;
+ if(!map||!root||n.type!=='map')return;
+ // Update hidden descendants too, without rebuilding the map or its camera.
+ const stack=[root];
+ while(stack.length){
+  const node=stack.pop();
+  if(node.children?.length){node.payload ||= {};node.payload.fold=collapsed?1:0;stack.push(...node.children)}
+ }
+ await map.setData();
+}
 function setCardActionIcons(el,type){
  updateViewButton(el,type);
+ if(!el.querySelector('.map-branch-controls')){
+  const controls=document.createElement('span');controls.className='map-branch-controls';controls.setAttribute('role','group');controls.setAttribute('aria-label','Markmap branches');
+  for(const collapsed of [true,false]){
+   const button=document.createElement('button');button.type='button';button.dataset.mapFold=collapsed?'collapse':'expand';
+   button.innerHTML=collapsed?'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14M5 21h14M8 7l4 4 4-4M8 17l4-4 4 4"/></svg>':'<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14M5 21h14M8 10l4-4 4 4M8 14l4 4 4-4"/></svg>';
+   button.title=collapsed?'Collapse all branches':'Expand all branches';button.setAttribute('aria-label',button.title);
+   button.onclick=async()=>{const n=state.notes.find(n=>n.el===el);button.disabled=true;try{await setAllMapBranches(n,collapsed)}catch(error){console.error('Could not update map branches',error)}finally{button.disabled=false}};
+   controls.append(button);
+  }
+  el.querySelector('[data-map-open]').before(controls);
+ }
  const mapOpen=el.querySelector("[data-map-open]");
  setButtonIcon(mapOpen,"mapOpen","Open Markmap in new window (M)");
  mapOpen?.classList.remove("map-only");
@@ -1794,10 +1818,8 @@ function renderCardIndex(){
   if($("#cardIndex").dataset.view==="palette")button.removeAttribute("title");
   button.append(label);button.setAttribute("aria-current",String(state.selected===n));
   const row=document.createElement("div");row.className="index-row";row.draggable=true;
-  const edit=document.createElement("button");edit.type="button";edit.className="index-rename";
-  edit.innerHTML=ICONS.edit;edit.title="Edit heading";edit.setAttribute("aria-label",`Edit heading: ${n.indexTitle}`);
-  edit.onclick=()=>editIndexHeading(n);
-  row.append(button,edit);
+  button.setAttribute("aria-keyshortcuts","F2");
+  row.append(button);
   const entry=document.createElement("div");entry.className="index-entry";entry.dataset.indexCardId=n.id;entry.append(row);
   entry.dataset.mapColor=n.mapColor||"default";applyCardColor(entry,n.mapColor);
   if(group){entry.dataset.groupId=group.id;entry.style.setProperty('--group-color',group.color)}
@@ -2025,7 +2047,8 @@ indexResize.addEventListener('keydown',e=>{
 window.addEventListener('resize',()=>setIndexWidth(indexWidth));
 $("#toggleIndex").onclick=()=>setIndexOpen($("#cardIndex").hidden);
 $("#closeIndex").onclick=()=>{setIndexOpen(false);$("#toggleIndex").focus()};
-$("#cardIndex").addEventListener("keydown",e=>{
+$('#cardIndex').addEventListener('keydown',e=>{
+ if(e.key==='F2'&&e.target.matches('[data-card-id]')){e.preventDefault();e.stopPropagation();const n=state.notes.find(n=>String(n.id)===e.target.dataset.cardId);if(n)editIndexHeading(n);return}
  if(indexGroupingKey(e))return;
  e.stopPropagation();
  if($("#cardIndex").dataset.view==="palette"&&!e.altKey&&["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(e.key)){
@@ -2067,12 +2090,32 @@ $("#cardIndex").addEventListener("keydown",e=>{
   e.key==="ArrowUp"?Math.max(0,current-1):e.key==="Home"?0:e.key==="End"?entries.length-1:null;
  if(next!==null){e.preventDefault();entries[next]?.focus()}
 });
-$("#indexEntries").addEventListener("click",e=>{
- const button=e.target.closest("button[data-card-id]");if(!button)return;
+let indexTap=null,indexTapTimer=0,indexTouchAt=0;
+$('#indexEntries').addEventListener('pointerup',e=>{if(e.pointerType==='touch'&&e.target.closest('[data-card-id]'))indexTouchAt=performance.now()});
+$('#indexEntries').addEventListener('dblclick',e=>{
+ const button=e.target.closest('button[data-card-id]');if(!button||e.ctrlKey||e.metaKey||e.shiftKey)return;
+ e.preventDefault();clearTimeout(indexTapTimer);indexTap=null;
+ const n=state.notes.find(n=>String(n.id)===button.dataset.cardId);if(n)editIndexHeading(n);
+});
+$('#indexEntries').addEventListener('click',e=>{
+ const button=e.target.closest('button[data-card-id]');if(!button)return;
  const n=state.notes.find(note=>String(note.id)===button.dataset.cardId);if(!n)return;
- selectIndexCard(n,e);if(e.ctrlKey||e.metaKey||e.shiftKey){e.preventDefault();return}
- if(innerWidth<700)setIndexOpen(false);
- select(n);focusSelected("readable").then(()=>{if(state.selected===n)highlightCanvasSearch(true)});
+ const activate=()=>{
+  if(!state.notes.includes(n))return;
+  selectIndexCard(n,e);if(e.ctrlKey||e.metaKey||e.shiftKey){e.preventDefault();return}
+  if(innerWidth<700)setIndexOpen(false);
+  select(n);focusSelected('readable').then(()=>{if(state.selected===n)highlightCanvasSearch(true)});
+ };
+ if((e.pointerType==='touch'||performance.now()-indexTouchAt<100)&&!e.ctrlKey&&!e.metaKey&&!e.shiftKey){
+  e.preventDefault();
+  if(indexTap?.id===n.id&&performance.now()-indexTap.time<350){clearTimeout(indexTapTimer);indexTap=null;editIndexHeading(n);return}
+  clearTimeout(indexTapTimer);indexTap={id:n.id,time:performance.now()};
+  // Keep the mobile index open long enough to recognize the second tap.
+  indexTapTimer=setTimeout(()=>{indexTap=null;activate()},350);return;
+ }
+ clearTimeout(indexTapTimer);indexTap=null;
+ if(e.detail>1&&!e.ctrlKey&&!e.metaKey&&!e.shiftKey)return;
+ activate();
 });
 try{$("#cardIndex").hidden=localStorage.getItem("reflatex-index-open")==="false"}catch{}
 $("#toggleIndex").setAttribute("aria-expanded",String(!$("#cardIndex").hidden));

@@ -1406,3 +1406,35 @@ body.dark .card .cardactions [data-card-color-button]{color:var(--card-accent-da
 /* Lock descendant raster scales too: the world hint alone does not cache
    cards that Chromium promotes into separate overlapping layers. */
 #world[data-bitmap-cache="true"] .card{will-change:transform}
+.card .map-branch-controls{display:none;flex:0 0 40px;height:28px;align-items:center}
+.card.map-card .map-branch-controls{display:flex}
+.card .map-branch-controls button{display:grid;place-items:center;flex:0 0 20px;width:20px;height:28px;padding:0;border-radius:3px;color:var(--muted)}
+.card .map-branch-controls button .icon{width:14px;height:14px}
+.card .map-branch-controls button:hover{background:color-mix(in srgb,var(--ink) 7%,transparent);color:var(--ink)}
+/* Compact index surfaces with local hover feedback, outside canvas rendering. */
+.card-index{border-radius:10px;background:color-mix(in srgb,var(--paper) 98%,var(--ink));box-shadow:0 4px 16px #0000000c,0 1px 3px #00000008;font-family:var(--ui-font)}
+.card-index header{padding:12px 12px 11px}
+.card-index header button{transition:background-color 130ms ease,color 130ms ease,transform 130ms ease}
+.canvas-search input{border-color:color-mix(in srgb,var(--ink) 13%,transparent);background:color-mix(in srgb,var(--paper) 97%,var(--ink));font-size:12px;transition:border-color 130ms ease,background-color 130ms ease}
+.canvas-search input:focus{outline:2px solid color-mix(in srgb,var(--accent) 35%,transparent);outline-offset:0;border-color:var(--accent);background:var(--paper)}
+.card-index[data-view="list"] .index-entry{margin:3px 0;border-radius:6px}
+.card-index[data-view="list"] .index-row{margin:0;padding:1px 3px;border-radius:6px;transition:transform 130ms ease,background-color 130ms ease,box-shadow 130ms ease}
+.card-index[data-view="list"] nav button[data-card-id] span{font-size:12px;line-height:1.45}
+.card-index .index-group-header{margin-top:10px;padding:6px 7px;border-radius:5px;transition:background-color 130ms ease,box-shadow 130ms ease}
+.card-index .index-group-header input:not([type="color"]){font-family:var(--ui-font);font-size:11px;letter-spacing:.01em}
+.card-index[data-view="palette"] .index-entry{transition:transform 130ms ease,background-color 130ms ease,border-color 130ms ease,box-shadow 130ms ease}
+.card-index nav .index-subtopic{border-radius:4px;transition:transform 130ms ease,background-color 130ms ease}
+@media (hover:hover) and (pointer:fine){
+ .card-index header button:hover{transform:translateY(-1px);background:color-mix(in srgb,var(--ink) 7%,transparent);color:var(--ink)}
+ .card-index[data-view="list"] .index-entry:not(.index-dragging)>.index-row:hover{transform:translateY(-1px);background:color-mix(in srgb,var(--group-color,var(--accent)) 8%,var(--paper));box-shadow:0 2px 5px #00000012}
+ .card-index[data-view="palette"] .index-entry:not(.index-dragging):hover{transform:translateY(-2px) scale(1.035);z-index:2;box-shadow:0 3px 7px #00000022,inset 0 0 0 1px color-mix(in srgb,var(--tile-accent) 35%,transparent)}
+ .card-index .index-group-header:not(.index-ungrouped):hover{background:color-mix(in srgb,var(--group-color) 28%,var(--paper));box-shadow:0 2px 5px #00000010}
+ .card-index nav .index-subtopic:hover{transform:translateX(2px);background:color-mix(in srgb,var(--group-color,var(--accent)) 10%,transparent)}
+}
+@media (prefers-reduced-motion:reduce){
+ .card-index header button,.card-index .index-row,.card-index .index-entry,.card-index .index-group-header,.card-index nav .index-subtopic{transition:none!important}
+ .card-index header button:hover,.card-index .index-row:hover,.card-index .index-entry:hover,.card-index nav .index-subtopic:hover{transform:none!important}
+}
+
+#cardIndex[data-view="palette"] .index-entry:has(.index-edit){grid-column:1/-1;overflow:visible}
+#cardIndex[data-view="palette"] .index-entry:has(.index-edit):hover{transform:none}
