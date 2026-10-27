@@ -98,7 +98,8 @@ const root=path.resolve(__dirname,'..');
   const v=compact.viewport;
   assert.ok(compact.rects.every(r=>r.left>=v.left-1&&r.right<=v.left+v.width+1&&r.top>=v.top-1&&r.bottom<=v.top+v.height+1),'Overview fits between the index and tray');
   await page.evaluate(()=>__layout.select(__layout.state.notes[0]));
-  await page.keyboard.press('Space');await page.waitForTimeout(400);
+  await page.locator('#focusCard').click();await page.waitForTimeout(400);
+  assert.ok(await page.evaluate(()=>Math.abs(__layout.state.scale-1.45)<1e-5&&__layout.state.spaceFocusStep===2),'Focus button starts at larger reading zoom');
   const reading=await inspect();assert.equal(reading.mode,'reading');
   assert.deepEqual(reading.reading,[1]);
   assert.deepEqual(reading.positions[0],compact.positions[0],'The first card stays first, rather than moving to the end');
@@ -109,6 +110,7 @@ const root=path.resolve(__dirname,'..');
   assert.ok(await page.evaluate(()=>__layout.state.notes.every((n,i)=>n.el===__cardRefs[i])&&__layout.state.notes.at(-1).mapInstance===__mapRef),'Spacing switches preserve every card and map instance');
   assert.equal(await page.evaluate(()=>__mapFits),0,'Overview and Markdown focus do not refit Markmaps');
   await page.keyboard.press('Space');await page.waitForTimeout(350);
+  assert.equal(await page.evaluate(()=>__layout.state.spaceFocusStep),1,'Space and Focus share the reading/whole-card cycle');
   assert.deepEqual((await inspect()).positions,reading.positions,'Revisiting a card does not move cards');
   const remembered=await page.evaluate(()=>{
    const t=__layout,s=t.state;t.setCameraImmediate(s.x+35,s.y-28,s.scale*1.07);const n=s.selected,v=t.focusViewport();
@@ -121,10 +123,12 @@ const root=path.resolve(__dirname,'..');
   assert.equal(overview.runs,compact.runs,'C does not arrange cards');
   await page.keyboard.press('ArrowRight');await page.waitForTimeout(300);
   await page.keyboard.press('ArrowLeft');await page.waitForTimeout(350);
+  await page.waitForFunction(()=>!__layout.state.raf);
   const restored=await page.evaluate(()=>{const t=__layout,s=t.state,n=s.selected,v=t.focusViewport();return{mode:s.layoutMode,scale:s.scale,x:(v.left+v.width/2-s.x)/s.scale-n.x,y:(v.top+v.height/2-s.y)/s.scale-n.y}});
   assert.equal(restored.mode,'reading');assert.ok(Math.abs(restored.scale-remembered.scale)<1e-5&&Math.hypot(restored.x-remembered.x,restored.y-remembered.y)<.01,'Reading view survives an overview detour');
   await page.evaluate(()=>__layout.select(__layout.state.notes[1]));
   await page.keyboard.press('Space');await page.waitForTimeout(350);
+  assert.equal(await page.evaluate(()=>__layout.state.spaceFocusStep),2,'First Space on another card starts reading directly');
   const second=await inspect();assert.deepEqual(second.reading,[1,2]);
   assert.deepEqual(second.positions[0],reading.positions[0],'A second working card leaves the first stable');
   assert.deepEqual(second.rows.flat().map(n=>n.id),compact.rows.flat().map(n=>n.id),'Focusing the next card keeps all cards in visual order');
@@ -160,6 +164,28 @@ const root=path.resolve(__dirname,'..');
   const spaceMs=await page.evaluate(()=>{const start=performance.now();window.dispatchEvent(new KeyboardEvent('keydown',{key:' ',code:'Space',bubbles:true,cancelable:true}));return performance.now()-start});
   await page.waitForTimeout(400);
   const largeReading=await inspect();
+  const focusRendering=await page.evaluate(async()=>{
+   const world=document.querySelector('#world');let boardCacheChanges=0,visibilityDuringMotion=0,cachedCards=0;
+   const observer=new MutationObserver(records=>{
+    for(const record of records){
+     if(record.target===world&&record.attributeName==='data-bitmap-cache')boardCacheChanges++;
+     if(record.attributeName==='class'&&record.target.matches('.card')&&__layout.state.raf)visibilityDuringMotion++;
+    }
+   });
+   observer.observe(world,{attributes:true,subtree:true,attributeFilter:['data-bitmap-cache','class']});
+   for(let i=0;i<4;i++){
+    document.querySelector('#focusCard').click();
+    cachedCards=Math.max(cachedCards,__layout.state.notes.filter(n=>n.el.style.willChange==='transform').length);
+    while(__layout.state.raf)await new Promise(requestAnimationFrame);
+    await new Promise(resolve=>setTimeout(resolve,100));
+   }
+   observer.disconnect();
+   return {boardCacheChanges,visibilityDuringMotion,cachedCards,leftoverHints:__layout.state.notes.filter(n=>n.el.style.willChange).length};
+  });
+  assert.equal(focusRendering.boardCacheChanges,0,'Repeated Space views do not invalidate whole-board raster caching');
+  assert.equal(focusRendering.visibilityDuringMotion,0,'Focus animation freezes offscreen visibility until it settles');
+  assert.ok(focusRendering.cachedCards>0&&focusRendering.cachedCards<50,'Reading animations cache nearby cards rather than all 500');
+  assert.equal(focusRendering.leftoverHints,0,'Reading releases temporary card raster hints after settling');
   assert.equal(largeReading.runs,largeCompact.runs,'500-card Space performs no layout');
   assert.deepEqual(largeReading.rows.flat().map(n=>n.id),largeCompact.rows.flat().map(n=>n.id),'500-card Space preserves visual order');
   const readingRow=largeCompact.rows.findIndex(row=>row.some(n=>n.id===351));

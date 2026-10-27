@@ -637,7 +637,7 @@ const latex = "\\(\\frac{a-b}{c}\\)";`;
   await expand.click();
   assert.equal(await expand.getAttribute('aria-expanded'),'true');
   assert.deepEqual(await page.locator(`#index-topics-${topicId} .index-subtopic`).allTextContents(),['First','Repeated','Repeated']);
-  assert.ok((await page.locator('#indexEntries [data-card-id] span').evaluateAll(labels=>labels.map(el=>getComputedStyle(el).fontWeight))).every(weight=>weight==='700'),'All index titles are bold');
+  assert.ok((await page.locator('#indexEntries [data-card-id] span').evaluateAll(labels=>labels.map(el=>getComputedStyle(el).fontWeight))).every(weight=>weight==='400'),'Index titles use regular weight');
   assert.ok((await page.locator(`#index-topics-${topicId} .index-subtopic`).evaluateAll(labels=>labels.map(el=>getComputedStyle(el).fontWeight))).every(weight=>weight==='400'),'Index subtitles use regular weight');
   assert.equal(await page.locator('#indexEntries [data-card-id] svg').count(),0,'Card type icons are removed');
   const nestedExpand=page.getByRole('button',{name:'Subtopics: First',exact:true});

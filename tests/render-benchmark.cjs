@@ -37,7 +37,7 @@ Use **clear headings**, short paragraphs, and meaningful labels. Revisit the boa
   if(name==='assets/backgrounds/night_sky_background.webp'){res.setHeader('Content-Type','image/webp');res.end(fs.readFileSync(path.join(root,name)));return}
   if(!['text-highlights.js','index.html','styles.css','app.js'].includes(name)){res.writeHead(404).end();return}
   let body=fs.readFileSync(path.join(root,name),'utf8');
-  if(name==='app.js')body=body.replace(/\}\)\(\);\s*$/,'window.__bench={state,zoomPrecise,apply};})();');
+  if(name==='app.js')body=body.replace(/\}\)\(\);\s*$/,'window.__bench={state,zoomPrecise,apply,select};})();');
   res.setHeader('Content-Type',name.endsWith('.js')?'text/javascript':name.endsWith('.css')?'text/css':'text/html');res.end(body);
  });
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
@@ -56,6 +56,25 @@ Use **clear headings**, short paragraphs, and meaningful labels. Revisit the boa
  const cdp=await page.context().newCDPSession(page);await cdp.send('Performance.enable');
  let layerDetails=[],renderLayers=0;cdp.on('LayerTree.layerTreeDidChange',event=>{layerDetails=event.layers||[];renderLayers=layerDetails.length});await cdp.send('LayerTree.enable');
  const metric=async()=>Object.fromEntries((await cdp.send('Performance.getMetrics')).metrics.map(m=>[m.name,m.value]));
+ if(process.env.BENCH_FOCUS==='true'){
+  await page.evaluate(()=>__bench.select(__bench.state.notes[0]));
+  const before=await metric();
+  const focus=await page.evaluate(async()=>{
+   const cycles=[];
+   for(let i=0;i<8;i++){
+    const times=[],start=performance.now();let last=start;
+    document.querySelector('#focusCard').click();
+    do{await new Promise(requestAnimationFrame);const now=performance.now();times.push(now-last);last=now}while(__bench.state.raf);
+    await new Promise(resolve=>setTimeout(resolve,150));
+    times.sort((a,b)=>a-b);
+    cycles.push({mode:__bench.state.spaceFocusStep,totalMs:last-start,p95:times[Math.floor(times.length*.95)],max:times.at(-1),slowFrames:times.filter(t=>t>25).length});
+   }
+   return cycles;
+  });
+  const after=await metric();
+  console.log(JSON.stringify({phase:'focus',cardCount,dark,layers,cycles:focus,taskMs:(after.TaskDuration-before.TaskDuration)*1000,layoutMs:(after.LayoutDuration-before.LayoutDuration)*1000,styleMs:(after.RecalcStyleDuration-before.RecalcStyleDuration)*1000}));
+  await page.close();continue;
+ }
  const before=await metric();
  const stats=await page.evaluate(async()=>{
   const times=[];let last=performance.now();

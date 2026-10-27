@@ -33,20 +33,39 @@ if(window.IntersectionObserver){
   }
  }).observe(world,{childList:true});
 }
+function cullCardsAtCamera(cameraX,cameraY,scale){
+ const dimensions=new Map();
+ for(const row of readingSession.rows)for(const card of row.cards)dimensions.set(card,row.dimensions.get(card));
+ // Complete geometry reads before visibility writes, including uncached cards.
+ const bounds=state.notes.map(n=>{
+  const d=dimensions.get(n);
+  return {n,w:d?.w??n.el.offsetWidth,h:d?.h??n.el.offsetHeight};
+ });
+ for(const {n,w,h} of bounds){
+  const x=cameraX+n.x*scale,y=cameraY+n.y*scale;
+  const visible=n===state.selected||(x+w*scale>=-400&&x<=innerWidth+400&&y+h*scale>=-400&&y<=innerHeight+400);
+  n.el.classList.toggle('offscreen',!visible);
+ }
+}
 function updateOverviewRendering(){
  // Hysteresis prevents toggling rendering modes around one zoom threshold.
- const next=state.overviewActive||state.scale<(overviewRendering?.6:.45);
+ const animating=!!state.raf;
+ const next=state.overviewActive||(animating?overviewRendering:state.scale<(overviewRendering?.6:.45));
  // Free-form zoom still needs culling for distant cards. Only a fitted
  // overview suspends geometry observation, since it shows the whole board.
- const pauseCulling=state.overviewActive;
- if(next!==overviewRendering){overviewRendering=next;world.dataset.bitmapCache=String(next);if(next)world.style.willChange='transform'}
- if(pauseCulling===overviewCullingPaused)return;
- overviewCullingPaused=pauseCulling;
- if(pauseCulling){cardVisibility?.disconnect();world.dataset.overviewRender='true'}
- else{
-  state.selected?.el.classList.remove('offscreen');world.dataset.overviewRender='false';
-  for(const n of state.notes)cardVisibility?.observe(n.el);
+ const pauseCulling=state.overviewActive||animating;
+ if(pauseCulling!==overviewCullingPaused){
+  overviewCullingPaused=pauseCulling;
+  if(pauseCulling){cardVisibility?.disconnect();if(state.overviewActive)world.dataset.overviewRender='true'}
+  else{
+   // Cull at the final camera BEFORE releasing cached rasters. Waiting for
+   // the observer's next delivery first repainted the entire large canvas.
+   cullCardsAtCamera(state.x,state.y,state.scale);
+   for(const n of state.notes)cardVisibility?.observe(n.el);
+   world.dataset.overviewRender='false';
+  }
  }
+ if(next!==overviewRendering){overviewRendering=next;world.dataset.bitmapCache=String(next);if(next)world.style.willChange='transform'}
 }
 if(window.marked?.setOptions) marked.setOptions({gfm:true,breaks:true});
 
@@ -194,6 +213,30 @@ function setButtonIcon(button,name,label){
  button.innerHTML=ICONS[name];
  if(label){button.title=label;button.setAttribute("aria-label",label)}
 }
+// Native hover help stays local to the hovered control; no canvas scans or repaint work.
+const BUTTON_HELP={
+ closeGlobalSettings:'Close settings (Esc)',actualSize:'Reset canvas zoom to 100%',fitView:'Fit layout overview (C)',
+ newBlankCanvas:'Start a new blank canvas',openCanvasFile:'Choose a canvas JSON file',
+ cancel:'Cancel editing (Esc)',applyCard:'Place or apply Markdown card (Ctrl/⌘+Enter)',applyMap:'Place or apply Markmap (Ctrl/⌘+Enter)',
+ edit:'Edit card (E)',duplicate:'Duplicate card (Ctrl/⌘+D)',copy:'Copy Markdown source',remove:'Delete card (Delete)',
+ defaultCardFont:'Default font for new cards',mapFont:'Font for this card',mapColor:'Card color presets',editorCardColor:'Choose card color',
+ canvasSearch:'Search titles and content (Ctrl/⌘+F)',edge:'Show navigation tray (B)',
+ 'nav-wheel':'Wheel zoom sensitivity','nav-scroll':'Vertical and horizontal scroll sensitivity',
+ 'nav-drag':'Canvas drag sensitivity','nav-pinch':'Touchpad pinch zoom sensitivity','nav-step':'Zoom step for + / − buttons',
+ clearHighlight:'Remove selected highlight (Backspace)'
+};
+for(const [id,label] of Object.entries(BUTTON_HELP)){
+ const control=document.getElementById(id);if(control)control.title=label;
+}
+function ensureHoverHelp(e){
+ const control=e.target.closest?.('button,summary,select,input[type="range"],input[type="color"],.custom-select-trigger');
+ if(!control||control.title)return;
+ const label=control.getAttribute('aria-label')||control.textContent.trim();
+ if(label)control.title=label;
+}
+document.addEventListener('pointerover',ensureHoverHelp);
+document.addEventListener('focusin',ensureHoverHelp);
+document.querySelectorAll('button,summary,select').forEach(control=>ensureHoverHelp({target:control}));
 function updateViewButton(el,type){
  const button=el.querySelector("[data-view]");
  setButtonIcon(button,"flip",type==="map"?"Switch to Markdown (K)":"Switch to Markmap (K)");
@@ -236,8 +279,12 @@ function setCardActionIcons(el,type){
   pdfButton.onclick=()=>downloadCardPdf(state.notes.find(n=>n.el===el));
  }
  setButtonIcon(pdfButton,"save","Save card as PDF");
- setButtonIcon(el.querySelector("[data-edit]"),"edit","Edit card");
- setButtonIcon(el.querySelector("[data-delete]"),"delete",type==="map"?"Delete map":"Delete card");
+ setButtonIcon(el.querySelector("[data-edit]"),"edit","Edit card (E)");
+ setButtonIcon(el.querySelector("[data-delete]"),"delete",type==="map"?"Delete map (Delete)":"Delete card (Delete)");
+ el.querySelector('[data-map-color]').title='Color presets (Shift+C cycles presets)';
+ el.querySelector('[data-font]').title='Card font (V / Shift+V)';
+ el.querySelector('[data-size]').title='Text size (1–9, 0); 4 restores 80%';
+ el.querySelector('.resize.right').title='Drag to resize width ([ / ] also resize)';
 }
 const LEGACY_MAP_FONTS={modern:"dm-sans",editorial:"lora",geometric:"comfortaa",humanist:"nunito",mono:"mono",rounded:"quicksand",handwritten:"hand-patrick"};
 const MAP_PALETTES={
@@ -1469,6 +1516,7 @@ function cardBounds(){
 
 function sync(){state.targetX=state.x;state.targetY=state.y;state.targetScale=state.scale}
 let motionHintTimer=0;
+const motionRasterCards=new Set();
 // Keep overview bitmaps cached, including after navigation settles. Reading
 // releases the cache so HTML/SVG text can rasterize at its final reading scale.
 function beginCameraMotion(){
@@ -1476,6 +1524,12 @@ function beginCameraMotion(){
  if(world.style.willChange!==hint)world.style.willChange=hint;
  if(!document.body.classList.contains("camera-moving")){
   document.body.classList.add("camera-moving");
+  // Cache only the visible reading cards. A world-wide cache selector
+  // invalidates every card subtree each time Space switches reading views.
+  if(!overviewRendering&&!state.overviewActive)for(const n of state.notes){
+   if(n.el.classList.contains('offscreen'))continue;
+   n.el.style.willChange='transform';motionRasterCards.add(n.el);
+  }
   hideTextHighlighter();
  }
 }
@@ -1491,6 +1545,8 @@ function finishCameraMotion(){
  if(state.pan||state.raf||cameraInputFrame||fallbackWheelTimer)return;
  clearTimeout(motionHintTimer);motionHintTimer=0;
  document.body.classList.remove("camera-moving");
+ for(const el of motionRasterCards)el.style.willChange='';
+ motionRasterCards.clear();
  if(!overviewRendering&&!state.overviewActive&&world.style.willChange)world.style.willChange="";
  save();
 }
@@ -1539,10 +1595,17 @@ function canvasWheelExponent(e){
  const unit=e.deltaMode===1?.05:e.deltaMode===2?1:.002;
  return Math.max(-2,Math.min(2,-e.deltaY*unit*2*(e.ctrlKey?navigation.pinch:navigation.wheel)));
 }
-function moveTo(x,y,s=state.targetScale){
+function moveTo(x,y,s=state.targetScale,readingFocus=false){
  if(!Number.isFinite(x)||!Number.isFinite(y)||!Number.isFinite(s))return;
  interruptCamera();
- state.targetX=x;state.targetY=y;state.targetScale=clampScale(s);animate()
+ state.targetX=x;state.targetY=y;state.targetScale=clampScale(s);
+ if(!state.overviewActive&&overviewRendering&&state.scale<.6&&s>=.6){
+  // Focus leaves the overview behind. Do not carry hundreds of distant
+  // card rasters through the zoom while reading gaps are being inserted.
+  cardVisibility?.disconnect();overviewCullingPaused=true;
+  cullCardsAtCamera(x,y,state.targetScale);world.dataset.overviewRender='false';
+ }
+ animate(readingFocus&&state.notes.length>=150?20:32)
 }
 function zoom(f,cx=innerWidth/2,cy=innerHeight/2){
  zoomPrecise(f,cx,cy);
@@ -1580,7 +1643,13 @@ function flushSave(){
  clearTimeout(state.saveTimer);
  try{localStorage.setItem("reflatex",snapshot())}catch{}
 }
-function empty(){$("#empty").style.display=state.notes.length?"none":"grid";scheduleCardIndex()}
+function positionEmptyIntro(){
+ if(state.notes.length)return;
+ const intro=$('#empty'),view=focusViewport();
+ intro.style.left=(innerWidth<700?0:view.left)+'px';
+ intro.style.right=(innerWidth<700?64:Math.max(0,innerWidth-view.left-view.width))+'px';
+}
+function empty(){$("#empty").style.display=state.notes.length?"none":"grid";if(!state.notes.length)positionEmptyIntro();scheduleCardIndex()}
 
 
 function indexHeading(md,id,fallback=''){
@@ -2013,6 +2082,7 @@ function setIndexOpen(open){
  if(!open)hidePaletteTitle();
  $("#cardIndex").hidden=!open;$("#toggleIndex").setAttribute("aria-expanded",String(open));
  if(open)revealIndexSelection();
+ positionEmptyIntro();
  try{localStorage.setItem("reflatex-index-open",String(open))}catch{}
 }
 const indexResize=$('#indexResize');
@@ -2022,6 +2092,7 @@ function setIndexWidth(width,persist=false){
  const {min,max}=indexWidthLimits();indexWidth=Math.round(Math.max(min,Math.min(max,width)));
  $('#cardIndex').style.setProperty('--index-width',indexWidth+'px');
  indexResize.setAttribute('aria-valuemin',min);indexResize.setAttribute('aria-valuemax',max);indexResize.setAttribute('aria-valuenow',indexWidth);
+ positionEmptyIntro();
  if(persist)try{localStorage.setItem('reflatex-index-width',String(indexWidth))}catch{}
 }
 try{const saved=Number(localStorage.getItem('reflatex-index-width')||260);setIndexWidth(Number.isFinite(saved)?saved:260)}catch{setIndexWidth(260)}
@@ -2683,7 +2754,8 @@ function updateHandUI(){
  button.classList.toggle("active",state.hand);
  document.body.classList.toggle("hand-mode",state.hand);
  button.innerHTML=state.hand?ICONS.zoom:ICONS.pan;
- button.title=state.hand?"Hand ON · trackpad zoom":"Hand OFF · trackpad pan";
+ button.title=state.hand?"Wheel zoom mode (H switches to scrolling)":"Wheel scroll mode (H switches to zooming)";
+ button.setAttribute('aria-label',button.title);
  canvas.style.cursor=state.hand?"grab":"default";
 }
 
@@ -2738,7 +2810,7 @@ for(const [color,label] of Object.entries(highlightColors)){
  button.className='highlight-swatch';button.title=label+' highlight';button.setAttribute('aria-label',label+' highlight');
  textHighlighter.append(button);
 }
-const clearHighlight=document.createElement('button');clearHighlight.type='button';clearHighlight.className='highlight-clear';clearHighlight.innerHTML=ICONS.close;clearHighlight.title='Remove highlight';clearHighlight.setAttribute('aria-label','Remove highlight');textHighlighter.append(clearHighlight);
+const clearHighlight=document.createElement('button');clearHighlight.type='button';clearHighlight.className='highlight-clear';clearHighlight.innerHTML=ICONS.close;clearHighlight.title='Remove highlight (Backspace)';clearHighlight.setAttribute('aria-label','Remove highlight');textHighlighter.append(clearHighlight);
 document.body.append(textHighlighter);
 textHighlighter.addEventListener('pointerdown',e=>e.preventDefault());
 function hideTextHighlighter(){textHighlighter.hidden=true}
@@ -3137,6 +3209,8 @@ $("#hand").onclick=()=>{
 showControls();
 }
 $("#new").onclick=()=>openEditor("note")
+$("#emptyCreate").onclick=()=>$("#new").click();
+$("#emptyImport").onclick=()=>$("#importMarkdownFiles").click();
 $("#center").onclick=showOverview;
 $("#arrange").onclick=arrange
 $("#background").onclick=e=>{e.stopPropagation();toggleBackgroundMenu()}
@@ -3201,6 +3275,7 @@ zoomLabel.addEventListener("blur",()=>{zoomLabel.value=String(Math.round(state.s
 zoomLabel.addEventListener("keydown",e=>{if(e.key==="Enter")zoomLabel.blur();e.stopPropagation()});
 $("#actualSize").onclick=()=>zoom(1/state.scale);
 $("#fitView").onclick=showOverview;
+$("#focusCard").onclick=focusForReading;
 for(const key of ["wheel","scroll","pinch","drag","step"]){
  const input=$("#nav-"+key),output=$("#nav-"+key+"-value");
  input.value=navigation[key];
@@ -3304,18 +3379,23 @@ async function focusSelected(mode="readable",options={}){
       if(state.selected!==n)return;
       save();
     }else{
-      moveTo(cameraX,cameraY,fitScale);
+      moveTo(cameraX,cameraY,fitScale,true);
     }
     return;
   }
   const fitScale=n.type==="map"?Math.min(widthScale,availableHeight/r.h):widthScale;
-  const targetScale=clampScale(Math.min(1.2,fitScale));
+  const targetScale=clampScale(Math.min(1.45,fitScale));
 
   moveTo(
     centerX-worldCenterX*targetScale,
     r.h*targetScale<=availableHeight?centerY-worldCenterY*targetScale:viewport.top-worldTop*targetScale,
-    targetScale
+    targetScale,true
   );
+}
+
+function focusForReading(){
+ if(!state.selected){showOverview();return}
+ focusSelected(state.selected.type==="map"?"fit":state.spaceFocusStep===2?"fit":"readable",{readingSession:true});
 }
 
 function openCardTab(n){
@@ -3451,11 +3531,7 @@ window.addEventListener("keydown",e=>{
  if(e.code==="Space"&&!editing&&!customSelectFocused){
    e.preventDefault();
    if(e.repeat)return;
-   if(state.selected){
-     // A Markmap's Space action is always one predictable fit-and-center.
-     // Markdown retains its fit/readable two-step cycle.
-     focusSelected(state.selected.type==="map"?"fit":state.spaceFocusStep===1?"readable":"fit",{readingSession:true});
-   }else $("#center").click();
+   focusForReading();
    return;
  }
 

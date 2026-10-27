@@ -41,10 +41,12 @@
   const villageActive=canvas.dataset.background==='village';
   pauseButton.disabled=canvas.dataset.background!=='village'||reduced.matches;
   pauseButton.textContent=userPaused?'Resume background':'Pause background';
+  pauseButton.title=userPaused?'Resume Village (P)':'Pause Village (P)';
   pauseButton.setAttribute('aria-pressed',String(userPaused));
   menuPauseButton.hidden=!villageActive;
   menuPauseButton.disabled=reduced.matches;
   menuPauseButton.querySelector('span').textContent=userPaused?'Play Village':'Pause Village';
+  menuPauseButton.title=userPaused?'Play Village (P)':'Pause Village (P)';
   menuPauseButton.querySelector('path').setAttribute('d',userPaused?'m9 5 10 7-10 7V5Z':'M9 5v14M15 5v14');
   menuPauseButton.setAttribute('aria-pressed',String(userPaused));
   if(canvas.dataset.background!=='village'||reduced.matches){if(worker)stop();return}

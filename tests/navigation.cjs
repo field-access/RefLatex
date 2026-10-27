@@ -201,6 +201,18 @@ const root=path.resolve(__dirname,'..');
   await page.locator('#nav-wheel').focus();await page.keyboard.press('Escape');
   assert.equal(await page.locator('#globalSettings').evaluate(el=>el.hidden),true);
   assert.ok(await page.locator('#settings').evaluate(el=>el===document.activeElement));
+  await page.locator('#help').click();
+  assert.equal(await page.locator('.help-group').count(),6,'All shortcut categories remain available');
+  assert.equal(await page.locator('.help-group[open]').count(),1,'Help opens with only reading shortcuts expanded');
+  const navigationHelp=page.locator('.help-group').filter({has:page.locator('summary', {hasText:'Canvas navigation'})});
+  await navigationHelp.locator('summary').click();
+  assert.ok(await navigationHelp.evaluate(el=>el.open),'Shortcut categories expand on demand');
+  await page.keyboard.press('Escape');
+  assert.equal(await page.locator('#helpBackdrop').evaluate(el=>el.hidden),true);
+  assert.deepEqual(await page.locator('#toolbar button').evaluateAll(buttons=>buttons.filter(button=>!button.title.trim()).map(button=>button.id)),[],'Every tray button has hover help');
+  assert.match(await page.locator('#hand').getAttribute('title'),/H/,'Navigation hover help retains its shortcut after changing mode');
+  assert.match(await page.locator('[data-edit]').first().getAttribute('title'),/\(E\)/);
+  assert.match(await page.locator('[data-delete]').first().getAttribute('title'),/Delete/);
   if(process.env.TEST_ONLINE){
    assert.ok(await page.evaluate(()=>!!window.d3?.zoom),'D3 must load for the integration test');
    const before=await page.evaluate(()=>({p:__test.worldPoint(800,300),scale:__test.state.scale}));
