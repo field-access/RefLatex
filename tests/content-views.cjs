@@ -4,7 +4,7 @@ const root=path.resolve(__dirname,'..');
 (async()=>{
  const server=http.createServer((req,res)=>{
   const name=req.url==='/'?'index.html':req.url.slice(1);
-  if(!['text-highlights.js','index.html','app.js','styles.css'].includes(name)){res.writeHead(404).end();return}
+  if(!['canvas-recovery.js','text-highlights.js','index.html','app.js','styles.css'].includes(name)){res.writeHead(404).end();return}
   let body=fs.readFileSync(path.join(root,name),'utf8');
   if(name==='app.js')body=body.replace(/\}\)\(\);\s*$/,'window.__content={state,markmapOptions,snapshot,restore,undo,renderCardIndex,showTextHighlighter,canvasPayload,resizeSelectedWidth,setCameraImmediate,focusViewport,editNote,closeEditor,makeNote,makeMap,select,focusSelected,layoutCards,updateCardHeading,deleteNote,openMapTab,openCardTab,wrapCodeLines,enableMapCameraFrames,enablePenMapWheel,ensureFontLoaded};})();');
   res.setHeader('Content-Type',name.endsWith('.js')?'text/javascript':name.endsWith('.css')?'text/css':'text/html');res.end(body);
@@ -15,6 +15,7 @@ const root=path.resolve(__dirname,'..');
   const page=await browser.newPage({viewport:{width:1280,height:900}});
   await page.route('https://**/*',r=>r.request().url().includes('/marked@')?r.fulfill({path:path.join(path.dirname(require.resolve('marked')),'marked.umd.js'),contentType:'text/javascript'}):r.abort());
   await page.goto(`http://127.0.0.1:${server.address().port}`,{waitUntil:'networkidle'});
+  await page.evaluate(()=>window.conceptcardsReady);
   assert.equal(await page.locator('#defaultCardFont').inputValue(),'poppins');
   const branchControls=await page.evaluate(async()=>{
    const n=__content.makeMap('# Branch controls\n\n## One\n### Nested\n#### Deep\n## Two',0,0,800,500,false);
@@ -466,7 +467,7 @@ const latex = "\\(\\frac{a-b}{c}\\)";`;
    const b=__content.makeNote('# Second context\n\nOther content',700,0,600,false);
    __content.select(a);
    const body=a.el.querySelector('.cardbody');body.style.maxHeight='300px';body.style.overflow='auto';body.scrollTop=180;
-   __content.setCameraImmediate(110,-300,.75);document.activeElement?.blur();return [a.id,b.id];
+   __content.state.overviewActive=false;__content.setCameraImmediate(110,-300,.75);document.activeElement?.blur();return [a.id,b.id];
   });
   await page.keyboard.press('ArrowRight');
   await page.waitForFunction(id=>__content.state.selected.id===id&&!__content.state.raf,switchIds[1]);
@@ -620,6 +621,7 @@ const latex = "\\(\\frac{a-b}{c}\\)";`;
   assert.ok(typography.sizes.every(size=>size>typography.body));
   assert.ok(typography.weights.every(weight=>weight==='700'));
   assert.ok(typography.shared);assert.equal(typography.links,1);assert.equal(typography.requests.length,2);
+  await page.evaluate(()=>{for(const n of [...__content.state.notes])__content.deleteNote(n)});
   for(const count of [7,13]){
    const board=await page.evaluate(count=>{
     const notes=Array.from({length:count},(_,i)=>__content.makeNote(`# Card ${i}\n\n${'Readable content. '.repeat(12+i%3)}`,0,0,520+(i%3)*80,false,null,'sans'));
@@ -746,7 +748,7 @@ const latex = "\\(\\frac{a-b}{c}\\)";`;
   const reorderTargetBounds=await reorderTarget.boundingBox();
   await page.locator(`[data-index-card-id="${reorderIds[1]}"] .index-reorder`).dragTo(reorderTarget,{targetPosition:{x:45,y:reorderTargetBounds.height-4}});
   assert.deepEqual(await page.evaluate(()=>__content.state.notes.map(n=>n.id)),[topicId,...reorderIds]);
-  await page.waitForFunction(ids=>JSON.parse(localStorage.getItem('reflatex')).notes.map(n=>n.id).join(',')===ids.join(','),[topicId,...reorderIds]);
+  await page.waitForFunction(async ids=>(await conceptcardsRecovery.read())?.notes.map(n=>n.id).join(',')===ids.join(','),[topicId,...reorderIds]);
   for(const id of reorderIds)await page.evaluate(id=>__content.deleteNote(__content.state.notes.find(n=>n.id===id)),id);
   await page.evaluate(id=>__content.deleteNote(__content.state.notes.find(n=>n.id===id)),topicId);
   const result=await page.evaluate(()=>{

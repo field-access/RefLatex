@@ -5,6 +5,10 @@ const $=s=>document.querySelector(s);
 const canvas=$("#canvas"),world=$("#world"),editor=$("#editor"),source=$("#source"),context=$("#context");
 const MIN_SCALE=.01;
 let canvasFiles=null;
+let recoveryLoading=true,recoveryIdle=0;
+const recovery=window.createCanvasRecovery();
+window.conceptcardsRecovery=recovery;
+document.body.inert=true;
 let savedCanvasContent='';
 const MAX_SCALE=8;
 const navigation={wheel:1,scroll:1,pinch:1,drag:1,step:1.2};
@@ -1611,7 +1615,8 @@ function zoom(f,cx=innerWidth/2,cy=innerHeight/2){
  zoomPrecise(f,cx,cy);
  clearTimeout(state.saveTimer);state.saveTimer=setTimeout(save,180);
 }
-function snapshot(){return JSON.stringify({x:state.x,y:state.y,scale:state.scale,nextId:state.nextId,layoutMode:state.layoutMode,overviewActive:state.overviewActive,groups:indexGroups,readingCards:[...readingSession.cards.keys()],notes:state.notes.map(n=>({id:n.id,md:n.md,x:n.x,y:n.y,w:n.type==="map"?(n.mapWidth||n.width||n.el.offsetWidth):(n.width||n.el.offsetWidth),h:n.mapHeight,mapWidth:n.mapWidth,mapHeight:n.mapHeight,font:n.font||"mono",size:n.size||"80",type:n.type||"note",mapColor:n.mapColor||"default",highlights:n.highlights||[],mapFont:n.mapFont||"modern",sourceName:n.sourceName||undefined,createdAt:n.createdAt}))})}
+function snapshotData(){return {x:state.x,y:state.y,scale:state.scale,nextId:state.nextId,layoutMode:state.layoutMode,overviewActive:state.overviewActive,groups:indexGroups.map(group=>({...group,cards:[...group.cards]})),readingCards:[...readingSession.cards.keys()],notes:state.notes.map(n=>({id:n.id,md:n.md,x:n.x,y:n.y,w:n.type==="map"?(n.mapWidth||n.width||n.el.offsetWidth):(n.width||n.el.offsetWidth),h:n.mapHeight,mapWidth:n.mapWidth,mapHeight:n.mapHeight,font:n.font||"mono",size:n.size||"80",type:n.type||"note",mapColor:n.mapColor||"default",highlights:(n.highlights||[]).map(item=>({...item,...(Array.isArray(item.mathSources)?{mathSources:[...item.mathSources]}:{})})),mapFont:n.mapFont||"modern",sourceName:n.sourceName||undefined,createdAt:n.createdAt}))}}
+function snapshot(){return JSON.stringify(snapshotData())}
 function history(){
  if(state.historyLock)return;
  const s=snapshot();
@@ -1633,16 +1638,36 @@ function restore(s){
 }
 function undo(){if(!state.undo.length)return;state.redo.push(snapshot());restore(state.undo.pop())}
 function redo(){if(!state.redo.length)return;state.undo.push(snapshot());restore(state.redo.pop())}
+function cancelRecoveryIdle(){
+ if(recoveryIdle){cancelIdleCallback(recoveryIdle);recoveryIdle=0}
+}
+function persistRecovery(){
+ if(recoveryLoading)return Promise.resolve(false);
+ return recovery.save(snapshotData()).then(success=>{
+  const hint=$('#hint');
+  if(!success){hint.dataset.recoveryError='true';hint.style.opacity='1';hint.textContent='Local recovery could not be saved. Download your canvas with Ctrl/⌘+S.'}
+  else if(hint.dataset.recoveryError){delete hint.dataset.recoveryError;hint.style.opacity='';hint.textContent=''}
+  return success;
+ });
+}
 function save(){
- clearTimeout(state.saveTimer);
+ if(recoveryLoading)return;
+ clearTimeout(state.saveTimer);cancelRecoveryIdle();
  state.saveTimer=setTimeout(()=>{
-  try{localStorage.setItem("reflatex",snapshot())}catch{}
- },80);
+  state.saveTimer=0;
+  const write=()=>{
+   recoveryIdle=0;
+   if(state.raf||state.pan||state.resize||cameraInputFrame||motionHintTimer){save();return}
+   persistRecovery();
+  };
+  if(window.requestIdleCallback)recoveryIdle=requestIdleCallback(write,{timeout:1000});else write();
+ },200);
 }
 function flushSave(){
- clearTimeout(state.saveTimer);
- try{localStorage.setItem("reflatex",snapshot())}catch{}
+ clearTimeout(state.saveTimer);state.saveTimer=0;cancelRecoveryIdle();
+ return persistRecovery();
 }
+
 function positionEmptyIntro(){
  if(state.notes.length)return;
  const intro=$('#empty'),view=focusViewport();
@@ -3295,10 +3320,11 @@ document.addEventListener("click",e=>{
  if(!context.contains(e.target))context.classList.remove("open");
  if(!e.target.closest(".background-picker"))toggleBackgroundMenu(false);
 })
-document.addEventListener("paste",e=>{
+document.addEventListener("paste",async e=>{
  if(document.activeElement===source)return;
  const md=e.clipboardData?.getData("text/plain");if(!md?.trim())return;
  e.preventDefault();
+ if(recoveryLoading)await window.conceptcardsReady;
  const p=worldPoint(innerWidth/2,innerHeight/2);
  const n=makeNote(md,p.x-300,p.y-150,600,true);
  select(n);
@@ -3500,6 +3526,7 @@ function resizeSelectedWidth(direction){
 }
 
 window.addEventListener("keydown",e=>{
+ if(recoveryLoading){if(!((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='v'))e.preventDefault();return}
  if(e.key==='Escape')hideTextHighlighter();
  if(!helpBackdrop.hidden){
    e.stopImmediatePropagation();
@@ -3764,9 +3791,15 @@ window.addEventListener("keydown",e=>{
  }
 
 });
-function load(){
+async function load(){
+ const dark=localStorage.getItem("reflatex-theme")==="dark";
+ if(dark)document.body.classList.add("dark");
+ updateThemeIcon();
+ setBackground(localStorage.getItem("reflatex-background")||"light");
+ toggleToolbar(localStorage.getItem("reflatex-toolbar-hidden")!=="1");
+ state.hand=false;updateHandUI();
  try{
-  const d=JSON.parse(localStorage.getItem("reflatex")||"null");
+  const d=await recovery.load();
   if(d){
    restoreIndexGroups(d.groups);
    state.x=Number.isFinite(d.x)?d.x:innerWidth/2;
@@ -3783,12 +3816,6 @@ function load(){
    restoreReadingSession(d.readingCards);
   }
  }catch{}
- const dark=localStorage.getItem("reflatex-theme")==="dark";
- if(dark)document.body.classList.add("dark");
- updateThemeIcon();
- setBackground(localStorage.getItem("reflatex-background")||"light");
- toggleToolbar(localStorage.getItem("reflatex-toolbar-hidden")!=="1");
- state.hand=false;updateHandUI();
  sync();apply();empty();world.style.willChange=overviewRendering?'transform':'';
 }
 let resizeFrame=0;
@@ -3797,18 +3824,25 @@ window.addEventListener("resize",()=>{
  resizeFrame=requestAnimationFrame(()=>{resizeFrame=0;apply()});
 });
 window.addEventListener("pagehide",flushSave);
+document.addEventListener("visibilitychange",()=>{if(document.hidden)flushSave()});
 window.addEventListener('beforeunload',event=>{
- if(!hasUnsavedCanvasWork())return;
+ if(recoveryLoading||!hasUnsavedCanvasWork())return;
  flushSave();event.preventDefault();event.returnValue='You have unsaved changes.';
 });
-try{
- load();
- try{savedCanvasContent=localStorage.getItem('reflatex-saved-content')||canvasContentSignature({notes:[],readingCards:[]})}catch{savedCanvasContent=canvasContentSignature({notes:[],readingCards:[]})}
- if(window.createCanvasFileManager)canvasFiles=window.createCanvasFileManager({openFile:openCanvasFile,newCanvas:newBlankCanvas});
- document.addEventListener('conceptcards-open-native',event=>{
-  if(canvasFiles)canvasFiles.importFile(event.detail.file,event.detail.handle);
- });
-}catch(err){
- showRuntimeError(err?.message||"Refresh the page and try again.");
-}
+if(window.createCanvasFileManager)canvasFiles=window.createCanvasFileManager({openFile:openCanvasFile,newCanvas:newBlankCanvas});
+window.conceptcardsReady=(async()=>{
+ try{
+  await load();
+  try{savedCanvasContent=localStorage.getItem('reflatex-saved-content')||canvasContentSignature({notes:[],readingCards:[]})}catch{savedCanvasContent=canvasContentSignature({notes:[],readingCards:[]})}
+ }catch(err){
+  showRuntimeError(err?.message||"Refresh the page and try again.");
+ }finally{
+  recoveryLoading=false;document.body.inert=false;
+  document.documentElement.dataset.recoveryReady='true';
+ }
+})();
+document.addEventListener('conceptcards-open-native',async event=>{
+ await window.conceptcardsReady;
+ if(canvasFiles)canvasFiles.importFile(event.detail.file,event.detail.handle);
+});
 })();

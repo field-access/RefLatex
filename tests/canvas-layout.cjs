@@ -4,7 +4,7 @@ const root=path.resolve(__dirname,'..');
 (async()=>{
  const server=http.createServer((req,res)=>{
   const name=req.url.split('?')[0]==='/'?'index.html':req.url.split('?')[0].slice(1);
-  if(!['index.html','app.js','styles.css','text-highlights.js','canvas-files.js','favicon.svg'].includes(name)){res.writeHead(404).end();return}
+  if(!['index.html','app.js','styles.css','canvas-recovery.js','text-highlights.js','canvas-files.js','favicon.svg'].includes(name)){res.writeHead(404).end();return}
   let body=fs.readFileSync(path.join(root,name),'utf8');
   if(name==='app.js')body=body.replace('function layoutCards(){','function layoutCards(){window.__layoutRuns=(window.__layoutRuns||0)+1;').replace(/\}\)\(\);\s*$/,'window.__layout={state,readingSession,makeNote,makeMap,select,focusViewport,cardBounds,setCameraImmediate,zoomPrecise,snapshot,restore,canvasPayload,openCanvasFile,deleteNote};})();');
   res.setHeader('Content-Type',name.endsWith('.js')?'text/javascript':name.endsWith('.css')?'text/css':'text/html');res.end(body);
@@ -16,6 +16,7 @@ const root=path.resolve(__dirname,'..');
   page.on('pageerror',error=>errors.push(error.message));
   await page.route('https://**/*',route=>route.request().url().includes('/marked@')?route.fulfill({path:path.join(path.dirname(require.resolve('marked')),'marked.umd.js'),contentType:'text/javascript'}):route.abort());
   await page.goto(`http://127.0.0.1:${server.address().port}`,{waitUntil:'networkidle'});
+  await page.evaluate(()=>window.conceptcardsReady);
   // Long documents previously persuaded Arrange to use one horizontal row.
   for(const width of [1440,900])for(const count of [3,12]){
    await page.setViewportSize({width,height:900});

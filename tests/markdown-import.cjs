@@ -4,7 +4,7 @@ const root=path.resolve(__dirname,'..');
 (async()=>{
  const server=http.createServer((req,res)=>{
   const name=req.url.split('?')[0]==='/'?'index.html':req.url.split('?')[0].slice(1);
-  if(!['index.html','app.js','styles.css','text-highlights.js','canvas-files.js','favicon.svg'].includes(name)){res.writeHead(404).end();return}
+  if(!['index.html','app.js','styles.css','canvas-recovery.js','text-highlights.js','canvas-files.js','favicon.svg'].includes(name)){res.writeHead(404).end();return}
   let body=fs.readFileSync(path.join(root,name),'utf8');
   if(name==='app.js')body=body.replace(/\}\)\(\);\s*$/,'window.__importTest={state,canvasFiles,importMarkdownFiles,canvasPayload};})();');
   res.setHeader('Content-Type',name.endsWith('.js')?'text/javascript':name.endsWith('.css')?'text/css':'text/html');res.end(body);
@@ -16,6 +16,7 @@ const root=path.resolve(__dirname,'..');
   page.on('pageerror',error=>errors.push(error.message));
   await page.route('https://**/*',route=>route.request().url().includes('/marked@')?route.fulfill({path:path.join(path.dirname(require.resolve('marked')),'marked.umd.js'),contentType:'text/javascript'}):route.abort());
   await page.goto(`http://127.0.0.1:${server.address().port}`,{waitUntil:'networkidle'});
+  await page.evaluate(()=>window.conceptcardsReady);
   await page.evaluate(async()=>{
    await __importTest.canvasFiles.importFile(new File([JSON.stringify({notes:[{id:1,markdown:'# Existing card\n\nKeep this.',width:600}]})],'Existing.json'));
   });

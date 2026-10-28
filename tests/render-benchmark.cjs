@@ -35,7 +35,7 @@ Use **clear headings**, short paragraphs, and meaningful labels. Revisit the boa
  const server=http.createServer((req,res)=>{
   let name=req.url.split('?')[0]==='/'?'index.html':req.url.split('?')[0].slice(1);
   if(name==='assets/backgrounds/night_sky_background.webp'){res.setHeader('Content-Type','image/webp');res.end(fs.readFileSync(path.join(root,name)));return}
-  if(!['text-highlights.js','index.html','styles.css','app.js'].includes(name)){res.writeHead(404).end();return}
+  if(!['canvas-recovery.js','text-highlights.js','index.html','styles.css','app.js'].includes(name)){res.writeHead(404).end();return}
   let body=fs.readFileSync(path.join(root,name),'utf8');
   if(name==='app.js')body=body.replace(/\}\)\(\);\s*$/,'window.__bench={state,zoomPrecise,apply,select};})();');
   res.setHeader('Content-Type',name.endsWith('.js')?'text/javascript':name.endsWith('.css')?'text/css':'text/html');res.end(body);
@@ -50,6 +50,7 @@ Use **clear headings**, short paragraphs, and meaningful labels. Revisit the boa
  await page.addInitScript(background=>localStorage.setItem('reflatex-background',background),process.env.BENCH_BACKGROUND||'light');
  await page.addInitScript(dark=>{localStorage.setItem('reflatex-index-open','false');localStorage.setItem('reflatex-theme',dark?'dark':'light')},dark);
   await page.goto(`http://127.0.0.1:${server.address().port}`,{waitUntil:'networkidle'});
+  await page.evaluate(()=>window.conceptcardsReady);
  if(process.env.BENCH_STYLE)await page.addStyleTag({content:fs.readFileSync(process.env.BENCH_STYLE,'utf8')});
  if(!layers)await page.addStyleTag({content:'#world{will-change:auto!important}'});
  if(process.env.BENCH_OVERVIEW==='true'){await page.locator('#arrange').click();await page.waitForTimeout(400)}

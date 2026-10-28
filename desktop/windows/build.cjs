@@ -11,7 +11,7 @@ function write(file,text){fs.mkdirSync(path.dirname(file),{recursive:true});fs.w
 function localize(text){for(const [url,file] of Object.entries(manifest))text=text.split(url).join('https://conceptcards.local/'+file);return text}
 (async()=>{
  fs.mkdirSync(renderer,{recursive:true});
- for(const name of ['index.html','app.js','styles.css','canvas-files.js','text-highlights.js','card-pdf.js','village.js','favicon.svg']){
+ for(const name of ['index.html','app.js','styles.css','canvas-files.js','canvas-recovery.js','text-highlights.js','card-pdf.js','village.js','favicon.svg']){
   let content=read(path.join(root,name));
   if(name==='index.html'||name==='app.js')content=content.replace(/<link rel="preconnect"[^>]*>\r?\n?/g,'');
   if(name==='app.js'){

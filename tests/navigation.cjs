@@ -8,7 +8,7 @@ const root=path.resolve(__dirname,'..');
 (async()=>{
  const server=http.createServer((req,res)=>{
   const name=req.url==='/'?'index.html':req.url.slice(1);
-  if(!['text-highlights.js','index.html','app.js','styles.css','favicon.svg'].includes(name)){res.writeHead(404).end();return}
+  if(!['canvas-recovery.js','text-highlights.js','index.html','app.js','styles.css','favicon.svg'].includes(name)){res.writeHead(404).end();return}
   let body=fs.readFileSync(path.join(root,name),'utf8');
   if(name==='app.js')body=body.replace(/\}\)\(\);\s*$/, 'window.__test={state,zoomPrecise,worldPoint,moveTo,layoutCards,setCameraImmediate,interruptCamera};})();');
   res.setHeader('Content-Type',name.endsWith('.js')?'text/javascript':name.endsWith('.css')?'text/css':'text/html');res.end(body);
@@ -26,6 +26,7 @@ const root=path.resolve(__dirname,'..');
   await page.addInitScript(()=>localStorage.setItem('reflatex',JSON.stringify({x:640,y:400,scale:1,notes:Array.from({length:150},(_,i)=>({id:i+1,md:'# Card '+i+'\n\nReadable text '.repeat(20),x:(i%10)*700,y:Math.floor(i/10)*500,w:600,font:'sans'}))})));
   await page.addInitScript(()=>localStorage.setItem('reflatex-index-open','false'));
   await page.goto(`http://127.0.0.1:${server.address().port}`,{waitUntil:'networkidle'});
+  await page.evaluate(()=>window.conceptcardsReady);
   assert.equal(await page.evaluate(()=>__test.state.hand),false,'Scroll mode is the default');
   const pageOrigin=await page.evaluate(()=>__test.state.targetY);
   await page.evaluate(()=>document.activeElement?.blur());
@@ -131,8 +132,8 @@ const root=path.resolve(__dirname,'..');
   await page.evaluate(()=>{
    __test.zoomPrecise(.75/__test.state.scale);
    window.__dragSaves=0;
-   const original=Storage.prototype.setItem;
-   Storage.prototype.setItem=function(key,value){if(key==='reflatex')window.__dragSaves++;return original.call(this,key,value)};
+   const original=IDBObjectStore.prototype.put;
+   IDBObjectStore.prototype.put=function(...args){if(this.name==='canvas')window.__dragSaves++;return original.apply(this,args)};
   });
   await page.mouse.move(700,350);
   const dragStart=await page.evaluate(()=>({x:__test.state.x,y:__test.state.y}));

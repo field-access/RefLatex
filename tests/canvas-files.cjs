@@ -4,7 +4,7 @@ const root=path.resolve(__dirname,'..');
 (async()=>{
  const server=http.createServer((req,res)=>{
   const name=req.url.split('?')[0]==='/'?'index.html':req.url.split('?')[0].slice(1);
-  if(!['index.html','app.js','styles.css','text-highlights.js','canvas-files.js','favicon.svg'].includes(name)){res.writeHead(404).end();return}
+  if(!['index.html','app.js','styles.css','canvas-recovery.js','text-highlights.js','canvas-files.js','favicon.svg'].includes(name)){res.writeHead(404).end();return}
   let body=fs.readFileSync(path.join(root,name),'utf8');
   if(name==='app.js')body=body.replace(/\}\)\(\);\s*$/,'window.__filesTest={state,save,makeNote,canvasFiles,editNote,closeEditor,hasUnsavedCanvasWork};})();');
   res.setHeader('Content-Type',name.endsWith('.js')?'text/javascript':name.endsWith('.css')?'text/css':'text/html');res.end(body);
@@ -28,6 +28,7 @@ const root=path.resolve(__dirname,'..');
     getFile:async()=>new File([JSON.stringify({notes:[{markdown:'# '+name.replace('.json',''),width:600}]})],name,{type:'application/json'})});
   });
   await page.goto(`http://127.0.0.1:${server.address().port}`,{waitUntil:'networkidle'});
+  await page.evaluate(()=>window.conceptcardsReady);
   await page.evaluate(()=>__filesTest.canvasFiles.ready);
   assert.equal(await page.locator('#canvasSaveMenu').count(),0);
   assert.equal(await page.evaluate(()=>localStorage.getItem('reflatex-active-file')),null);
