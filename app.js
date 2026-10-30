@@ -18,6 +18,22 @@ try{
  if(Number.isFinite(saved.pinch))navigation.pinch=Math.max(.25,Math.min(3,saved.pinch));
  if(Number.isFinite(saved.step))navigation.step=saved.step>1.35?1.2:Math.max(1.05,saved.step);
 }catch{}
+// Browsers also set ctrlKey on touchpad pinch events. Track the physical key
+// once per window so Ctrl + wheel keeps the configured wheel sensitivity.
+function createWheelInputState(){
+ const input={ctrlHeld:false};
+ const key=e=>{input.ctrlHeld=e.key==="Control"?e.type==="keydown":e.ctrlKey};
+ window.addEventListener("keydown",key,true);
+ window.addEventListener("keyup",key,true);
+ window.addEventListener("blur",()=>{input.ctrlHeld=false});
+ return input;
+}
+const wheelInput=createWheelInputState();
+function isTouchpadPinch(e){return e.ctrlKey&&e.deltaMode===0&&!wheelInput.ctrlHeld}
+function wheelZoomSensitivity(e,settings){
+ const pinch=isTouchpadPinch(e),value=Number(settings[pinch?"pinch":"wheel"])||1;
+ return Math.max(pinch?.25:.5,Math.min(pinch?3:1.5,value));
+}
 const zoomLabel=$("#zoomLabel");
 let lastZoomLabel="";
 let cameraInputFrame=0,indexFrame=0,wheelScrollTimer=0;
@@ -28,7 +44,7 @@ let cardVisibility=null,overviewRendering=false,overviewCullingPaused=false;
 if(window.IntersectionObserver){
  cardVisibility=new IntersectionObserver(entries=>{
   if(overviewCullingPaused)return;
-  for(const {target,isIntersecting} of entries)target.classList.toggle('offscreen',!isIntersecting);
+  for(const {target,isIntersecting} of entries)target.classList.toggle('offscreen',!isIntersecting&&!target.classList.contains('selected'));
  },{root:canvas,rootMargin:'400px'});
  new MutationObserver(records=>{
   for(const record of records){
@@ -219,7 +235,7 @@ function setButtonIcon(button,name,label){
 }
 // Native hover help stays local to the hovered control; no canvas scans or repaint work.
 const BUTTON_HELP={
- closeGlobalSettings:'Close settings (Esc)',actualSize:'Reset canvas zoom to 100%',fitView:'Fit layout overview (C)',
+ settings:'Global settings (Ctrl/⌘+,)',closeGlobalSettings:'Close settings (Esc)',actualSize:'Reset canvas zoom to 100%',fitView:'Fit layout overview (C)',
  newBlankCanvas:'Start a new blank canvas',openCanvasFile:'Choose a canvas JSON file',
  cancel:'Cancel editing (Esc)',applyCard:'Place or apply Markdown card (Ctrl/⌘+Enter)',applyMap:'Place or apply Markmap (Ctrl/⌘+Enter)',
  edit:'Edit card (E)',duplicate:'Duplicate card (Ctrl/⌘+D)',copy:'Copy Markdown source',remove:'Delete card (Delete)',
@@ -290,7 +306,7 @@ function setCardActionIcons(el,type){
  el.querySelector('[data-size]').title='Text size (1–9, 0); 4 restores 80%';
  el.querySelector('.resize.right').title='Drag to resize width ([ / ] also resize)';
 }
-const LEGACY_MAP_FONTS={modern:"dm-sans",editorial:"lora",geometric:"comfortaa",humanist:"nunito",mono:"mono",rounded:"quicksand",handwritten:"hand-patrick"};
+const LEGACY_MAP_FONTS={modern:"dm-sans",editorial:"lora",geometric:"poppins",humanist:"nunito",mono:"mono",rounded:"nunito",handwritten:"hand-patrick"};
 const MAP_PALETTES={
  default:["#5b57b7","#7c78c8","#9b98d8","#bbb9e8","#d5d3f2"],
  purple:["#6846b5","#825fca","#a07fdb","#bca4e8","#d9c9f3"],
@@ -301,67 +317,91 @@ const MAP_PALETTES={
  slate:["#475569","#5c6b7d","#788697","#9ba7b2","#c1c8ce"]
 };
 const CARD_FONT_GROUPS=[
- ["Monospace",[
-  ["mono","Mono"],["mono-code","JetBrains Mono"],["mono-fira","Fira Code"],["mono-courier","Courier Prime"],
-  ["mono-dm","DM Mono"],["mono-victor","Victor Mono"]
- ]],
- ["Sans serif",[
-  ["dm-sans","DM Sans"],["poppins","Poppins"],["raleway","Raleway"],
-  ["nunito","Nunito"],["quicksand","Quicksand"],["league-spartan","League Spartan"]
- ]],
- ["Serif",[
-  ["slab","Roboto Slab"],["lora","Lora"],
-  ["alegreya","Alegreya"],["cormorant","Cormorant Garamond"],["fraunces","Fraunces"],
-  ["bodoni","Bodoni Moda"]
- ]],
- ["Rounded",[["comfortaa","Comfortaa"],["fredoka","Fredoka"],["varela-round","Varela Round"]]],
- ["Handwritten",[
-  ["comic-sans","Comic Sans"],
-  ["comic-neue","Comic Neue"],["coming-soon","Coming Soon"],["itim","Itim"],
-  ["hand-kalam","Kalam"],["hand-patrick","Patrick Hand"],
-
- ]]
+ ["Sans serif",[["dm-sans","DM Sans"],["poppins","Poppins"],["nunito","Nunito"]]],
+ ["Serif",[["lora","Lora"],["alegreya","Alegreya"],["slab","Roboto Slab"]]],
+ ["Monospace",[["mono","System Mono"],["mono-code","JetBrains Mono"],["mono-fira","Fira Code"],["mono-cascadia-code","Cascadia Code"]]],
+ ["Handwritten",[["comic-sans","Comic Sans"],["comic-neue","Comic Neue"],["coming-soon","Coming Soon"],["itim","Itim"],["hand-kalam","Kalam"],["hand-patrick","Patrick Hand"]]]
 ];
 const CARD_FONTS=CARD_FONT_GROUPS.flatMap(([,fonts])=>fonts);
 const MAP_FONTS=CARD_FONTS.map(([value])=>value);
 let defaultFontPreference="poppins";
 function newCardFont(){return defaultFontPreference}
+let defaultThemePreference='random';
+function newCardTheme(){return validCardColor(defaultThemePreference)?defaultThemePreference:randomCardTheme()}
+const CODE_FONTS=[
+ ['mono','System Mono','ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace'],
+ ['mono-code','JetBrains Mono','"JetBrains Mono",Consolas,ui-monospace,monospace'],
+ ['mono-fira','Fira Code','"Fira Code",Consolas,ui-monospace,monospace'],
+ ['mono-cascadia-code','Cascadia Code','"Cascadia Code",Consolas,ui-monospace,monospace'],
+ ['code-roboto','Roboto Mono','"Roboto Mono",Consolas,ui-monospace,monospace'],
+ ['code-source','Source Code Pro','"Source Code Pro",Consolas,ui-monospace,monospace'],
+ ['code-ibm','IBM Plex Mono','"IBM Plex Mono",Consolas,ui-monospace,monospace']
+];
+function normalizeCodeFont(font){const value=font==='mono-cascadia'?'mono-cascadia-code':font;return CODE_FONTS.some(([key])=>key===value)?value:'mono'}
+function codeFontStack(font=codeFontPreference){return CODE_FONTS.find(([key])=>key===normalizeCodeFont(font))[2]}
+let codeFontPreference='mono';
+try{codeFontPreference=normalizeCodeFont(localStorage.getItem('reflatex-code-font'))}catch{}
+const READING_RULES={
+ fontWeight:{value:400,min:300,max:600,step:100,css:'--reading-font-weight',unit:''},
+ headingWeight:{value:700,min:500,max:700,step:100,css:'--reading-heading-weight',unit:''},
+ letterSpacing:{value:0,min:-.03,max:.08,step:.005,css:'--reading-letter-spacing',unit:'em'},
+ lineHeight:{value:1.5,min:1.25,max:1.9,step:.05,css:'--reading-line-height',unit:''},
+ paragraphGap:{value:.6,min:.25,max:1.2,step:.05,css:'--reading-paragraph-gap',unit:'em'},
+ sectionGap:{value:.95,min:.5,max:1.5,step:.05,css:'--reading-section-gap',unit:''},
+ codeLineHeight:{value:1.5,min:1.25,max:1.9,step:.05,css:'--reading-code-line-height',unit:''},
+ mapLineWeight:{value:1,min:.5,max:1.8,step:.1,css:'--map-line-weight',unit:''}
+};
+const readingStyle=Object.fromEntries(Object.entries(READING_RULES).map(([key,rule])=>[key,rule.value]));
+function normalizeReadingValue(key,value){
+ const rule=READING_RULES[key],number=Number(value);
+ if(!Number.isFinite(number))return rule.value;
+ return Number((Math.round(Math.max(rule.min,Math.min(rule.max,number))/rule.step)*rule.step).toFixed(3));
+}
+try{
+ const saved=JSON.parse(localStorage.getItem('reflatex-reading')||'{}');
+ for(const key of Object.keys(READING_RULES))if(saved[key]!=null)readingStyle[key]=normalizeReadingValue(key,saved[key]);
+}catch{}
+function readingStyleText(){return Object.entries(READING_RULES).map(([key,rule])=>`${rule.css}:${readingStyle[key]}${rule.unit}`).join(';')+`;--code-font-family:${codeFontStack()}`}
+function applyReadingStyles(){
+ for(const [key,rule] of Object.entries(READING_RULES)){
+  const value=readingStyle[key]+rule.unit;
+  if(document.documentElement.style.getPropertyValue(rule.css)!==value)document.documentElement.style.setProperty(rule.css,value);
+ }
+}
+applyReadingStyles();
+// Old canvases keep a readable equivalent when a decorative font is retired.
 const LEGACY_CARD_FONTS={
+ "mono-cascadia":"mono-cascadia-code",
  cinzel:"poppins","mono-typewriter":"mono","mono-azeret":"mono",
  sans:"dm-sans","josefin-sans":"nunito","editorial-serif":"lora","bebas-neue":"poppins",
  "dancing-script":"hand-patrick",sacramento:"hand-patrick",satisfy:"comic-sans","marck-script":"hand-patrick",
  hand:"hand-patrick",caveat:"hand-patrick","hand-caveat":"hand-patrick","hand-script":"hand-patrick",
  "hand-soft":"hand-patrick","hand-bold":"hand-kalam","hand-marker":"hand-kalam",
  "mono-terminal":"mono","mono-inconsolata":"mono-fira","mono-roboto":"mono-code","mono-source":"mono-code","mono-ubuntu":"mono",
+ "mono-courier":"mono","mono-dm":"mono","mono-victor":"mono-fira",
  serif:"lora",editorial:"lora",humanist:"nunito",maiandra:"nunito",inter:"dm-sans",
- "nunito-sans":"nunito",manrope:"dm-sans","space-grotesk":"league-spartan",outfit:"poppins",rubik:"dm-sans",archivo:"dm-sans",rounded:"quicksand",
- montserrat:"dm-sans",playfair:"fraunces",merriweather:"lora",
- oswald:"league-spartan","dm-serif-display":"fraunces",anton:"poppins",shrikhand:"poppins","abril-fatface":"poppins"
+ "nunito-sans":"nunito",manrope:"dm-sans","space-grotesk":"dm-sans",outfit:"poppins",rubik:"dm-sans",archivo:"dm-sans",rounded:"nunito",
+ raleway:"dm-sans",quicksand:"nunito","league-spartan":"dm-sans",comfortaa:"nunito",fredoka:"nunito","varela-round":"nunito",
+ cormorant:"lora",fraunces:"lora",bodoni:"lora",montserrat:"dm-sans",playfair:"lora",merriweather:"lora",
+ oswald:"dm-sans","dm-serif-display":"lora",anton:"poppins",shrikhand:"poppins","abril-fatface":"poppins"
 };
-
 const GOOGLE_FONT_SPECS={
- "mono-code":["JetBrains+Mono","wght@400;500;600"],
- "mono-fira":["Fira+Code","wght@400;500;600"],"mono-courier":["Courier+Prime","wght@400;700"],
- "mono-dm":["DM+Mono","wght@400;500"],"mono-victor":["Victor+Mono","wght@400;500;600"],
- "dm-sans":["DM+Sans","wght@400;500;600;700"],poppins:["Poppins","wght@400;500;600;700"],
- raleway:["Raleway","wght@400;500;600;700"],"josefin-sans":["Josefin+Sans","wght@400;500;600;700"],nunito:["Nunito","wght@400;500;600;700"],
- quicksand:["Quicksand","wght@400;500;600;700"],"league-spartan":["League+Spartan","wght@400;500;600;700"],
- slab:["Roboto+Slab","wght@400;500;600;700"],lora:["Lora","wght@400;500;600;700"],
- alegreya:["Alegreya","wght@400;500;600;700"],cormorant:["Cormorant+Garamond","wght@400;500;600;700"],
- fraunces:["Fraunces","wght@400;500;600;700"],bodoni:["Bodoni+Moda","wght@400;500;600;700"],
- comfortaa:["Comfortaa","wght@400;500;600;700"],fredoka:["Fredoka","wght@400;500;600;700"],"varela-round":["Varela+Round","wght@400"],
- "bebas-neue":["Bebas+Neue","wght@400"],
- "comic-neue":["Comic+Neue","wght@400;700"],"coming-soon":["Coming+Soon","wght@400"],itim:["Itim","wght@400"],
- "hand-kalam":["Kalam","wght@300;400;700"],"hand-patrick":["Patrick+Hand","wght@400"],"dancing-script":["Dancing+Script","wght@400;500;600;700"],
- sacramento:["Sacramento","wght@400"],satisfy:["Satisfy","wght@400"],"marck-script":["Marck+Script","wght@400"]
+ "mono-cascadia-code":["Cascadia+Code","wght@300;400;500;600;700"],
+ "code-roboto":["Roboto+Mono","wght@400"],"code-source":["Source+Code+Pro","wght@400"],"code-ibm":["IBM+Plex+Mono","wght@400"],
+ "mono-code":["JetBrains+Mono","wght@300;400;500;600;700"],"mono-fira":["Fira+Code","wght@300;400;500;600;700"],
+ "dm-sans":["DM+Sans","wght@300;400;500;600;700"],poppins:["Poppins","wght@300;400;500;600;700"],nunito:["Nunito","wght@300;400;500;600;700"],
+ slab:["Roboto+Slab","wght@300;400;500;600;700"],lora:["Lora","wght@400;500;600;700"],alegreya:["Alegreya","wght@400;500;600;700"],
+ "comic-neue":["Comic+Neue","wght@300;400;700"],"coming-soon":["Coming+Soon","wght@400"],itim:["Itim","wght@400"],
+ "hand-kalam":["Kalam","wght@300;400;700"],"hand-patrick":["Patrick+Hand","wght@400"]
 };
 function googleFontStylesheetUrl(font){
- const key=normalizeCardFont(font),spec=GOOGLE_FONT_SPECS[key];
+ const key=fontResourceKey(font),spec=GOOGLE_FONT_SPECS[key];
  return spec?`https://fonts.googleapis.com/css2?family=${spec[0]}:${spec[1]}&display=swap`:"";
 }
+function fontResourceKey(font){return CODE_FONTS.some(([key])=>key===font)?font:normalizeCardFont(font)}
 const cardFontLoads=new Map();
 function ensureFontLoaded(font){
- const key=normalizeCardFont(font),href=googleFontStylesheetUrl(key);
+ const key=fontResourceKey(font),href=googleFontStylesheetUrl(key);
  if(!href)return Promise.resolve();
  if(cardFontLoads.has(key))return cardFontLoads.get(key);
  const link=document.createElement("link");
@@ -369,7 +409,7 @@ function ensureFontLoaded(font){
  const loaded=new Promise(resolve=>{
   link.onload=async()=>{
    try{
-    const family=mapFontStack(key).split(",")[0];
+    const family=(CODE_FONTS.some(([value])=>value===key)?codeFontStack(key):mapFontStack(key)).split(",")[0];
     await Promise.all([document.fonts.load(`400 18px ${family}`),document.fonts.load(`700 28px ${family}`)]);
    }catch{}
    resolve();
@@ -399,20 +439,15 @@ function createCardFontGroups(){
 function mapFontStack(font){
  const stacks={
   mono:'ui-monospace,SFMono-Regular,Consolas,monospace',
-  "mono-code":'"JetBrains Mono","Cascadia Code","Fira Code",Consolas,ui-monospace,monospace',"mono-fira":'"Fira Code",ui-monospace,monospace',"mono-courier":'"Courier Prime","Courier New",Courier,monospace',
-  "mono-dm":'"DM Mono",ui-monospace,monospace',"mono-victor":'"Victor Mono",ui-monospace,monospace',
-  sans:'ui-sans-serif,system-ui,sans-serif',"dm-sans":'"DM Sans",ui-sans-serif,system-ui,sans-serif',poppins:'"Poppins",ui-sans-serif,system-ui,sans-serif',
-  comfortaa:'"Comfortaa",ui-sans-serif,system-ui,sans-serif',fredoka:'"Fredoka",ui-sans-serif,system-ui,sans-serif',"varela-round":'"Varela Round",ui-sans-serif,system-ui,sans-serif',
-  raleway:'"Raleway",ui-sans-serif,system-ui,sans-serif',"josefin-sans":'"Josefin Sans",ui-sans-serif,system-ui,sans-serif',
-  nunito:'"Nunito",ui-sans-serif,system-ui,sans-serif',quicksand:'"Quicksand",ui-sans-serif,system-ui,sans-serif',"league-spartan":'"League Spartan",ui-sans-serif,system-ui,sans-serif',
-  slab:'"Roboto Slab",Georgia,serif',"editorial-serif":'Cambria,Georgia,"Times New Roman",serif',
-  lora:'"Lora",Georgia,serif',alegreya:'"Alegreya",Georgia,serif',
-  cormorant:'"Cormorant Garamond",Georgia,serif',fraunces:'"Fraunces",Georgia,serif',bodoni:'"Bodoni Moda",Georgia,serif',
-  "bebas-neue":'"Bebas Neue",Impact,sans-serif',
-  "comic-sans":'"Comic Sans MS","Comic Sans",cursive',
-  "comic-neue":'"Comic Neue","Comic Sans MS",cursive',"coming-soon":'"Coming Soon","Comic Sans MS",cursive',itim:'"Itim","Comic Sans MS",cursive',
-  "hand-kalam":'"Kalam",cursive',"hand-patrick":'"Patrick Hand",cursive',"dancing-script":'"Dancing Script",cursive',
-  sacramento:'"Sacramento",cursive',satisfy:'"Satisfy",cursive',"marck-script":'"Marck Script",cursive',
+  "mono-code":'"JetBrains Mono","Cascadia Code","Fira Code",Consolas,ui-monospace,monospace',
+  "mono-fira":'"Fira Code",ui-monospace,Consolas,monospace',
+  "mono-cascadia-code":'"Cascadia Code",Consolas,ui-monospace,monospace',
+  "dm-sans":'"DM Sans",ui-sans-serif,system-ui,sans-serif',poppins:'"Poppins",ui-sans-serif,system-ui,sans-serif',
+  nunito:'"Nunito",ui-sans-serif,system-ui,sans-serif',
+  slab:'"Roboto Slab",Georgia,serif',lora:'"Lora",Georgia,serif',alegreya:'"Alegreya",Georgia,serif',
+  "comic-sans":'"Comic Sans MS","Comic Sans",cursive',"comic-neue":'"Comic Neue","Comic Sans MS",cursive',
+  "coming-soon":'"Coming Soon","Comic Sans MS",cursive',itim:'"Itim","Comic Sans MS",cursive',
+  "hand-kalam":'"Kalam",cursive',"hand-patrick":'"Patrick Hand",cursive'
  };
  return stacks[normalizeMapFont(font)]||stacks["dm-sans"];
 }
@@ -602,15 +637,76 @@ defaultCardFont.addEventListener("change",()=>{
  try{localStorage.setItem("reflatex-default-font",defaultFontPreference)}catch{}
  ensureFontLoaded(defaultFontPreference);
 });
+const defaultCardTheme=$("#defaultCardTheme"),defaultCardThemeColor=$("#defaultCardThemeColor");
+try{const saved=localStorage.getItem('reflatex-default-theme');if(validCardColor(saved)||saved==='random')defaultThemePreference=saved}catch{}
+function refreshDefaultTheme(){
+ const custom=/^#[0-9a-f]{6}$/i.test(defaultThemePreference);
+ defaultCardTheme.value=custom?'custom':defaultThemePreference;
+ defaultCardThemeColor.closest('label').hidden=!custom;
+ if(custom)defaultCardThemeColor.value=defaultThemePreference;
+}
+function saveDefaultTheme(){
+ refreshDefaultTheme();
+ try{localStorage.setItem('reflatex-default-theme',defaultThemePreference)}catch{}
+}
+refreshDefaultTheme();
+defaultCardTheme.addEventListener('change',()=>{
+ defaultThemePreference=defaultCardTheme.value==='custom'?defaultCardThemeColor.value:defaultCardTheme.value;saveDefaultTheme();
+});
+defaultCardThemeColor.addEventListener('input',()=>{defaultThemePreference=defaultCardThemeColor.value;saveDefaultTheme()});
+const codeBlockFont=$("#codeBlockFont");
+codeBlockFont.replaceChildren(...CODE_FONTS.map(([value,name])=>new Option(name,value)));
+codeBlockFont.value=codeFontPreference;
+function applyCodeFont(){
+ document.documentElement.style.setProperty('--code-font-family',codeFontStack());
+ ensureFontLoaded(codeFontPreference);
+}
+applyCodeFont();
+codeBlockFont.addEventListener('change',()=>{
+ codeFontPreference=normalizeCodeFont(codeBlockFont.value);applyCodeFont();readingSession.rows=[];
+ try{localStorage.setItem('reflatex-code-font',codeFontPreference)}catch{}
+});
+let readingStyleFrame=0;
+const readingControls=new Map();
+function queueReadingStyle(){
+ if(readingStyleFrame)return;
+ readingStyleFrame=requestAnimationFrame(()=>{
+  readingStyleFrame=0;applyReadingStyles();readingSession.rows=[];
+ });
+}
+function saveReadingStyle(){try{localStorage.setItem('reflatex-reading',JSON.stringify(readingStyle))}catch{}}
+function refreshReadingControls(){
+ for(const [key,{control,output}] of readingControls){
+  control.value=readingStyle[key];
+  if(output)output.textContent=key==='letterSpacing'?`${readingStyle[key]>0?'+':''}${readingStyle[key]}em`:key==='paragraphGap'||key==='sectionGap'?readingStyle[key]+'em':key==='mapLineWeight'?readingStyle[key]+'×':String(readingStyle[key]);
+ }
+}
+for(const control of globalSettings.querySelectorAll('[data-reading]')){
+ const key=control.dataset.reading,output=globalSettings.querySelector(`[data-reading-value="${key}"]`);
+ readingControls.set(key,{control,output});
+ const update=e=>{
+  readingStyle[key]=normalizeReadingValue(key,control.value);refreshReadingControls();queueReadingStyle();
+  if(e.type==='change')saveReadingStyle();
+ };
+ control.addEventListener('input',update);control.addEventListener('change',update);
+}
+refreshReadingControls();
+$('#resetReadingStyle').onclick=()=>{
+ for(const [key,rule] of Object.entries(READING_RULES))readingStyle[key]=rule.value;
+ codeFontPreference='mono';codeBlockFont.value=codeFontPreference;applyCodeFont();
+ try{localStorage.removeItem('reflatex-code-font')}catch{}
+ refreshReadingControls();queueReadingStyle();saveReadingStyle();
+};
 function closeGlobalSettings(){
  globalSettings.hidden=true;settingsButton.setAttribute("aria-expanded","false");
  settingsButton.focus({preventScroll:true});showControls();
 }
-settingsButton.onclick=()=>{
+function toggleGlobalSettings(){
  if(!globalSettings.hidden){closeGlobalSettings();return}
  closeCardMenu();globalSettings.hidden=false;settingsButton.setAttribute("aria-expanded","true");
- showControls();defaultCardFont.focus({preventScroll:true});
-};
+ showControls();($("#defaultSettings").open?defaultCardFont:$("#defaultSettings summary")).focus({preventScroll:true});
+}
+settingsButton.onclick=toggleGlobalSettings;
 $("#closeGlobalSettings").onclick=closeGlobalSettings;
 document.addEventListener("pointerdown",e=>{
  if(!globalSettings.hidden&&!globalSettings.contains(e.target)&&!settingsButton.contains(e.target))closeGlobalSettings();
@@ -1187,6 +1283,18 @@ function mapViewportSize(){
  };
 }
 const PEN_PAN_GAIN=1.7;
+function enableMapLineWeights(svg,map){
+ const setData=map.setData;
+ if(!setData)return;
+ map.setData=async function(...args){
+  const result=await setData.apply(this,args);
+  for(const line of svg.querySelectorAll('.markmap-link,.markmap-node line')){
+   const node=line.__data__?.target||line.__data__,depth=node?.state?.depth||0;
+   line.style.setProperty('--branch-stroke',(depth===1?3.6:depth===2?2.25:1.55)+'px');
+  }
+  return result;
+ };
+}
 // Keep D3 gesture bookkeeping immediate, but paint the latest SVG transform
 // once per frame instead of redrawing rich map content for every input event.
 function enableMapCameraFrames(svg,map,settings={drag:1}){
@@ -1194,7 +1302,7 @@ function enableMapCameraFrames(svg,map,settings={drag:1}){
  if(!paint)return;
  zoom.wheelDelta?.(e=>{
   const unit=e.deltaMode===1?.05:e.deltaMode===2?1:.002;
-  const sensitivity=e.ctrlKey?Math.max(.25,Math.min(3,Number(settings.pinch)||1)):Math.max(.5,Math.min(1.5,Number(settings.wheel)||1));
+  const sensitivity=wheelZoomSensitivity(e,settings);
   return Math.max(-4,Math.min(4,-e.deltaY*unit*2.2*sensitivity));
  });
  let frame=0,pending=null,dragOrigin=null;
@@ -1253,7 +1361,7 @@ function enablePenMapWheel(pane,svg,map){
   }
   const point=window.d3?.pointer?.({clientX,clientY},svg)||[rect.width/2,rect.height/2];
   const unit=e.deltaMode===1?0.05:e.deltaMode===2?1:0.002;
-  const exponent=-e.deltaY*unit*(e.ctrlKey?navigation.pinch:navigation.wheel)*2.2;
+  const exponent=-e.deltaY*unit*wheelZoomSensitivity(e,navigation)*2.2;
   if(!Number.isFinite(exponent)||!window.d3||!map.zoom?.scaleBy)return;
   window.d3.select(svg).call(map.zoom.scaleBy,2**Math.max(-4,Math.min(4,exponent)),point);
  },{capture:true,passive:false});
@@ -1372,6 +1480,7 @@ async function renderMap(n){
   // Disable Markmap's implicit setData fit so there is only one initial transform.
   options.autoFit=false;
   const map=window.markmap.Markmap.create(svg,options);
+  enableMapLineWeights(svg,map);
   n.mapCameraCleanup=enableMapCameraFrames(svg,map,navigation);
   const defaultZoomFilter=map.zoom?.filter?.();
   if(defaultZoomFilter)map.zoom.filter(function(event){
@@ -1597,7 +1706,7 @@ function queueWheelZoom(exponent,cx,cy,smooth){
 function canvasWheelExponent(e){
  // Same logarithmic mapping as D3, with twice its default mouse gain.
  const unit=e.deltaMode===1?.05:e.deltaMode===2?1:.002;
- return Math.max(-2,Math.min(2,-e.deltaY*unit*2*(e.ctrlKey?navigation.pinch:navigation.wheel)));
+ return Math.max(-2,Math.min(2,-e.deltaY*unit*2*wheelZoomSensitivity(e,navigation)));
 }
 function moveTo(x,y,s=state.targetScale,readingFocus=false){
  if(!Number.isFinite(x)||!Number.isFinite(y)||!Number.isFinite(s))return;
@@ -1627,8 +1736,8 @@ function restore(s){
  state.layoutMode=d.layoutMode==='reading'?'reading':'compact';state.overviewActive=d.overviewActive===true;
  state.notes.forEach(disposeCard);state.notes=[];state.selected=null;
  (d.notes||[]).forEach(n=>n.type==="map"
-  ? makeMap(n.md,n.x,n.y,n.w,n.h,false,n.id,n.mapColor,n.mapFont,n.size,n.highlights,n.sourceName,n.createdAt??null)
-  : makeNote(n.md,n.x,n.y,n.w,false,n.id,n.font,n.size,n.mapColor,n.mapFont,n.mapWidth,n.mapHeight,n.highlights,n.sourceName,n.createdAt??null));
+  ? makeMap(n.md,n.x,n.y,n.w,n.h,false,n.id,n.mapColor??"default",n.mapFont,n.size,n.highlights,n.sourceName,n.createdAt??null)
+  : makeNote(n.md,n.x,n.y,n.w,false,n.id,n.font,n.size,n.mapColor??"default",n.mapFont,n.mapWidth,n.mapHeight,n.highlights,n.sourceName,n.createdAt??null));
  state.x=Number.isFinite(d.x)?d.x:innerWidth/2;
  state.y=Number.isFinite(d.y)?d.y:innerHeight/2;
  state.scale=clampScale(Number.isFinite(d.scale)?d.scale:1);
@@ -2241,6 +2350,8 @@ function select(n){
  state.selected?.el.classList.remove("selected");
  state.selected=n;if(n){
   cardVisits.delete(n);cardVisits.add(n);
+  // Reveal existing content before selection makes the controls visible.
+  n.el.classList.remove("offscreen");
   n.el.classList.add("selected");
   n.el.querySelectorAll('img').forEach(image=>{if(image.loading==='lazy')image.loading='eager'});
  }
@@ -2346,8 +2457,8 @@ function openCanvasFile(file){
     const x=Number.isFinite(n.x)?n.x:0,y=Number.isFinite(n.y)?n.y:0;
     const width=Number.isFinite(n.width)?n.width:600,id=Number.isFinite(n.id)?n.id:null;
     n.type==="map"
-      ? makeMap(n.markdown,x,y,width,Number.isFinite(n.height)?n.height:640,false,id,n.mapColor,n.mapFont,n.size,n.highlights,n.sourceName,n.createdAt??null)
-      : makeNote(n.markdown,x,y,width,false,id,typeof n.font==="string"?n.font:"mono",n.size,n.mapColor,n.mapFont,n.mapWidth,n.mapHeight,n.highlights,n.sourceName,n.createdAt??null);
+      ? makeMap(n.markdown,x,y,width,Number.isFinite(n.height)?n.height:640,false,id,n.mapColor??"default",n.mapFont,n.size,n.highlights,n.sourceName,n.createdAt??null)
+      : makeNote(n.markdown,x,y,width,false,id,typeof n.font==="string"?n.font:"mono",n.size,n.mapColor??"default",n.mapFont,n.mapWidth,n.mapHeight,n.highlights,n.sourceName,n.createdAt??null);
    });
 
    state.nextId=Number.isFinite(data.nextId)
@@ -2424,7 +2535,7 @@ async function importMarkdownFiles(fileList){
    history();
    const font=newCardFont();
    for(const [i,result] of contents.entries())if(result.status==='fulfilled'){
-    makeNote(result.value,0,0,600,false,null,font,'80',randomCardTheme(),'modern',null,null,[],files[i].name);
+    makeNote(result.value,0,0,600,false,null,font,'80',newCardTheme(),'modern',null,null,[],files[i].name);
    }
    select(state.notes.at(-1));arrange(false,false);
   }
@@ -2442,7 +2553,7 @@ function normalizeCardSize(size){
  if(value==='180')return '160';
  return ['50','60','70','80','90','100','110','125','140','160'].includes(value)?value:'80';
 }
-function makeNote(md,x,y,w=600,record=true,id=null,font=newCardFont(),size="80",mapColor=randomCardTheme(),mapFont="modern",mapWidth=null,mapHeight=null,highlights=[],sourceName='',createdAt=new Date().toISOString()){
+function makeNote(md,x,y,w=600,record=true,id=null,font=newCardFont(),size="80",mapColor=newCardTheme(),mapFont="modern",mapWidth=null,mapHeight=null,highlights=[],sourceName='',createdAt=new Date().toISOString()){
  if(record)history();
  const minWidth=Math.min(300,Math.max(200,innerWidth-24));
  const width=Math.max(minWidth,Math.min(1200,w||600));
@@ -2501,7 +2612,7 @@ const n={id:id??state.nextId++,md,x,y,font:normalizeCardFont(font),size:normaliz
  empty();
  return n;
 }
-function makeMap(md,x,y,w=null,h=null,record=true,id=null,mapColor=randomCardTheme(),mapFont=newCardFont(),size="80",highlights=[],sourceName='',createdAt=new Date().toISOString()){
+function makeMap(md,x,y,w=null,h=null,record=true,id=null,mapColor=newCardTheme(),mapFont=newCardFont(),size="80",highlights=[],sourceName='',createdAt=new Date().toISOString()){
  if(record)history();
  const viewport=mapViewportSize();
  const width=Math.max(Math.min(300,Math.max(200,innerWidth-24)),Math.min(1600,w||viewport.width));
@@ -2752,8 +2863,8 @@ canvas.addEventListener("wheel",e=>{
  if(mapCard?.classList.contains("selected"))return;
  e.preventDefault();
 
- const pinch=e.ctrlKey&&e.deltaMode===0;
- if(pinch||state.hand){
+ const pinch=isTouchpadPinch(e);
+ if(e.ctrlKey||state.hand){
   const kind=pinch?"pinch":"wheel";
   if(!fallbackWheelTimer||wheelZoomKind!==kind||(pinch&&state.raf))interruptCamera();
   wheelZoomKind=kind;
@@ -2941,7 +3052,7 @@ function openEditor(mode="note",n=null){
  state.editId=n?.id??null;
  state.editorMode=mode;
  source.value=n?.md||"";
- setColorPreset($("#mapColor"),n?.mapColor||randomCardTheme());$("#editorCardColor").value=cardColorValue($("#mapColor").value);
+ setColorPreset($("#mapColor"),n?.mapColor||newCardTheme());$("#editorCardColor").value=cardColorValue($("#mapColor").value);
  $("#mapFont").value=normalizeCardFont(n?.font||n?.mapFont||newCardFont());
  syncCardSelect($("#mapColor"));
  syncCardSelect($("#mapFont"));
@@ -2999,13 +3110,13 @@ function openMapTab(n){
   const darkMode=document.body.classList.contains("dark");
   const theme=validCardColor(n.mapColor)?n.mapColor:"default";
   const fontStylesheet=googleFontStylesheetUrl(n.mapFont);
-  const fontLink=fontStylesheet?`<link rel="stylesheet" href="${fontStylesheet}">`:"";
+  const fontLink=[fontStylesheet,googleFontStylesheetUrl(codeFontPreference)].filter((url,i,urls)=>url&&urls.indexOf(url)===i).map(url=>`<link rel="stylesheet" href="${escapeHtml(url)}">`).join("");
   const rainbow=["#e76f51","#f4a261","#e9c46a","#6b9b67","#299c97","#4e7bc5","#a16bb3","#d5668a"];
   const colors=mapBranchPalette(theme);
   const colorPayload=JSON.stringify(colors);
   const highlightPayload=JSON.stringify(n.highlights||[]).replace(/</g,"\\u003c");
   const highlightScript=escapeHtml(new URL("text-highlights.js",location.href).href);
-  const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>${fontLink}<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css"><link rel="stylesheet" href="${stylesheet}"><style>html,body{height:100%;margin:0}.card.map-window{position:fixed;inset:0;width:100%;height:100%;min-width:0;max-width:none;min-height:0;border:0;border-radius:0}.map-window .cardbody{height:100%;padding:0}.map-window .map-pane{height:100%;background:transparent}.map-window .map-pane>svg{width:100%;height:100%}</style></head><body class="${darkMode?"dark":""}"><article class="card map-card map-window" data-map-color="${theme}" data-custom-color="${/^#[0-9a-f]{6}$/i.test(theme)}" data-font="${normalizeCardFont(n.mapFont)}" data-font-size="${size}" style="${customColorStyle(theme)}--card-font-family:${escapeHtml(fontStack)};--map-font-family:${escapeHtml(fontStack)}"><div class="cardbody"><div class="map-pane"><svg id="map"></svg></div></div></article><script src="https://cdn.jsdelivr.net/npm/d3@7"><\/script><script src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18.12"><\/script><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/highlight.min.js"><\/script><script src="${highlightScript}"><\/script><script>const md=${payload};const colors=${colorPayload};const highlights=${highlightPayload};const root=new markmap.Transformer().transform(md).root;const depth=node=>node.state?.depth||0;const svg=document.querySelector("#map");const map=markmap.Markmap.create(svg,{autoFit:false,duration:350,maxWidth:300,spacingHorizontal:82,spacingVertical:15,color:node=>colors[depth(node)%colors.length],lineWidth:node=>depth(node)===1?3.6:depth(node)===2?2.25:1.55,style:id=>"#"+id+" .markmap-link{stroke-linecap:round;stroke-linejoin:round}"});${enableMapCameraFrames.toString()};let mapNavigation={drag:1};try{mapNavigation=JSON.parse(localStorage.getItem("reflatex-navigation")||"{}")}catch{}enableMapCameraFrames(svg,map,mapNavigation);(async()=>{await document.fonts.ready;await map.setData(root);svg.querySelectorAll("pre code").forEach(code=>{if(window.hljs){try{hljs.highlightElement(code)}catch{}}});ConceptTextHighlights.paint(document.querySelector(".map-pane"),highlights);await map.fit()})().catch(error=>{document.querySelector(".map-pane").textContent="Could not render this map: "+error.message});<\/script></body></html>`;
+  const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>${fontLink}<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css"><link rel="stylesheet" href="${stylesheet}"><style>:root{${readingStyleText()}}html,body{height:100%;margin:0}.card.map-window{position:fixed;inset:0;width:100%;height:100%;min-width:0;max-width:none;min-height:0;border:0;border-radius:0}.map-window .cardbody{height:100%;padding:0}.map-window .map-pane{height:100%;background:transparent}.map-window .map-pane>svg{width:100%;height:100%}</style></head><body class="${darkMode?"dark":""}"><article class="card map-card map-window" data-map-color="${theme}" data-custom-color="${/^#[0-9a-f]{6}$/i.test(theme)}" data-font="${normalizeCardFont(n.mapFont)}" data-font-size="${size}" style="${customColorStyle(theme)}--card-font-family:${escapeHtml(fontStack)};--map-font-family:${escapeHtml(fontStack)}"><div class="cardbody"><div class="map-pane"><svg id="map"></svg></div></div></article><script src="https://cdn.jsdelivr.net/npm/d3@7"><\/script><script src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12"><\/script><script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18.12"><\/script><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/highlight.min.js"><\/script><script src="${highlightScript}"><\/script><script>const md=${payload};const colors=${colorPayload};const highlights=${highlightPayload};const root=new markmap.Transformer().transform(md).root;const depth=node=>node.state?.depth||0;const svg=document.querySelector("#map");const map=markmap.Markmap.create(svg,{autoFit:false,duration:350,maxWidth:300,spacingHorizontal:82,spacingVertical:15,color:node=>colors[depth(node)%colors.length],lineWidth:node=>depth(node)===1?3.6:depth(node)===2?2.25:1.55,style:id=>"#"+id+" .markmap-link{stroke-linecap:round;stroke-linejoin:round}"});${enableMapLineWeights.toString()};enableMapLineWeights(svg,map);${createWheelInputState.toString()};const wheelInput=createWheelInputState();${isTouchpadPinch.toString()};${wheelZoomSensitivity.toString()};${enableMapCameraFrames.toString()};let mapNavigation={drag:1};try{mapNavigation=JSON.parse(localStorage.getItem("reflatex-navigation")||"{}")}catch{}enableMapCameraFrames(svg,map,mapNavigation);(async()=>{await document.fonts.ready;await map.setData(root);svg.querySelectorAll("pre code").forEach(code=>{if(window.hljs){try{hljs.highlightElement(code)}catch{}}});ConceptTextHighlights.paint(document.querySelector(".map-pane"),highlights);await map.fit()})().catch(error=>{document.querySelector(".map-pane").textContent="Could not render this map: "+error.message});<\/script></body></html>`;
   const tab=window.open();if(!tab){alert("Allow pop-ups to open this mind map.");return}
   tab.document.write(html);tab.document.close();
 }
@@ -3264,7 +3375,7 @@ async function downloadCardPdf(n){
   await pdfExportLoader;
   await window.downloadConceptCardPdf({
    window:pdfWindow,baseURL:location.href,
-   css:[...document.styleSheets].flatMap(sheet=>{try{return [...sheet.cssRules].map(rule=>rule.cssText)}catch{return []}}).join("\n"),
+   css:[...document.styleSheets].flatMap(sheet=>{try{return [...sheet.cssRules].map(rule=>rule.cssText)}catch{return []}}).join("\n")+`\n:root{${readingStyleText()}}`,
    stylesheets:[...new Set([
     new URL("styles.css",location.href).href,
     ...[...document.querySelectorAll('link[rel="stylesheet"]')].filter(link=>link.hasAttribute("data-ui-fonts")||link.href.includes("katex.min.css")).map(link=>link.href),
@@ -3432,7 +3543,7 @@ function openCardTab(n){
  const font=normalizeCardFont(n.type==="map"?n.mapFont:n.font);
  const fontStack=mapFontStack(font);
  const fontStylesheet=googleFontStylesheetUrl(font);
- const fontLink=fontStylesheet?`<link rel="stylesheet" href="${escapeHtml(fontStylesheet)}">`:"";
+ const fontLink=[fontStylesheet,googleFontStylesheetUrl(codeFontPreference)].filter((url,i,urls)=>url&&urls.indexOf(url)===i).map(url=>`<link rel="stylesheet" href="${escapeHtml(url)}">`).join("");
  const size=normalizeCardSize(n.size);
  const stylesheet=escapeHtml(new URL("styles.css",location.href).href);
  const supportingStyles=[...document.querySelectorAll('link[rel="stylesheet"]')]
@@ -3440,7 +3551,7 @@ function openCardTab(n){
   .map(link=>`<link rel="stylesheet" href="${escapeHtml(link.href)}">`).join("");
  const dark=document.body.classList.contains("dark");
  const width=Math.max(300,Math.min(1600,n.el.offsetWidth||600));
- const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="stylesheet" href="${stylesheet}">${supportingStyles}${fontLink}<style>html,body{height:auto;min-height:100%;margin:0}html{overflow-x:hidden;overflow-y:auto}body{min-height:100vh;display:grid;align-items:start;justify-items:center;padding:24px;box-sizing:border-box;overflow:visible;background:var(--canvas);color:var(--ink)}.card.card-window{min-width:0;position:relative;left:auto;top:auto;width:min(${width}px,calc(100vw - 48px));max-width:100%;max-height:none;overflow:visible;box-sizing:border-box}.card-window .cardbar{cursor:default}.card-window .cardactions,.card-window .resize{display:none!important}.card-window .cardbody{height:auto;max-height:none;overflow:visible}@media(max-width:600px){body{padding:12px}.card.card-window{width:100%}}</style></head><body class="${dark?"dark":""}"><article class="card card-window${heading?" has-title":""}" data-map-color="${theme}" data-custom-color="${/^#[0-9a-f]{6}$/i.test(theme)}" data-font="${font}" data-font-size="${size}" style="${customColorStyle(theme)}--card-font-family:${escapeHtml(fontStack)}">${titleHtml}<div class="cardbody">${renderCardMarkdown(n.md,n.highlights)}</div></article></body></html>`;
+ const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="stylesheet" href="${stylesheet}">${supportingStyles}${fontLink}<style>:root{${readingStyleText()}}html,body{height:auto;min-height:100%;margin:0}html{overflow-x:hidden;overflow-y:auto}body{min-height:100vh;display:grid;align-items:start;justify-items:center;padding:24px;box-sizing:border-box;overflow:visible;background:var(--canvas);color:var(--ink)}.card.card-window{min-width:0;position:relative;left:auto;top:auto;width:min(${width}px,calc(100vw - 48px));max-width:100%;max-height:none;overflow:visible;box-sizing:border-box}.card-window .cardbar{cursor:default}.card-window .cardactions,.card-window .resize{display:none!important}.card-window .cardbody{height:auto;max-height:none;overflow:visible}@media(max-width:600px){body{padding:12px}.card.card-window{width:100%}}</style></head><body class="${dark?"dark":""}"><article class="card card-window${heading?" has-title":""}" data-map-color="${theme}" data-custom-color="${/^#[0-9a-f]{6}$/i.test(theme)}" data-font="${font}" data-font-size="${size}" style="${customColorStyle(theme)}--card-font-family:${escapeHtml(fontStack)}">${titleHtml}<div class="cardbody">${renderCardMarkdown(n.md,n.highlights)}</div></article></body></html>`;
  const tab=window.open();
  if(!tab){alert("Allow pop-ups to open this card.");return}
  tab.document.write(html);tab.document.close();
@@ -3538,6 +3649,9 @@ window.addEventListener("keydown",e=>{
  }
  if(indexGroupingKey(e))return;
  const mod=e.ctrlKey||e.metaKey;
+ if(mod&&!e.altKey&&!e.shiftKey&&(e.key===','||e.code==='Comma')){
+  e.preventDefault();if(!e.repeat)toggleGlobalSettings();return;
+ }
  if(mod&&!e.shiftKey&&e.key.toLowerCase()==='f'&&!editor.classList.contains('open')){
   e.preventDefault();setIndexOpen(true);$("#canvasSearch").focus();$("#canvasSearch").select();return;
  }
@@ -3810,8 +3924,8 @@ async function load(){
    (d.notes||[]).forEach(n=>{
     if(typeof n.md!=="string")return;
     n.type==="map"
-      ? makeMap(n.md,n.x||0,n.y||0,n.w||960,n.h||640,false,n.id,n.mapColor,n.mapFont,n.size,n.highlights,n.sourceName,n.createdAt??null)
-      : makeNote(n.md,n.x||0,n.y||0,n.w||600,false,n.id,typeof n.font==="string"?n.font:"mono",n.size,n.mapColor,n.mapFont,n.mapWidth,n.mapHeight,n.highlights,n.sourceName,n.createdAt??null);
+      ? makeMap(n.md,n.x||0,n.y||0,n.w||960,n.h||640,false,n.id,n.mapColor??"default",n.mapFont,n.size,n.highlights,n.sourceName,n.createdAt??null)
+      : makeNote(n.md,n.x||0,n.y||0,n.w||600,false,n.id,typeof n.font==="string"?n.font:"mono",n.size,n.mapColor??"default",n.mapFont,n.mapWidth,n.mapHeight,n.highlights,n.sourceName,n.createdAt??null);
    })
    restoreReadingSession(d.readingCards);
   }

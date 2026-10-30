@@ -68,7 +68,7 @@
  <input id="markdownFiles" type="file" accept=".md,.markdown,text/markdown" multiple hidden>
  <button class="tool" id="full" title="Fullscreen (F)" aria-label="Fullscreen"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
  <button class="tool" id="toggleIndex" title="Card index (Tab)" aria-label="Card index (Tab)" aria-keyshortcuts="Tab" aria-controls="cardIndex" aria-expanded="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
- <button class="tool" id="settings" title="Global settings" aria-label="Global settings" aria-controls="globalSettings" aria-expanded="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16"/></svg></button>
+ <button class="tool" id="settings" title="Global settings (Ctrl/⌘+,)" aria-label="Global settings" aria-keyshortcuts="Control+, Meta+," aria-controls="globalSettings" aria-expanded="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16"/></svg></button>
  <button class="tool" id="help" title="Keyboard shortcuts and help" aria-label="Keyboard shortcuts and help"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9a2.5 2.5 0 1 1 4.6 1.4c-.9 1.1-2.2 1.4-2.2 3M12 17h.01"/></svg></button>
 </div>
 
@@ -89,10 +89,40 @@
 
 <section id="globalSettings" class="global-settings" role="dialog" aria-labelledby="globalSettingsTitle" hidden>
  <header><h2 id="globalSettingsTitle">Global settings</h2><button type="button" id="closeGlobalSettings" aria-label="Close global settings">×</button></header>
- <h3>New cards</h3>
+ <details class="settings-section" id="defaultSettings" open>
+  <summary>New card defaults</summary>
+  <div class="settings-content">
  <label class="default-font-label" for="defaultCardFont">Default font<select id="defaultCardFont"></select></label>
- <p class="settings-note">Applies to new cards and Markdown imports. Existing cards keep their font.</p>
- <h3>Navigation</h3>
+ <label for="defaultCardTheme">Default theme<select id="defaultCardTheme"><option value="random">Random preset</option><option value="default">White / Midnight</option><option value="purple">Amethyst</option><option value="warm">Terracotta</option><option value="ocean">Ocean</option><option value="forest">Forest</option><option value="sunset">Sunset</option><option value="slate">Slate</option><option value="custom">Custom color</option></select></label>
+ <label for="defaultCardThemeColor" class="default-theme-color" hidden>Custom color<input id="defaultCardThemeColor" type="color" value="#7669d3" title="Default custom color for new cards"></label>
+ <p class="settings-note">Applies to new cards and Markdown imports. Existing cards keep their font and theme.</p>
+  </div>
+ </details>
+ <details class="settings-section" id="readingSettings">
+  <summary>Reading appearance</summary>
+  <div class="settings-content">
+  <p class="settings-note">Typography applies to all Markdown cards. Branch weight applies to maps.</p>
+  <label>Text weight<select id="readingFontWeight" data-reading="fontWeight" title="Default text thickness for Markdown cards"><option value="300">Light</option><option value="400">Regular</option><option value="500">Medium</option><option value="600">Semibold</option></select></label>
+  <label>Heading weight<select id="readingHeadingWeight" data-reading="headingWeight" title="Heading thickness"><option value="500">Medium</option><option value="600">Semibold</option><option value="700">Bold</option></select></label>
+  <label>Letter spacing <output data-reading-value="letterSpacing"></output><input id="readingLetterSpacing" data-reading="letterSpacing" type="range" min="-0.03" max="0.08" step="0.005" title="Space between characters in Markdown text"></label>
+  <label>Line spacing <output data-reading-value="lineHeight"></output><input id="readingLineHeight" data-reading="lineHeight" type="range" min="1.25" max="1.9" step="0.05" title="Distance between lines of text"></label>
+  <label>Paragraph gap <output data-reading-value="paragraphGap"></output><input id="readingParagraphGap" data-reading="paragraphGap" type="range" min="0.25" max="1.2" step="0.05" title="Space between paragraphs"></label>
+  <label>Space before headings <output data-reading-value="sectionGap"></output><input id="readingSectionGap" data-reading="sectionGap" type="range" min="0.5" max="1.5" step="0.05" title="Space before a new section heading"></label>
+  <label>Map branch weight <output data-reading-value="mapLineWeight"></output><input id="readingMapLineWeight" data-reading="mapLineWeight" type="range" min="0.5" max="1.8" step="0.1" title="Thickness of map branches and node underlines"></label>
+  <button type="button" id="resetReadingStyle" title="Restore default text, code and map appearance">Reset appearance</button>
+  </div>
+ </details>
+ <details class="settings-section" id="codeSettings">
+  <summary>Code blocks</summary>
+  <div class="settings-content">
+  <p class="settings-note">Applies to code blocks in existing and new cards.</p>
+  <label for="codeBlockFont">Code block font<select id="codeBlockFont" title="Font for code blocks in all cards"></select></label>
+  <label>Code line spacing <output data-reading-value="codeLineHeight"></output><input id="readingCodeLineHeight" data-reading="codeLineHeight" type="range" min="1.25" max="1.9" step="0.05" title="Line spacing inside code blocks"></label>
+  </div>
+ </details>
+ <details class="settings-section" id="navigationSettings">
+  <summary>Navigation</summary>
+  <div class="settings-content">
    <label>Wheel zoom sensitivity <output id="nav-wheel-value"></output><input id="nav-wheel" type="range" min="0.5" max="1.5" step="0.05"></label>
    <label>Scroll sensitivity <output id="nav-scroll-value"></output><input id="nav-scroll" type="range" min="0.5" max="1.5" step="0.05"></label>
    <label>Drag sensitivity <output id="nav-drag-value"></output><input id="nav-drag" type="range" min="0.5" max="1.5" step="0.05"></label>
@@ -100,6 +130,8 @@
    <label>Button zoom step <output id="nav-step-value"></output><input id="nav-step" type="range" min="1.05" max="1.35" step="0.05"></label>
    <button id="actualSize">100%</button><button id="fitView">Fit all</button>
    <button id="pauseBackground" type="button" aria-pressed="false" aria-keyshortcuts="P" title="Pause or resume background (P)">Pause background</button>
+  </div>
+ </details>
 </section>
 
 <div class="hint" id="hint" role="status" aria-live="polite"></div>
@@ -138,6 +170,7 @@
     <div><kbd>Delete</kbd><span>Delete the selected card</span></div>
    </div></details>
    <details class="help-group"><summary>Appearance and highlights</summary><div class="help-rows">
+    <div><kbd>Ctrl/⌘ + ,</kbd><span>Open / close Global settings</span></div>
     <div><kbd>1–9</kbd><span>Text size: 50, 60, 70, 80, 90, 100, 110, 125, 140%</span></div>
     <div><kbd>0</kbd><span>160% text size; 4 restores the default 80%</span></div>
     <div><kbd>[ / ]</kbd><span>Decrease / increase card width and refocus it</span></div>

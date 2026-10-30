@@ -71,6 +71,9 @@ const root=path.resolve(__dirname,'..');
   await page.evaluate(()=>{const slider=document.querySelector('#nav-pinch');slider.value=1;slider.dispatchEvent(new Event('input',{bubbles:true}));__test.interruptCamera();__test.setCameraImmediate(640,400,1)});
 
   const nativePinchBefore=await page.evaluate(()=>{
+   for(const [id,value] of [['nav-wheel',.5],['nav-pinch',3]]){
+    const slider=document.getElementById(id);slider.value=value;slider.dispatchEvent(new Event('input',{bubbles:true}));
+   }
    __test.interruptCamera();__test.setCameraImmediate(100,70,1);
    document.querySelector('#canvas').addEventListener('wheel',event=>{window.__nativePinch={trusted:event.isTrusted,ctrl:event.ctrlKey,delta:event.deltaY}},{once:true,capture:true});
    return __test.worldPoint(800,300);
@@ -78,10 +81,13 @@ const root=path.resolve(__dirname,'..');
   await page.mouse.move(800,300);await page.keyboard.down('Control');await page.mouse.wheel(0,-20);await page.keyboard.up('Control');
   await page.waitForFunction(()=>__test.state.scale>1);
   const nativePinch=await page.evaluate(()=>({event:__nativePinch,scale:__test.state.scale,point:__test.worldPoint(800,300)}));
-  assert.ok(nativePinch.event.trusted&&nativePinch.event.ctrl,'Browser-delivered trackpad-style pinch reaches the camera');
-  assert.ok(Math.abs(nativePinch.scale-2**.08)<1e-7);
+  assert.ok(nativePinch.event.trusted&&nativePinch.event.ctrl,'Browser-delivered Ctrl + wheel reaches the camera in scroll mode');
+  assert.ok(Math.abs(nativePinch.scale-2**.04)<1e-7,'Physical Ctrl uses the current wheel sensitivity, even when pinch sensitivity is higher');
   assert.ok(Math.hypot(nativePinch.point.x-nativePinchBefore.x,nativePinch.point.y-nativePinchBefore.y)<1e-7);
-  await page.evaluate(()=>{__test.interruptCamera();__test.setCameraImmediate(640,400,1)});
+  await page.evaluate(()=>{
+   for(const id of ['nav-wheel','nav-pinch']){const slider=document.getElementById(id);slider.value=1;slider.dispatchEvent(new Event('input',{bubbles:true}))}
+   __test.interruptCamera();__test.setCameraImmediate(640,400,1);
+  });
   await page.locator('#hand').click();
   await page.waitForFunction(()=>window.__test);
   const result=await page.evaluate(()=>{
@@ -172,6 +178,7 @@ const root=path.resolve(__dirname,'..');
   });
   assert.equal(touch.pinch,5);assert.equal(touch.pan,30);
   await page.locator('#settings').click();
+  await page.locator('#navigationSettings summary').click();
   await page.locator('#nav-wheel').fill('1.5');
   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('reflatex-navigation')).wheel),1.5);
   await page.locator('#nav-scroll').fill('0.75');

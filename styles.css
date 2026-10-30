@@ -175,24 +175,23 @@ body.dark .map-card .markmap-node pre{
 }
 .card:not(.has-title) .cardbar{height:10px;background:transparent!important;border-bottom-color:transparent!important}
 .map-card:not(.has-title) .cardbody{height:calc(100% - 10px)}
-.card.has-title:not(.map-card) .cardbody{padding-top:16px}
-.card:not(.has-title):not(.map-card) .cardbody{padding-top:16px}
 .cardbar:hover{border-bottom-color:#e0ddd6}
 .cardbody{
  padding:16px 28px 24px;
+ min-width:0;
  overflow-wrap:anywhere;
  user-select:text;
  cursor:pointer;
  --card-font-scale:1;
 }
-.cardbody h1,.cardbody h2,.cardbody h3,.cardbody h4,.cardbody h5{
- font-family:inherit;letter-spacing:-.025em;line-height:1.2;
+.card:not(.map-card) .cardbody{
+ --reading-font-size:calc(18px * var(--card-font-scale));
+ --card-paragraph-gap:var(--reading-paragraph-gap,.6em);--card-code-line-height:var(--reading-code-line-height,1.5);
+ font-size:var(--reading-font-size);line-height:var(--reading-line-height,1.5);font-weight:var(--reading-font-weight,400);letter-spacing:var(--reading-letter-spacing,0em);
+ padding:18px 24px 24px;cursor:text;
 }
-.cardbody h1{font-size:calc(31px * var(--card-font-scale));margin:0 0 18px}
-.cardbody h2{font-size:calc(24px * var(--card-font-scale));margin:30px 0 12px}
-.cardbody h3{font-size:calc(19px * var(--card-font-scale));margin:25px 0 9px}
 /* Markdown headings retain a clear hierarchy in every card font and size. */
-.card:not(.map-card) .cardbody :is(h1,h2,h3,h4,h5,h6){font-family:var(--card-font-family);font-weight:700;line-height:1.25;letter-spacing:-.02em;margin:.85em 0 .35em}
+.card:not(.map-card) .cardbody :is(h1,h2,h3,h4,h5,h6){font-family:var(--card-font-family);font-weight:var(--reading-heading-weight,700);line-height:1.25;letter-spacing:calc(var(--reading-letter-spacing,0em) - .02em);margin:calc(var(--reading-font-size) * var(--reading-section-gap,.95)) 0 calc(var(--reading-font-size) * .35)}
 .card:not(.map-card) .cardbody h1{font-size:1.6em}
 .card:not(.map-card) .cardbody h2{font-size:1.4em}
 .card:not(.map-card) .cardbody h3{font-size:1.25em}
@@ -201,55 +200,62 @@ body.dark .map-card .markmap-node pre{
 .card:not(.map-card) .cardbody h6{font-size:1.05em}
 .card:not(.map-card) .cardbody :is(h1,h2,h3,h4,h5,h6):first-child{margin-top:0}
 .card:not(.map-card) .cardbody :is(h1,h2,h3,h4,h5,h6) code{font-size:.85em;line-height:inherit}
-.cardbody p,.cardbody li{
- font:calc(18px * var(--card-font-scale))/1.78 Georgia,"Times New Roman",serif;
-}
-.cardbody p{margin:0 0 17px}
-.cardbody ul,.cardbody ol{margin:.7em 0 1em;padding-inline-start:2em;list-style-position:outside}
+/* One reading rhythm: paragraphs and list items inherit the body leading. */
+.cardbody p,.cardbody li{font:inherit}
+.cardbody p{margin:0 0 var(--card-paragraph-gap,.6em)}
+.cardbody ul,.cardbody ol{margin:.4em 0 calc(var(--card-paragraph-gap,.6em) + .05em);padding-inline-start:1.7em;list-style-position:outside}
 .cardbody ul{list-style-type:disc}
 .cardbody ol{list-style-type:decimal}
 .cardbody ul ul{list-style-type:circle}
 .cardbody ul ul ul{list-style-type:square}
 .cardbody ol ol{list-style-type:lower-alpha}
 .cardbody ol ol ol{list-style-type:lower-roman}
-.cardbody li{display:list-item;margin:.35em 0;padding-inline-start:.15em}
-.cardbody li ul,.cardbody li ol{margin:.35em 0}
+.cardbody li{display:list-item;margin:.16em 0;padding-inline-start:.15em}
+.cardbody li :is(ul,ol){margin:.25em 0}
+.cardbody li>p{margin:0 0 .4em}
+.cardbody li>:last-child{margin-bottom:0}
 .cardbody li:has(>input[type="checkbox"]){list-style:none}
 .cardbody li>input[type="checkbox"]{margin:0 .55em 0 -1.45em;vertical-align:middle;accent-color:var(--accent)}
 .cardbody strong{font-weight:700}
 .cardbody blockquote{
- margin:21px 0;padding:3px 0 3px 17px;border-left:3px solid #d0ccc4;color:#6e6a63
+ margin:calc(var(--card-paragraph-gap,.6em) + .1em) 0;padding:.1em 0 .1em .85em;border-left:3px solid #d0ccc4;color:inherit
 }
+.cardbody blockquote>:last-child{margin-bottom:0}
+.cardbody>:first-child{margin-top:0}
+.cardbody>:last-child{margin-bottom:0}
 .cardbody code{
- font:calc(16px * var(--card-font-scale))/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;
- color:inherit
+ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+ font-size:.9em;line-height:inherit;letter-spacing:normal;color:inherit
 }
 .cardbody pre{
- margin:19px 0;padding:16px;overflow:auto;border-radius:17px;
- background:color-mix(in srgb,var(--ink) 22%,transparent);color:var(--ink);font:calc(16px * var(--card-font-scale))/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;
+ position:relative;display:block;width:100%;margin:calc(var(--card-paragraph-gap,.6em) + .2em) 0;padding:.85em 1em;overflow:auto;border-radius:4px;
+ font-family:var(--code-font-family,ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace);font-size:.9em;line-height:var(--card-code-line-height,1.5);letter-spacing:normal;font-weight:400;
+ background:color-mix(in srgb,var(--ink) 22%,transparent);color:var(--ink);
+ tab-size:4;-webkit-font-smoothing:antialiased;isolation:isolate;
  -webkit-backdrop-filter:none;backdrop-filter:none;
- border:1px solid color-mix(in srgb,var(--ink) 16%,transparent);box-shadow:none
+ border:1px solid color-mix(in srgb,var(--ink) 16%,transparent);box-shadow:none;text-shadow:none
 }
-.cardbody pre code{background:none;padding:0;color:inherit}
+.cardbody pre code{display:block;position:relative;font:inherit;background:none;padding:0;border:0;border-radius:0;color:inherit}
+.cardbody pre *{text-shadow:none}
+.cardbody code:not(pre code){white-space:pre-wrap;overflow-wrap:anywhere;background:color-mix(in srgb,currentColor 8%,transparent);border-radius:3px;padding:.08em .3em}
 .cardbody table{
  border-collapse:collapse;width:100%;max-width:100%;
- font:calc(14px * var(--card-font-scale))/1.5 system-ui;margin:20px 0;
+ font:inherit;font-size:.95em;line-height:1.45;margin:.7em 0;
 }
 .cardbody th,.cardbody td{
- border:1px solid #d2cec6;padding:8px 10px;
+ border:1px solid #d2cec6;padding:.4em .6em;vertical-align:top;overflow-wrap:break-word;word-break:normal;
 }
 .cardbody th{background:#f1efe9}
-.cardbody hr{border:0;border-top:1px solid #ddd9d1;margin:28px 0}
-.cardbody a{color:#514ca5;text-decoration:none}
+.cardbody hr{border:0;border-top:1px solid #ddd9d1;margin:1em 0}
+.cardbody a{color:#514ca5;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:.15em}
+body.dark .cardbody a{color:#b2b0eb}
 .cardbody img.card-image{
  display:block;width:auto;max-width:100%;max-height:min(70vh,720px);height:auto;
- object-fit:contain;margin:12px auto;border:1px solid color-mix(in srgb,currentColor 12%,transparent);
- border-radius:14px;box-shadow:0 8px 24px #1112
+ object-fit:contain;margin:.7em auto;border:1px solid color-mix(in srgb,currentColor 12%,transparent);
+ border-radius:4px;box-shadow:none
 }
 .map-card .cardbody img.card-image{max-height:min(48vh,480px);margin:6px auto}
 .cardbody a img.card-image{cursor:zoom-in}
-.katex{font-size:1em}
-.katex-display{margin:1.3em 0;padding:5px 0;overflow-x:auto}
 .resize{
  position:absolute;top:30px;bottom:25px;width:12px;z-index:5;cursor:ew-resize
 }
@@ -508,7 +514,7 @@ body.dark .card:not(.map-card)[data-map-color="sunset"] .cardbar{background:line
 body.dark .card:not(.map-card)[data-map-color="slate"] .cardbar{background:linear-gradient(90deg,#303946,#272c32);border-bottom-color:#414a57}
 body.dark .cardbody th{background:#302e2a}
 body.dark .cardbody th,body.dark .cardbody td{border-color:#4b4841}
-body.dark .cardbody blockquote{border-color:#5b574f;color:#aaa59d}
+body.dark .cardbody blockquote{border-color:#5b574f}
 body.dark button.tool,.dark .zoom button{color:#dedbd5}
 body.dark .background-select{color:#dedbd5}
 body.dark .background-menu{background:#292824;border-color:#4a4740}
@@ -529,6 +535,8 @@ body.dark .map-card .map-pane{
 }
 body.dark .map-card .map-pane svg{
  color-scheme:dark;
+ --markmap-code-color:var(--ink);
+ --markmap-code-bg:color-mix(in srgb,var(--card-accent-dark,#b6aaff) 14%,transparent);
 }
 body.dark .map-card .markmap-node text,
 body.dark .map-card .markmap-node foreignObject,
@@ -588,24 +596,24 @@ body.fullscreen.toolbar-hidden .edge{display:grid;pointer-events:auto}
 }
 body.fullscreen.controls .toolbar{transform:translateY(-50%)}
  .hint{display:none}.help-dialog{padding:18px}.help-grid{grid-template-columns:1fr;gap:17px}.card{max-width:calc(100vw - 30px)}
- .cardbody{padding:16px 22px 22px}.cardbody p,.cardbody li{font-size:calc(17px * var(--card-font-scale))}
+ .cardbody{padding:16px 22px 22px}
+ .card:not(.map-card) .cardbody{--reading-font-size:calc(17px * var(--card-font-scale))}
  .map-card{min-width:320px;width:calc(100vw - 30px);height:420px}
 }
 
-/* Crisp, readable math */
+/* Keep equation wrappers scrollable; leave KaTeX's internal spacing intact. */
 .cardbody .katex-display{
   display:block;
   width:100%;
   overflow-x:auto;
   overflow-y:hidden;
-  padding:8px 2px;
-  margin:1.35em 0;
+  max-width:100%;
+  padding:7px 2px;
+  margin:1.25em 0;
   text-align:center;
   scrollbar-width:thin;
 }
-.cardbody .katex{
-  font-size:1.02em;
-}
+.cardbody .katex{font-size:1.02em;letter-spacing:normal}
 .cardbody .katex-display > .katex{
   max-width:100%;
 }
@@ -614,63 +622,7 @@ body.fullscreen.controls .toolbar{transform:translateY(-50%)}
 .toolbar,.zoom,.editor,.context{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 .card,.cardbody,#world{filter:none!important;-webkit-filter:none!important}
 .cardbody{-webkit-font-smoothing:auto;text-rendering:auto}
-
-
-.cardbody .katex{font-size:1.03em}
-.cardbody .katex-display{overflow-x:auto;overflow-y:hidden;padding:7px 2px;margin:1.25em 0}
 .cardbody .katex-unavailable{white-space:normal}
-
-
-.cardbody pre{
-  position:relative;
-  display:block;
-  width:100%;
-  margin:20px 0;
-  padding:18px 20px;
-  overflow:auto;
-  white-space:pre;
-  tab-size:4;
-  -webkit-font-smoothing:antialiased;
-  isolation:isolate;
-}
-.cardbody pre code{
-  display:block;position:relative;
-  white-space:pre;
-  background:transparent;
-  padding:0;
-  border-radius:0;
-  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
-  font-size:calc(16px * var(--card-font-scale))!important;
-  line-height:1.6;
-}
-.cardbody pre .code-line{display:block;min-height:1.6em}
-.cardbody pre .code-line::before{
-  content:attr(data-line);display:inline-block;width:2.7em;margin-right:1.25em;
-  color:color-mix(in srgb,var(--ink) 52%,transparent);text-align:right;user-select:none;font-size:.88em
-}
-.cardbody code:not(pre code){
-  white-space:pre-wrap;
-  overflow-wrap:anywhere;
-  background:color-mix(in srgb,currentColor 12%,transparent);
-  color:inherit;border-radius:4px;padding:2px 5px;
-}
-.cardbody .katex-display{
-  max-width:100%;
-  overflow-x:auto;
-  overflow-y:hidden;
-  padding:8px 2px;
-}
-
-
-.cardbody .katex{font-size:1.02em}
-.cardbody .katex-display{
-  display:block;
-  max-width:100%;
-  overflow-x:auto;
-  overflow-y:hidden;
-  padding:7px 2px;
-  margin:1.25em 0;
-}
 .cardbody .katex-error{
   color:inherit;
   background:transparent;
@@ -700,8 +652,7 @@ body.fullscreen.controls .toolbar{transform:translateY(-50%)}
 
 .card[data-font] .cardbody,.card[data-font] .cardbody :is(p,li,table,th,td){font-family:var(--card-font-family,ui-monospace,SFMono-Regular,Consolas,monospace)}
 .card[data-font] .cardbody h1,.card[data-font] .cardbody h2,.card[data-font] .cardbody h3,.card[data-font] .cardbody h4,.card[data-font] .cardbody h5,.card[data-font] .cardbody h6{font-family:inherit}
-.card[data-font="mono-code"] .cardbody{font-feature-settings:"liga" 1;letter-spacing:-.025em}
-.card[data-font="mono-courier"] .cardbody{letter-spacing:.035em}
+.card[data-font="mono-code"] .cardbody{font-feature-settings:"liga" 1}
 .card[data-font-size="110"] .cardbody{--card-font-scale:1.1}
 .card[data-font-size="125"] .cardbody{--card-font-scale:1.25}
 .card[data-font-size="140"] .cardbody{--card-font-scale:1.4}
@@ -732,7 +683,7 @@ body.dark .card[data-map-color="default"] .cardbar{
 body.dark .card[data-map-color="default"] .cardbar:hover{border-bottom-color:#262a33}
 body.dark .card:not(.map-card)[data-map-color="default"] .cardbar{background:#121317;border-bottom-color:#1b1d23}
 body.dark .card[data-map-color="default"] .cardbody{color:#d9dce5}
-body.dark .card[data-map-color="default"] .cardbody blockquote{color:#a9afbd;border-color:#4d6079}
+body.dark .card[data-map-color="default"] .cardbody blockquote{border-color:#4d6079}
 body.dark .card[data-map-color="default"] .cardbody th{background:#22252c}
 body.dark .card[data-map-color="default"] .cardbody th,
 body.dark .card[data-map-color="default"] .cardbody td{border-color:#343842}
@@ -1004,7 +955,7 @@ body.dark .custom-select-group{color:#9ca4b3}
 .map-options .custom-select-menu .custom-select-option{min-height:30px}
 .map-options .native-card-select{display:none!important}
 
-/* Markdown code blocks: restrained dark glass with colorful editor-style tokens. */
+/* Markdown syntax colors follow the card theme without glow or blur. */
 .cardbody pre.line-numbered{
  --code-accent:var(--card-accent,#7669d3);
  --syntax-keyword:color-mix(in srgb,#c792ea 76%,var(--code-accent) 24%);
@@ -1014,33 +965,15 @@ body.dark .custom-select-group{color:#9ca4b3}
  --syntax-comment:#8290a3;
  --syntax-type:color-mix(in srgb,#89ddff 82%,var(--code-accent) 18%);
  --syntax-meta:color-mix(in srgb,#ffcb6b 84%,var(--code-accent) 16%);
- display:flex;align-items:stretch;gap:0;box-sizing:border-box;width:100%;
- padding:16px 14px;margin:20px 0;overflow:auto;white-space:pre;tab-size:4;
  color:#e4eaf3;
  background:linear-gradient(135deg,
   color-mix(in srgb,#0d1118 95%,var(--code-accent) 5%),
   color-mix(in srgb,#151b25 91%,var(--code-accent) 9%));
  border:1px solid color-mix(in srgb,var(--code-accent) 28%,#374151);
- border-radius:16px;
- box-shadow:0 10px 26px #0002,0 0 16px color-mix(in srgb,var(--code-accent) 10%,transparent),inset 0 1px 0 #ffffff10;
- -webkit-backdrop-filter:none;backdrop-filter:none;
- isolation:isolate
 }
 body.dark .cardbody pre.line-numbered{--code-accent:var(--card-accent-dark,var(--card-accent,#7669d3))}
-.cardbody pre.line-numbered .code-gutter{
- position:relative;display:block;box-sizing:border-box;flex:0 0 3.7em;align-self:stretch;
- margin-right:1em;padding-right:.8em;text-align:right;color:#8793a4;user-select:none;
- border-right:1px solid color-mix(in srgb,var(--code-accent) 25%,#ffffff18);
- background:color-mix(in srgb,#111720 82%,var(--code-accent) 18%);
- font:calc(16px * var(--card-font-scale))/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;
- font-variant-numeric:tabular-nums
-}
-.cardbody pre.line-numbered .code-gutter span{display:block;height:1.6em;line-height:1.6em;overflow:hidden}
 .cardbody pre.line-numbered code{
- display:block;flex:0 0 auto;width:max-content;min-width:calc(100% - 3.7em);
- padding:0!important;background:transparent!important;color:#e4eaf3;
- border:0;border-radius:0;white-space:pre;overflow:visible;
- font:calc(16px * var(--card-font-scale))/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace!important
+ color:inherit;overflow:visible
 }
 .cardbody pre.line-numbered .hljs-keyword,
 .cardbody pre.line-numbered .hljs-selector-tag,
@@ -1056,7 +989,8 @@ body.dark .cardbody pre.line-numbered{--code-accent:var(--card-accent-dark,var(-
 .cardbody pre.line-numbered .hljs-regexp,
 .cardbody pre.line-numbered .hljs-symbol{color:var(--syntax-number)}
 .cardbody pre.line-numbered .hljs-comment,
-.cardbody pre.line-numbered .hljs-quote{color:var(--syntax-comment);font-style:italic}
+.cardbody pre.line-numbered .hljs-quote{color:var(--syntax-comment);font-style:normal}
+.cardbody pre .hljs-comment{font-style:normal}
 .cardbody pre.line-numbered .hljs-type,
 .cardbody pre.line-numbered .hljs-params,
 .cardbody pre.line-numbered .hljs-variable{color:var(--syntax-type)}
@@ -1083,12 +1017,6 @@ body:not(.dark) .cardbody pre.line-numbered{
   color-mix(in srgb,color-mix(in srgb,#fff 84%,var(--code-tint,#ded9ff) 16%) 88%,transparent),
   color-mix(in srgb,color-mix(in srgb,#fff 74%,var(--code-tint,#ded9ff) 26%) 84%,transparent));
  border-color:color-mix(in srgb,var(--code-accent) 34%,#fff);
- box-shadow:0 10px 26px #27364c12,0 0 17px color-mix(in srgb,var(--code-tint,#ded9ff) 42%,transparent),inset 0 1px 0 #ffffffc9;
-}
-body:not(.dark) .cardbody pre.line-numbered .code-gutter{
- color:#738096;
- border-right-color:color-mix(in srgb,var(--code-accent) 22%,#64748b38);
- background:color-mix(in srgb,#fff 82%,var(--code-tint,#ded9ff) 18%);
 }
 body:not(.dark) .cardbody pre.line-numbered code{color:#293448}
 body:not(.dark) .cardbody pre.line-numbered .hljs-keyword,
@@ -1118,6 +1046,7 @@ body:not(.dark) .cardbody pre.line-numbered .hljs-section{color:var(--syntax-met
 /* Global preferences live beside the navigation tray, without canvas effects. */
 .global-settings{position:fixed;z-index:250;right:80px;top:50%;transform:translateY(-50%);width:310px;max-width:calc(100vw - 32px);max-height:calc(100dvh - 32px);overflow:auto;padding:18px;background:var(--paper);color:var(--ink);border:1px solid var(--border);border-radius:6px;box-shadow:0 3px 12px #0002;font:12px/1.5 var(--ui-font)}
 .global-settings[hidden]{display:none}
+body.dark .global-settings{color-scheme:dark}
 .global-settings header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
 .global-settings h2{margin:0;font-size:15px;font-weight:600}
 .global-settings h3{margin:18px 0 12px;font-size:11px;font-weight:600;color:var(--muted)}
@@ -1125,28 +1054,31 @@ body:not(.dark) .cardbody pre.line-numbered .hljs-section{color:var(--syntax-met
 .global-settings label{display:grid;grid-template-columns:1fr auto;gap:6px;margin-bottom:14px}
 .global-settings input{grid-column:1/-1;width:100%;accent-color:var(--accent)}
 .global-settings select{grid-column:1/-1;width:100%;padding:8px;border:1px solid var(--border);border-radius:3px;background:var(--paper);color:var(--ink);font:inherit}
+.global-settings .default-theme-color{display:flex;align-items:center;justify-content:space-between}
+.global-settings .default-theme-color[hidden]{display:none}
+.global-settings input[type="color"]{width:44px;height:28px;padding:2px;border:1px solid var(--border);border-radius:3px;background:transparent;cursor:pointer}
 .global-settings output{color:var(--muted);font-variant-numeric:tabular-nums}
 .global-settings .settings-note{margin:0;color:var(--muted);font-size:11px}
 .global-settings>button{padding:6px 10px;border:1px solid var(--border);border-radius:3px;background:transparent;color:var(--ink);font:inherit}
+.settings-section{margin:0;border:0;border-top:1px solid var(--border);padding:0}
+.settings-section summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;font-weight:500;cursor:pointer;list-style:none}
+.settings-section summary::-webkit-details-marker{display:none}
+.settings-section summary::after{content:"";width:6px;height:6px;margin-right:3px;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);transform:rotate(-45deg)}
+.settings-section[open]>summary::after{transform:rotate(45deg)}
+.settings-section summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+.settings-content{padding:2px 0 14px}
+.settings-section .settings-note{margin:12px 0 16px}
+.settings-section button{padding:6px 10px;border:1px solid var(--border);border-radius:3px;background:transparent;color:var(--ink);font:inherit}
 @media(max-width:600px){.global-settings{right:16px}}
 .zoom:focus-within{opacity:1!important;pointer-events:auto!important;transform:none!important}
 
-/* Broad blurred shadows on every code block multiply raster work on a board.
-   Keep the existing colored surfaces, borders, syntax colors and text. */
-.cardbody pre.line-numbered,body.dark .cardbody pre.line-numbered{box-shadow:none}
-.cardbody pre,body:not(.dark) .cardbody pre.line-numbered,body.dark .cardbody pre.line-numbered{box-shadow:none;text-shadow:none}
-.cardbody pre *{text-shadow:none}
-.card:not(.map-card) .cardbody pre code{font-size:calc(15px * var(--card-font-scale))!important}
-@media(max-width:700px){.card:not(.map-card) .cardbody pre code{font-size:calc(14px * var(--card-font-scale))!important}}
-
 /* Content never changes the user's card width. */
-.cardbody{min-width:0}
-.table-scroll{width:100%;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;margin:20px 0}
+.table-scroll{width:100%;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;margin:calc(var(--card-paragraph-gap,.6em) + .1em) 0}
 .cardbody .table-scroll table{margin:0;min-width:100%}
 .cardbody pre,.cardbody pre code{box-sizing:border-box;max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal}
 .cardbody pre.line-numbered{display:block;overflow:hidden;white-space:normal}
 .cardbody pre.line-numbered code{display:block;width:100%;min-width:0;white-space:normal;counter-reset:code-line}
-.cardbody pre.line-numbered .code-line{display:block;position:relative;padding-left:3.6em;min-height:1.6em;white-space:pre-wrap;overflow-wrap:anywhere;counter-increment:code-line}
+.cardbody pre.line-numbered .code-line{display:block;position:relative;padding-left:3.6em;min-height:calc(var(--card-code-line-height,1.5) * 1em);white-space:pre-wrap;overflow-wrap:anywhere;counter-increment:code-line}
 .cardbody pre.line-numbered .code-line::before{content:counter(code-line);position:absolute;left:0;top:0;width:2.7em;margin:0;line-height:inherit;color:var(--syntax-comment);text-align:right;user-select:none;font-size:inherit}
 .map-card .markmap-node pre{width:100%;max-width:300px;white-space:pre-wrap;overflow-wrap:anywhere}
 .map-card .markmap-node pre code{min-width:0;width:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:inherit!important;line-height:inherit;color:inherit;background:transparent!important}
@@ -1249,40 +1181,45 @@ body.dark .card-index[data-view="palette"] .index-entry{--tile-accent:var(--card
 .card-index nav .index-edit button[type="submit"]{background:var(--ink);color:var(--paper);border-color:transparent}
 @media(prefers-reduced-motion:reduce){.index-row{transition:none}}
 
-/* A stable, flat header keeps selection from moving the reading surface. */
+/* Stable header geometry keeps selection from moving the reading surface. */
 body,.toolbar,.zoom,.editor,.context,.help,.card-index,.custom-select-menu{font-family:var(--ui-font)}
 button,input,select,textarea{font-family:inherit}
 .card{--header-height:56px;container-type:inline-size}
 .card,.card[data-map-color="default"]{border-radius:4px;box-shadow:none}
 .card.selected{outline:none;box-shadow:none}
-.card:not(.has-title){--header-height:32px}
-.card .cardbar,.card:not(.has-title) .cardbar,.card.selected.has-title .cardbar,.card.selected:not(.has-title) .cardbar{height:var(--header-height);border-radius:4px 4px 0 0;background:var(--paper)!important;border-bottom:1px solid color-mix(in srgb,var(--ink) 12%,transparent)!important}
-.card.has-title .map-title{left:16px;right:16px;top:4px;max-width:none;font:500 12px/16px var(--ui-font);letter-spacing:0}
+.card .cardbar,.card:not(.has-title) .cardbar,.card.selected.has-title .cardbar,.card.selected:not(.has-title) .cardbar{display:flex;align-items:flex-start;gap:12px;padding:4px 12px 0;box-sizing:border-box;height:var(--header-height);border-radius:4px 4px 0 0;background:var(--paper)!important;border-bottom:1px solid color-mix(in srgb,var(--ink) 9%,transparent)!important}
+.card.has-title .map-title{position:static;flex:1;min-width:0;width:0;max-width:none;font:500 12px/16px var(--ui-font);letter-spacing:0}
 .card.has-title .map-title::after{display:none}
-.card .cardactions,.card.selected .cardactions,.card.selected.has-title .cardactions{display:flex;top:24px;left:16px;right:16px;height:28px;gap:3px;justify-content:flex-start;flex-wrap:nowrap}
+.card .cardactions,.card.selected .cardactions,.card.selected.has-title .cardactions,.card:not(.has-title) .cardactions,.card.selected:not(.has-title) .cardactions{display:flex;top:26px;left:12px;right:12px;height:24px;gap:2px;justify-content:flex-start;flex-wrap:nowrap}
 .card .cardactions{visibility:hidden}
 .card.selected .cardactions{visibility:visible}
-.card:not(.has-title) .cardactions,.card.selected:not(.has-title) .cardactions{top:2px}
-.card .cardactions>.custom-select{height:28px}
-.card .cardactions .custom-select[data-control="theme"]{width:80px}
-.card .cardactions .custom-select[data-control="font"],.card .cardactions .custom-select[data-control="map-font"]{width:100px}
-.card .cardactions .custom-select[data-control="size"]{width:66px;margin-right:auto}
+.card .cardactions>.custom-select{height:24px}
+.card .cardactions .custom-select[data-control="theme"]{width:76px}
+.card .cardactions .custom-select[data-control="font"],.card .cardactions .custom-select[data-control="map-font"]{width:116px}
+.card .cardactions .custom-select[data-control="size"]{width:52px;margin-right:auto}
 .custom-select-trigger{height:28px!important;border-radius:3px!important;box-shadow:none;font:400 11px/1.2 var(--ui-font)!important}
-.card .cardactions>button{flex:0 0 28px;width:28px;height:28px;border-radius:3px;color:var(--muted)}
-.card .cardactions>button:hover{background:color-mix(in srgb,var(--ink) 7%,transparent);color:var(--ink)}
+.card .custom-select-trigger{height:24px!important;padding:0 5px!important;border:0!important;background:transparent!important;color:var(--muted)!important;transition:background-color .12s ease,color .12s ease}
+.card .custom-select-trigger:hover,.card .custom-select.menu-open .custom-select-trigger{background:color-mix(in srgb,var(--ink) 6%,transparent)!important;color:var(--ink)!important}
+.card .custom-select-chevron{flex-basis:8px;width:8px;height:8px;opacity:.55}
+.card .cardactions>button{flex:0 0 24px;width:24px;height:24px;border-radius:3px;color:var(--muted)}
+.card .cardactions>button:hover{background:color-mix(in srgb,var(--ink) 6%,transparent);color:var(--ink)}
 .map-card .cardbody,.map-card:not(.has-title) .cardbody,.map-card.selected.has-title .cardbody,.map-card.selected:not(.has-title) .cardbody{height:calc(100% - var(--header-height))}
 .card .resize.right{top:16px;bottom:16px;width:14px;touch-action:none;z-index:9;right:0}
 .card .resize.right::after{display:none}
 .card .resize:hover::after{background:color-mix(in srgb,var(--ink) 24%,transparent)}
-@container(max-width:580px){
- .card .cardbar,.card.selected.has-title .cardbar{height:88px}
- .card:not(.has-title) .cardbar,.card.selected:not(.has-title) .cardbar{height:64px}
- .card .cardactions,.card.selected .cardactions,.card.selected.has-title .cardactions{flex-wrap:wrap;height:60px;row-gap:4px;left:12px;right:12px}
- .card .cardactions>.custom-select{flex:0 0 calc((100% - 37px)/3);width:auto!important;margin-right:0!important}
- .map-card .cardbody,.map-card.selected.has-title .cardbody{height:calc(100% - 88px)}
- .map-card:not(.has-title) .cardbody,.map-card.selected:not(.has-title) .cardbody{height:calc(100% - 64px)}
+@container(max-width:620px){
+ .card .cardbar,.card:not(.has-title) .cardbar,.card.selected.has-title .cardbar,.card.selected:not(.has-title) .cardbar{height:78px}
+ .card .cardactions,.card.selected .cardactions,.card.selected.has-title .cardactions,.card:not(.has-title) .cardactions,.card.selected:not(.has-title) .cardactions{display:grid;grid-template-columns:24px 24px minmax(54px,.8fr) minmax(70px,1.3fr) 48px;grid-template-rows:24px 24px;gap:2px;height:50px}
+ .card .cardactions>.custom-select{width:100%!important;margin:0!important}
+ .card .cardactions>[data-map-open],.card .cardactions>[data-card-open],.card .cardactions>[data-card-pdf],.card .cardactions>[data-edit],.card .cardactions>[data-delete]{position:absolute;bottom:0}
+ .card .cardactions>[data-map-open]{right:104px}
+ .card .cardactions>[data-card-open]{right:78px}
+ .card .cardactions>[data-card-pdf]{right:52px}
+ .card .cardactions>[data-edit]{right:26px}
+ .card .cardactions>[data-delete]{right:0}
+ .card .cardactions>.map-branch-controls{position:absolute;bottom:0;left:0}
+ .map-card .cardbody,.map-card:not(.has-title) .cardbody,.map-card.selected.has-title .cardbody,.map-card.selected:not(.has-title) .cardbody{height:calc(100% - 78px)}
 }
-.card:not(.map-card) .cardbody{line-height:1.65;font-weight:400;padding:18px 24px 24px;cursor:text}
 .card.card-window .cardbar{height:26px}
 .card.card-window:not(.has-title) .cardbar{height:0;border:0!important}
 .card.map-window .cardbody{height:100%}
@@ -1305,17 +1242,6 @@ body:not(.dark) .card[data-map-color="default"]{--paper:#fff;--ink:#272622;--map
 body:not(.dark) .card[data-map-color="default"] .cardbar{background:#f7f8fa;border-bottom-color:#e3e6eb}
 body:not(.dark) .card[data-map-color="default"] .map-pane{background:#fff;color:#272622}
 .card[data-font-size="160"] .cardbody{--card-font-scale:1.6}
-
-/* Markdown rhythm follows the current card text size. */
-.card:not(.map-card) .cardbody{font-size:calc(18px * var(--card-font-scale))}
-.card:not(.map-card) .cardbody p{margin-bottom:.8em}
-.card:not(.map-card) .cardbody :is(ul,ol){margin:.45em 0 .8em;padding-inline-start:1.7em}
-.card:not(.map-card) .cardbody li :is(ul,ol){margin:.3em 0}
-.card:not(.map-card) .cardbody blockquote{margin:.8em 0;padding:.15em 0 .15em .85em}
-.card:not(.map-card) .cardbody pre{margin:.85em 0}
-.card:not(.map-card) .cardbody table{margin:.85em 0}
-.card:not(.map-card) .cardbody :is(th,td){padding:.45em .65em}
-@media(max-width:700px){.card:not(.map-card) .cardbody{font-size:calc(17px * var(--card-font-scale))}}
 
 @container(max-width:550px){.card:not(.map-card) .cardbody{padding:16px 22px 22px}}
 .text-highlighter{position:fixed;z-index:320;display:flex;align-items:center;gap:4px;padding:5px 6px;border:1px solid var(--border);border-radius:7px;background:var(--paper);color:var(--ink);box-shadow:0 2px 8px #0002;font:11px var(--ui-font)}
@@ -1353,10 +1279,7 @@ body.dark .cardbody .card-equation-highlight[data-highlight="theme"]{--highlight
 .cardbody .card-equation-highlight[data-highlight="pink"]{--highlight-color:#db87a7}
 
 /* Saved card creation time and lightweight index groups. */
-.card .card-timestamp{position:absolute;right:16px;top:4px;font:10px/16px var(--ui-font,Inter,sans-serif);color:var(--muted);white-space:nowrap;opacity:.8}
-.card .map-title{right:145px}
-.card:not(.has-title) .cardbar,.card.selected:not(.has-title) .cardbar{height:56px}
-.card:not(.has-title) .cardactions,.card.selected:not(.has-title) .cardactions{top:24px}
+.card .card-timestamp{position:static;flex:0 0 auto;margin-left:auto;font:10px/16px var(--ui-font,Inter,sans-serif);color:var(--muted);white-space:nowrap;opacity:.8}
 .index-group-header{grid-column:1/-1;display:flex;align-items:center;gap:6px;margin:8px 0 3px;padding:5px 7px;border-left:3px solid var(--group-color);background:color-mix(in srgb,var(--group-color) 12%,transparent);border-radius:3px}
 .index-group-header input:not([type="color"]){width:0;flex:1;min-width:0;background:transparent;border:0;color:var(--ink);font:400 12px/20px Inter,sans-serif}
 .index-group-header input[type="color"]{width:20px;height:20px;padding:0;border:0;background:transparent;cursor:pointer}
@@ -1365,7 +1288,6 @@ body.dark .cardbody .card-equation-highlight[data-highlight="theme"]{--highlight
 .index-entry[data-group-id]{border-left:2px solid var(--group-color)}
 .index-entry.group-picked{background:color-mix(in srgb,var(--group-color,var(--ink)) 18%,transparent)!important}
 .card-index[data-view="palette"] .index-entry{position:relative}
-@container (max-width:580px){.card:not(.has-title) .cardbar,.card.selected:not(.has-title) .cardbar{height:88px}}
 
 .index-group-header{position:relative;background:color-mix(in srgb,var(--group-color) 22%,var(--paper))}
 .card-index nav .index-group-toggle{display:grid;place-items:center;flex:0 0 18px;width:18px;height:22px}
@@ -1389,7 +1311,6 @@ body.dark .cardbody .card-equation-highlight[data-highlight="theme"]{--highlight
 body.dark .card[data-custom-color="true"]{--map-surface:color-mix(in srgb,var(--custom-card-color) 18%,#181b22);background:var(--map-surface);border-color:color-mix(in srgb,var(--custom-card-color) 35%,#343740);color:var(--reading-color,var(--ink))}
 body.dark .card[data-custom-color="true"] .cardbar{background:color-mix(in srgb,var(--custom-card-color) 24%,#181b22);border-bottom-color:color-mix(in srgb,var(--custom-card-color) 35%,#343740)}
 
-@container (max-width:580px){.card .cardactions>.custom-select{flex-basis:calc((100% - 67px)/3)}}
 
 .card-index .index-group-header.group-picked{box-shadow:inset 0 0 0 1px var(--group-color)}
 
@@ -1415,9 +1336,11 @@ body.dark .card .cardactions [data-card-color-button]{color:var(--card-accent-da
 /* Lock descendant raster scales too: the world hint alone does not cache
    cards that Chromium promotes into separate overlapping layers. */
 #world[data-bitmap-cache="true"] .card{will-change:transform}
-.card .map-branch-controls{display:none;flex:0 0 40px;height:28px;align-items:center}
+/* Branch thickness changes without re-laying out the map or touching zoom. */
+.map-card :is(.markmap-link,.markmap-node line){stroke-width:calc(var(--branch-stroke,1.55px) * var(--map-line-weight,1))}
+.card .map-branch-controls{display:none;flex:0 0 40px;height:24px;align-items:center}
 .card.map-card .map-branch-controls{display:flex}
-.card .map-branch-controls button{display:grid;place-items:center;flex:0 0 20px;width:20px;height:28px;padding:0;border-radius:3px;color:var(--muted)}
+.card .map-branch-controls button{display:grid;place-items:center;flex:0 0 20px;width:20px;height:24px;padding:0;border-radius:3px;color:var(--muted)}
 .card .map-branch-controls button .icon{width:14px;height:14px}
 .card .map-branch-controls button:hover{background:color-mix(in srgb,var(--ink) 7%,transparent);color:var(--ink)}
 /* Compact index surfaces with local hover feedback, outside canvas rendering. */

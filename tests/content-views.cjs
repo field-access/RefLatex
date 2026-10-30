@@ -6,7 +6,7 @@ const root=path.resolve(__dirname,'..');
   const name=req.url==='/'?'index.html':req.url.slice(1);
   if(!['canvas-recovery.js','text-highlights.js','index.html','app.js','styles.css'].includes(name)){res.writeHead(404).end();return}
   let body=fs.readFileSync(path.join(root,name),'utf8');
-  if(name==='app.js')body=body.replace(/\}\)\(\);\s*$/,'window.__content={state,markmapOptions,snapshot,restore,undo,renderCardIndex,showTextHighlighter,canvasPayload,resizeSelectedWidth,setCameraImmediate,focusViewport,editNote,closeEditor,makeNote,makeMap,select,focusSelected,layoutCards,updateCardHeading,deleteNote,openMapTab,openCardTab,wrapCodeLines,enableMapCameraFrames,enablePenMapWheel,ensureFontLoaded};})();');
+  if(name==='app.js')body=body.replace(/\}\)\(\);\s*$/,'window.__content={state,importMarkdownFiles,markmapOptions,snapshot,restore,undo,renderCardIndex,showTextHighlighter,canvasPayload,resizeSelectedWidth,setCameraImmediate,focusViewport,editNote,closeEditor,makeNote,makeMap,select,focusSelected,layoutCards,updateCardHeading,deleteNote,openMapTab,openCardTab,wrapCodeLines,enableMapCameraFrames,enableMapLineWeights,enablePenMapWheel,ensureFontLoaded};})();');
   res.setHeader('Content-Type',name.endsWith('.js')?'text/javascript':name.endsWith('.css')?'text/css':'text/html');res.end(body);
  });
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
@@ -17,6 +17,8 @@ const root=path.resolve(__dirname,'..');
   await page.goto(`http://127.0.0.1:${server.address().port}`,{waitUntil:'networkidle'});
   await page.evaluate(()=>window.conceptcardsReady);
   assert.equal(await page.locator('#defaultCardFont').inputValue(),'poppins');
+  assert.deepEqual(await page.locator('#globalSettings>.settings-section>summary').allTextContents(),['New card defaults','Reading appearance','Code blocks','Navigation']);
+  assert.equal(await page.locator('#globalSettings>.settings-section[open]').count(),1,'Settings starts compact with only new-card defaults expanded');
   const branchControls=await page.evaluate(async()=>{
    const n=__content.makeMap('# Branch controls\n\n## One\n### Nested\n#### Deep\n## Two',0,0,800,500,false);
    const leaf={payload:{}},deep={payload:{fold:1},children:[leaf]},branch={payload:{fold:0},children:[deep]},root={payload:{fold:0},children:[branch,{payload:{fold:1},children:[{payload:{}}]}]};
@@ -186,10 +188,11 @@ const root=path.resolve(__dirname,'..');
    assert.deepEqual(row.after,row.before,`Selection keeps reading position: ${JSON.stringify(row)}`);
    assert.equal(row.radius,'4px');assert.equal(row.shadow,'none');assert.equal(row.outline,'none');assert.equal(row.font,'poppins');
   }
-  const legacyFonts=await page.evaluate(()=>['cinzel','mono-typewriter','mono-azeret'].map(font=>{
-   const n=__content.makeNote('Legacy note',0,0,600,false,null,font),value=n.font;__content.deleteNote(n);return value;
+  const legacyFonts=await page.evaluate(()=>['cinzel','mono-typewriter','mono-azeret','comic-sans','hand-patrick','comfortaa','cormorant','bodoni','raleway','mono-victor'].map(font=>{
+   const n=__content.makeNote('Legacy note',0,0,600,false,null,font),m=__content.makeMap('# Legacy map',0,0,600,500,false,null,'default',font);
+   const values=[n.font,m.mapFont];__content.deleteNote(n);__content.deleteNote(m);return values;
   }));
-  assert.deepEqual(legacyFonts,['poppins','mono','mono']);
+  assert.deepEqual(legacyFonts,['poppins','mono','mono','comic-sans','hand-patrick','nunito','lora','lora','dm-sans','mono-fira'].map(font=>[font,font]),'Handwriting fonts retain their identities; retired display fonts migrate to readable equivalents');
   assert.ok(!(await page.locator('#defaultCardFont option').allTextContents()).some(name=>['Cinzel','Space Mono','Azeret Mono'].includes(name)));
   const flip=await page.evaluate(()=>{
    const md='# Flip test\n\nKeep **Markdown** and $x^2$ unchanged.',n=__content.makeNote(md,0,0,600,false);
@@ -199,6 +202,8 @@ const root=path.resolve(__dirname,'..');
   });
   assert.equal(flip.map.type,'map');assert.equal(flip.map.label,'Switch to Markdown (K)');
   assert.equal(flip.note.type,'note');assert.equal(flip.note.label,'Switch to Markmap (K)');assert.equal(flip.note.md,flip.md);assert.equal(flip.note.dropdowns,0);
+  await page.keyboard.press('Control+,');assert.ok(await page.locator('#globalSettings').isVisible());
+  await page.keyboard.press('Control+,');assert.ok(await page.locator('#globalSettings').isHidden());
   await page.locator('#settings').click();await page.locator('#defaultCardFont').selectOption('lora');
   assert.equal(await page.evaluate(()=>localStorage.getItem('reflatex-default-font')),'lora');
   await page.keyboard.press('Escape');assert.ok(await page.locator('#globalSettings').isHidden());
@@ -210,6 +215,109 @@ const root=path.resolve(__dirname,'..');
    const result=[note.font,map.font];__content.deleteNote(note);__content.deleteNote(map);return result;
   });
   assert.deepEqual(customDefaults,['lora','lora'],'Saved default applies to new cards; changing it preserves existing fonts');
+  await page.keyboard.press('Control+,');
+  await page.locator('#defaultCardTheme').selectOption('ocean');
+  const themeDefaults=await page.evaluate(async()=>{
+   const old=__content.makeNote('# Existing theme',0,0,600,false,null,'poppins','80','warm');
+   const a=__content.makeNote('New note',0,0,400,false),b=__content.makeMap('New map',0,0,400,500,false);
+   await __content.importMarkdownFiles([new File(['# Imported default'], 'default.md',{type:'text/markdown'})]);
+   const imported=__content.state.notes.find(n=>n.sourceName==='default.md');
+   const select=document.querySelector('#defaultCardTheme');select.value='forest';select.dispatchEvent(new Event('change'));
+   const result=[old.mapColor,a.mapColor,b.mapColor,imported.mapColor];
+   for(const n of [...__content.state.notes])__content.deleteNote(n);return result;
+  });
+  assert.deepEqual(themeDefaults,['warm','ocean','ocean','ocean'],'The chosen theme applies to new Markdown, Markmap and imports, preserving existing cards');
+  await page.locator('#defaultCardTheme').selectOption('custom');
+  assert.ok(await page.locator('#defaultCardThemeColor').isVisible());
+  await page.locator('#defaultCardThemeColor').evaluate(el=>{el.value='#8d71c1';el.dispatchEvent(new Event('input',{bubbles:true}))});
+  const customDefault=await page.evaluate(()=>{
+   const n=__content.makeNote('Custom default',0,0,400,false),map=__content.makeMap('Custom map',0,0,400,500,false);
+   let pasted;document.dispatchEvent(new ClipboardEvent('paste',{clipboardData:new DataTransfer()}));
+   const data=new DataTransfer();data.setData('text/plain','Pasted default');document.dispatchEvent(new ClipboardEvent('paste',{clipboardData:data}));
+   pasted=__content.state.notes.at(-1);
+   const result=[n.mapColor,map.mapColor,pasted.mapColor,n.el.dataset.customColor];
+   for(const note of [...__content.state.notes])__content.deleteNote(note);return result;
+  });
+  assert.deepEqual(customDefault,['#8d71c1','#8d71c1','#8d71c1','true'],'Custom default colors work for notes, maps and clipboard paste');
+  await page.keyboard.press('Escape');
+  await page.reload({waitUntil:'networkidle'});await page.evaluate(()=>window.conceptcardsReady);
+  assert.equal(await page.locator('#defaultCardTheme').inputValue(),'custom');
+  assert.equal(await page.locator('#defaultCardThemeColor').inputValue(),'#8d71c1','Default theme persists on reopening');
+  const neutralRestore=await page.evaluate(()=>{
+   __content.restore(JSON.stringify({notes:[{id:1,md:'Old canvas without a theme',x:0,y:0,w:400,font:'poppins',type:'note'}]}));
+   const color=__content.state.notes[0].mapColor;__content.deleteNote(__content.state.notes[0]);return color;
+  });
+  assert.equal(neutralRestore,'default','Restoring legacy canvases does not apply a new-card theme');
+  await page.keyboard.press('Control+,');await page.locator('#defaultCardTheme').selectOption('random');await page.keyboard.press('Escape');
+
+  await page.evaluate(()=>{
+   const n=__content.makeNote('# Typography settings\n\nFirst paragraph with `code`.\n\nSecond paragraph.\n\n## Section\n\n```js\nconst value = 1;\n\nconsole.log(value);\n```',0,0,600,false,null,'poppins');
+   window.__readingFixture={n,body:n.el.querySelector('.cardbody'),md:n.md,camera:[__content.state.x,__content.state.y,__content.state.scale]};
+   const card=document.createElement('article');card.className='map-card';
+   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');card.append(svg);document.body.append(card);
+   for(const depth of [1,2,3]){const line=document.createElementNS(svg.namespaceURI,'path');line.classList.add('markmap-link');line.__data__={target:{state:{depth}}};svg.append(line)}
+   const map={setData:async()=>{__readingFixture.mapRenders++;return 'kept'}};__readingFixture.mapRenders=0;
+   __content.enableMapLineWeights(svg,map);__readingFixture.map=map;__readingFixture.svg=svg;
+   return map.setData();
+  });
+  await page.locator('#settings').click();await page.locator('#defaultCardFont').selectOption('lora');await page.locator('#readingSettings summary').click();
+  await page.locator('#readingFontWeight').selectOption('600');await page.locator('#readingHeadingWeight').selectOption('500');
+  await page.locator('#codeSettings summary').click();
+  assert.deepEqual(await page.locator('#codeBlockFont option').allTextContents(),['System Mono','JetBrains Mono','Fira Code','Cascadia Code','Roboto Mono','Source Code Pro','IBM Plex Mono']);
+  for(const [value,family] of [['mono-cascadia-code','Cascadia Code'],['mono-code','JetBrains Mono'],['mono-fira','Fira Code'],['code-source','Source Code Pro'],['code-ibm','IBM Plex Mono'],['code-roboto','Roboto Mono']]){
+   await page.locator('#codeBlockFont').selectOption(value);
+   const codeFont=await page.evaluate(()=>({family:getComputedStyle(__readingFixture.body.querySelector('pre code')).fontFamily,paragraph:getComputedStyle(__readingFixture.body.querySelector('p')).fontFamily,source:__readingFixture.n.md===__readingFixture.md,dom:__readingFixture.body===__readingFixture.n.el.querySelector('.cardbody')}));
+   assert.ok(codeFont.family.includes(family)&&codeFont.paragraph.includes('Poppins')&&codeFont.source&&codeFont.dom,'Code font changes only the code appearance, preserving source and DOM');
+  }
+  assert.equal(await page.evaluate(()=>localStorage.getItem('reflatex-code-font')),'code-roboto');
+
+  for(const [id,value] of [['readingLetterSpacing','.02'],['readingLineHeight','1.7'],['readingParagraphGap','.85'],['readingSectionGap','1.2'],['readingCodeLineHeight','1.8'],['readingMapLineWeight','1.6']]){
+   await page.locator('#'+id).evaluate((el,value)=>{el.value=value;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}))},value);
+  }
+  await page.waitForFunction(()=>getComputedStyle(__readingFixture.body).fontWeight==='600'&&document.documentElement.style.getPropertyValue('--map-line-weight')==='1.6');
+  const readingPreferences=await page.evaluate(()=>{
+   const {n,body,md,camera,svg,mapRenders}=__readingFixture,p=getComputedStyle(body.querySelector('p')),code=getComputedStyle(body.querySelector('pre code'));
+   let html='';const open=window.open;window.open=()=>({document:{write(value){html=value},close(){}}});__content.openCardTab(n);window.open=open;
+   return {size:parseFloat(p.fontSize),leading:parseFloat(p.lineHeight),weight:p.fontWeight,tracking:parseFloat(p.letterSpacing),paragraph:parseFloat(p.marginBottom),heading:getComputedStyle(body.querySelector('h2')).fontWeight,section:parseFloat(getComputedStyle(body.querySelector('h2')).marginTop),codeSize:parseFloat(code.fontSize),codeLeading:parseFloat(code.lineHeight),codeTracking:code.letterSpacing,codeWeight:code.fontWeight,strokes:[...svg.children].map(el=>parseFloat(getComputedStyle(el).strokeWidth)),mapRenders,preserved:body===n.el.querySelector('.cardbody')&&n.md===md&&JSON.stringify(camera)===JSON.stringify([__content.state.x,__content.state.y,__content.state.scale]),popup:html.includes('--reading-line-height:1.7')&&html.includes('--reading-letter-spacing:0.02em'),saved:JSON.parse(localStorage.getItem('reflatex-reading'))};
+  });
+  assert.equal(readingPreferences.weight,'600');assert.equal(readingPreferences.heading,'500');
+  assert.ok(Math.abs(readingPreferences.leading/readingPreferences.size-1.7)<.001);
+  assert.ok(Math.abs(readingPreferences.tracking/readingPreferences.size-.02)<.001);
+  assert.ok(Math.abs(readingPreferences.paragraph/readingPreferences.size-.85)<.001);
+  assert.ok(Math.abs(readingPreferences.section/readingPreferences.size-1.2)<.001,JSON.stringify(readingPreferences));
+  assert.ok(Math.abs(readingPreferences.codeLeading/readingPreferences.codeSize-1.8)<.001);
+  assert.equal(readingPreferences.codeTracking,'normal');assert.equal(readingPreferences.codeWeight,'400','Text weight does not make source code bold');
+  readingPreferences.strokes.forEach((width,i)=>assert.ok(Math.abs(width-[3.6,2.25,1.55][i]*1.6)<.001));
+  assert.equal(readingPreferences.mapRenders,1,'Changing branch weight does not redraw or relayout the map');
+  assert.ok(readingPreferences.preserved&&readingPreferences.popup,'Preferences preserve content, camera and DOM; standalone Markdown inherits them');
+  assert.equal(readingPreferences.saved.lineHeight,1.7);
+  const codePopups=await page.evaluate(()=>{
+   const {n}=__readingFixture;let html='',mapHtml='';const open=window.open;
+   window.open=()=>({document:{write(value){html=value},close(){}}});__content.openCardTab(n);
+   window.open=()=>({document:{write(value){mapHtml=value},close(){}}});__content.openMapTab(n);window.open=open;
+   return [html,mapHtml].every(text=>text.includes('family=Roboto+Mono:wght@400')&&text.includes('--code-font-family:"Roboto Mono"'));
+  });
+  assert.ok(codePopups,'Standalone Markdown and Markmap include the selected code font stylesheet and preference');
+
+  page.once('dialog',dialog=>dialog.type()==='beforeunload'?dialog.accept():dialog.dismiss());await page.reload({waitUntil:'networkidle'});await page.evaluate(()=>window.conceptcardsReady);
+  assert.equal(await page.locator('#readingFontWeight').inputValue(),'600');assert.equal(await page.locator('#readingLineHeight').inputValue(),'1.7');
+  assert.equal(await page.locator('#readingMapLineWeight').inputValue(),'1.6');
+  assert.equal(await page.locator('#codeBlockFont').inputValue(),'code-roboto','Code font persists after reopening');
+  const restoredHandwriting=await page.evaluate(()=>{
+   const rows=['comic-sans','comic-neue','coming-soon','itim','hand-kalam','hand-patrick'].map(font=>{
+    const n=__content.makeNote('# Handwriting\n\nNew reading card.',0,0,600,false,null,font);const result={font:n.font,weight:getComputedStyle(n.el.querySelector('.cardbody')).fontWeight};__content.deleteNote(n);return result;
+   });return rows;
+  });
+  assert.deepEqual(restoredHandwriting.map(row=>row.font),['comic-sans','comic-neue','coming-soon','itim','hand-kalam','hand-patrick']);
+  assert.ok(restoredHandwriting.every(row=>row.weight==='600'),'New cards inherit the saved reading settings');
+  await page.locator('#settings').click();await page.locator('#readingSettings summary').click();await page.locator('#resetReadingStyle').click();
+  await page.waitForFunction(()=>document.documentElement.style.getPropertyValue('--reading-line-height')==='1.5');
+  assert.equal(await page.locator('#readingFontWeight').inputValue(),'400');assert.equal(await page.locator('#readingHeadingWeight').inputValue(),'700');
+  assert.equal(await page.locator('#readingParagraphGap').inputValue(),'0.6');assert.equal(await page.locator('#readingMapLineWeight').inputValue(),'1');
+  assert.equal(await page.locator('#defaultCardFont').inputValue(),'lora','Reading reset preserves the chosen default font');
+  assert.equal(await page.locator('#codeBlockFont').inputValue(),'mono','Reading reset restores the system code font');
+  await page.locator('#defaultCardFont').selectOption('poppins');
+  await page.keyboard.press('Escape');await page.evaluate(()=>{for(const n of [...__content.state.notes])__content.deleteNote(n)});
   await page.route('**/test-web-image.svg',route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20"><rect width="40" height="20" fill="blue"/></svg>'}));
   const highlightId=await page.evaluate(()=>{
    const n=__content.makeNote('# Highlights\n\nRemember this important idea.',0,0,600,false,null,'mono','80','ocean');__content.select(n);
@@ -446,6 +554,24 @@ const latex = "\\(\\frac{a-b}{c}\\)";`;
    card.style.width=original;return results;
   });
   assert.ok(toolbarFit.every(Boolean),'Toolbar controls remain inside narrow and wide cards');
+  const quietHeaders=await page.evaluate(()=>{
+   const results=[];
+   for(const dark of [false,true])for(const type of ['note','map'])for(const titled of [false,true])for(const width of [300,400,600,700]){
+    document.body.classList.toggle('dark',dark);
+    const md=titled?'# Research papers: Computational probability and statistical inference':'Untitled reading card.';
+    const n=type==='map'?__content.makeMap(md,0,0,width,500,false):__content.makeNote(md,0,0,width,false,null,'mono-fira');
+    __content.select(n);
+    const card=n.el,rect=el=>el.getBoundingClientRect(),title=rect(card.querySelector('.map-title')),stamp=rect(card.querySelector('.card-timestamp')),bar=rect(card.querySelector('.cardbar'));
+    const controls=[...card.querySelectorAll('.cardactions>button,.cardactions>.custom-select,.map-branch-controls button')].filter(el=>getComputedStyle(el).display!=='none'&&rect(el).width);
+    const bounds=controls.map(rect),trigger=getComputedStyle(card.querySelector('.custom-select-trigger'));
+    results.push({type,width,dark,titled,separate:!titled||title.right+4<=stamp.left,inside:bounds.every(r=>r.left>=bar.left&&r.right<=bar.right&&r.bottom<=bar.bottom),overlap:bounds.some((a,i)=>bounds.slice(i+1).some(b=>a.left<b.right&&b.left<a.right&&a.top<b.bottom&&b.top<a.bottom)),border:trigger.borderTopWidth});
+    __content.deleteNote(n);
+   }
+   document.body.classList.remove('dark');return results;
+  });
+  assert.ok(quietHeaders.every(row=>row.separate&&row.inside&&!row.overlap),'Titled and untitled cards keep timestamps and every action inside the header at all widths in both modes');
+  assert.ok(quietHeaders.every(row=>row.border==='0px'),'Card dropdowns use quiet borderless controls');
+
   assert.equal(await imageCard.getAttribute('data-font-size'),'80','New cards default to 80%');
   assert.deepEqual(await imageCard.locator('select[data-size] option').allTextContents(),['50%','60%','70%','80%','90%','100%','110%','125%','140%','160%']);
   await page.evaluate(()=>document.activeElement?.blur());
@@ -469,7 +595,13 @@ const latex = "\\(\\frac{a-b}{c}\\)";`;
    const body=a.el.querySelector('.cardbody');body.style.maxHeight='300px';body.style.overflow='auto';body.scrollTop=180;
    __content.state.overviewActive=false;__content.setCameraImmediate(110,-300,.75);document.activeElement?.blur();return [a.id,b.id];
   });
-  await page.keyboard.press('ArrowRight');
+  const switchVisibility=await page.evaluate(ids=>{
+   const next=__content.state.notes.find(n=>n.id===ids[1]);next.el.classList.add('offscreen');
+   const body=next.el.querySelector('.cardbody');window.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true,cancelable:true}));
+   return {selected:__content.state.selected===next,hidden:next.el.classList.contains('offscreen'),body:getComputedStyle(body).visibility,controls:getComputedStyle(next.el.querySelector('.cardactions')).visibility,sameBody:body===next.el.querySelector('.cardbody')};
+  },switchIds);
+  assert.ok(switchVisibility.selected&&!switchVisibility.hidden&&switchVisibility.sameBody);
+  assert.equal(switchVisibility.body,'visible');assert.equal(switchVisibility.controls,'visible','Destination content and controls are revealed together');
   await page.waitForFunction(id=>__content.state.selected.id===id&&!__content.state.raf,switchIds[1]);
   await page.evaluate(()=>__content.setCameraImmediate(-560,-100,1.1));
   await page.keyboard.press('ArrowLeft');
@@ -504,8 +636,9 @@ const latex = "\\(\\frac{a-b}{c}\\)";`;
   ]);
   await page.waitForFunction(()=>document.querySelectorAll('#indexEntries [data-card-id]').length>=2);
   const fontChoices=await page.locator('.card select[data-font]').first().locator('option').allTextContents();
-  assert.ok(fontChoices.includes('Comic Sans'));
-  for(const removed of ['Dancing Script','Sacramento','Satisfy','Marck Script','Bebas Neue','Editorial Serif','Josefin Sans','System Sans'])assert.ok(!fontChoices.includes(removed));
+  assert.deepEqual(fontChoices,['DM Sans','Poppins','Nunito','Lora','Alegreya','Roboto Slab','System Mono','JetBrains Mono','Fira Code','Cascadia Code','Comic Sans','Comic Neue','Coming Soon','Itim','Kalam','Patrick Hand']);
+  assert.deepEqual(await page.locator('#defaultCardFont option').allTextContents(),fontChoices,'Default font and card menus use the same reading choices');
+  assert.deepEqual(await page.locator('#mapFont option').allTextContents(),fontChoices,'The editor also removes retired choices');
   const neutral=page.locator('.card[data-map-color="default"]').first();
   assert.equal(await neutral.evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 255, 255)');
   assert.equal(await neutral.locator('select[data-map-color] option[value="default"]').textContent(),'White');
@@ -547,6 +680,9 @@ const latex = "\\(\\frac{a-b}{c}\\)";`;
    const settings={pinch:3,wheel:.5},cleanup=__content.enableMapCameraFrames(svg,{zoom},settings);
    const high=delta({ctrlKey:true,deltaY:-20,deltaMode:0});settings.pinch=.25;
    const low=delta({ctrlKey:true,deltaY:-20,deltaMode:0}),wheel=delta({ctrlKey:false,deltaY:-20,deltaMode:0});
+   window.dispatchEvent(new KeyboardEvent('keydown',{key:'Control',ctrlKey:true}));
+   const ctrlWheel=delta({ctrlKey:true,deltaY:-20,deltaMode:0});
+   window.dispatchEvent(new KeyboardEvent('keyup',{key:'Control'}));
    cleanup();svg.remove();
    const original=window.d3;let captured;
    window.d3={pointer:event=>[event.clientX,event.clientY],select:()=>({call(fn,scale,point){captured={scale,point}}})};
@@ -555,10 +691,11 @@ const latex = "\\(\\frac{a-b}{c}\\)";`;
    const pane=card.querySelector('.map-pane');__content.enablePenMapWheel(pane,card.querySelector('svg'),{zoom:{scaleBy(){}}});
    pane.dispatchEvent(new PointerEvent('pointermove',{pointerType:'pen',clientX:100,clientY:100,bubbles:true}));
    pane.dispatchEvent(new WheelEvent('wheel',{ctrlKey:true,deltaY:-20,clientX:600,clientY:400,bubbles:true,cancelable:true}));
-   card.remove();window.d3=original;return {high,low,wheel,anchor:captured.point};
+   card.remove();window.d3=original;return {high,low,wheel,ctrlWheel,anchor:captured.point};
   });
   assert.ok(Math.abs(mapPinch.high/mapPinch.low-12)<1e-8,'Standalone maps honor the expanded pinch sensitivity');
   assert.ok(Math.abs(mapPinch.wheel-.044)<1e-8,'Ctrl pinch and wheel retain separate sensitivities');
+  assert.equal(mapPinch.ctrlWheel,mapPinch.wheel,'Holding Ctrl adds no gain to Markmap wheel zoom');
   assert.deepEqual(mapPinch.anchor,[600,400],'A previous pen hover cannot replace the touchpad pinch anchor');
 
   const palette=await page.evaluate(async()=>{
@@ -611,16 +748,46 @@ const latex = "\\(\\frac{a-b}{c}\\)";`;
    const first=headings[0].textContent;__content.deleteNote(n);
    const requests=[],original=document.fonts.load;
    document.fonts.load=async spec=>{requests.push(spec);return []};
-   const a=__content.ensureFontLoaded('itim'),b=__content.ensureFontLoaded('itim');
-   document.querySelector('#card-font-itim').dispatchEvent(new Event('load'));
+   const a=__content.ensureFontLoaded('alegreya'),b=__content.ensureFontLoaded('alegreya');
+   document.querySelector('#card-font-alegreya').dispatchEvent(new Event('load'));
    await a;document.fonts.load=original;
-   return {first,sizes,weights,body,shared:a===b,links:document.querySelectorAll('#card-font-itim').length,requests};
+   return {first,sizes,weights,body,shared:a===b,links:document.querySelectorAll('#card-font-alegreya').length,requests};
   });
   assert.equal(typography.first,'Main heading');
   typography.sizes.forEach((size,i)=>assert.ok(Math.abs(size-typography.body*[1.6,1.4,1.25,1.15,1.1,1.05][i])<.01));
   assert.ok(typography.sizes.every(size=>size>typography.body));
   assert.ok(typography.weights.every(weight=>weight==='700'));
   assert.ok(typography.shared);assert.equal(typography.links,1);assert.equal(typography.requests.length,2);
+  // Verify the actual rendered cascade at small/large sizes and narrow widths.
+  for(const width of [1280,390]){
+   await page.setViewportSize({width,height:900});
+   const rhythm=await page.evaluate(()=>{
+    const md=['# Reading rhythm','','A paragraph with **emphasis**, `inline code`, and a [reference](https://example.com).','','## Evidence','','- First item','','  A second paragraph within the item.','','  - Nested point','- Second item','','> A quoted observation.','','| Measure | Reading |','| --- | --- |','| Value | A table explanation |','','```js','// Keep the source intact','const count = 3;','','console.log(count);','```','','Final paragraph.'].join('\n');
+    const rows=[];
+    for(const dark of [false,true])for(const size of ['80','160']){
+     document.body.classList.toggle('dark',dark);
+     const n=__content.makeNote(md,0,0,600,false,null,'poppins',size,'default'),body=n.el.querySelector('.cardbody');
+     const style=selector=>getComputedStyle(selector?body.querySelector(selector):body),base=style(),p=style('p'),item=style('li'),loose=style('li>p'),table=style('table'),code=style('pre code'),pre=style('pre'),quote=style('blockquote');
+     rows.push({dark,size,base:parseFloat(base.fontSize),leading:parseFloat(base.lineHeight),paragraph:parseFloat(p.lineHeight),item:parseFloat(item.lineHeight),paragraphGap:parseFloat(p.marginBottom),looseGap:parseFloat(loose.marginBottom),nestedGap:parseFloat(style('li ul').marginTop),headingGap:parseFloat(style('h2').marginTop),table:parseFloat(table.fontSize),code:parseFloat(code.fontSize),inlineLeading:parseFloat(style('p code').lineHeight),lastGap:parseFloat(style(':scope > :last-child').marginBottom),quote:quote.color,ink:base.color,shadow:pre.boxShadow,radius:parseFloat(pre.borderRadius),source:n.md===md,codeText:body.querySelector('pre code').textContent});
+     __content.deleteNote(n);
+    }
+    document.body.classList.remove('dark');return rows;
+   });
+   for(const row of rhythm){
+    assert.ok(row.leading/row.base>=1.45&&row.leading/row.base<=1.55,'Body leading stays comfortable and compact');
+    assert.equal(row.paragraph,row.leading,'Old paragraph leading cannot override the body');assert.equal(row.item,row.leading);
+    assert.ok(row.paragraphGap<=row.base*.65&&row.looseGap<=row.base*.45&&row.nestedGap<=row.base*.3,'Paragraph, loose list and nested list gaps do not stack excessively');
+    assert.ok(row.headingGap<=row.base,'Heading gaps scale with body text');
+    assert.ok(row.table>=row.base*.9&&row.table<=row.base,'Table text remains close to the reading size');
+    assert.ok(row.code>=row.base*.85&&row.code<row.base,'Code stays slightly smaller than prose');
+    assert.ok(row.inlineLeading<=row.leading,'Inline code does not inflate the paragraph leading');
+    assert.equal(row.lastGap,0);assert.equal(row.quote,row.ink,'Quotes keep readable contrast');
+    assert.equal(row.shadow,'none');assert.ok(row.radius<=4);assert.ok(row.source);
+    assert.equal(row.codeText,'// Keep the source intact\nconst count = 3;\n\nconsole.log(count);');
+   }
+   assert.ok(Math.abs(rhythm[1].base/rhythm[0].base-2)<.01,'Doubling the text setting scales all reading content');
+  }
+  await page.setViewportSize({width:1280,height:900});
   await page.evaluate(()=>{for(const n of [...__content.state.notes])__content.deleteNote(n)});
   for(const count of [7,13]){
    const board=await page.evaluate(count=>{
